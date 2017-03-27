@@ -2228,7 +2228,7 @@ static void PutSaveComment (FSerializer &arc)
 
 	// Append elapsed time
 	levelTime = level.time / TICRATE;
-	mysnprintf (comment + len + 1, countof(comment) - len - 1, "time: %02d:%02d:%02d",
+	mysnprintf (comment + len + 1, countof(comment) - len - 1, "Time: %02d:%02d:%02d",
 		levelTime/3600, (levelTime%3600)/60, levelTime%60);
 	comment[len+16] = 0;
 
