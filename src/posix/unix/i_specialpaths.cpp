@@ -110,7 +110,7 @@ FString M_GetCachePath(bool create)
 {
 	// Don't use GAME_DIR and such so that ZDoom and its child ports can
 	// share the node cache.
-	FString path = NicePath("~/.config/zdoom/cache");
+	FString path = NicePath("~/.config/LAD/cache");
 	if (create)
 	{
 		CreatePath(path);
