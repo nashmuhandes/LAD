@@ -224,24 +224,20 @@ void FGameConfigFile::DoAutoloadSetup (FIWadManager *iwad_man)
 	CreateSectionAtStart("Global.Autoload");
 
 	// The same goes for auto-exec files.
-	CreateStandardAutoExec("Chex.AutoExec", true);
-	CreateStandardAutoExec("Strife.AutoExec", true);
-	CreateStandardAutoExec("Hexen.AutoExec", true);
-	CreateStandardAutoExec("Heretic.AutoExec", true);
-	CreateStandardAutoExec("Doom.AutoExec", true);
+	CreateStandardAutoExec("LAD.AutoExec", true);
 
 	// Move search paths back to the top.
 	MoveSectionToStart("FileSearch.Directories");
 	MoveSectionToStart("IWADSearch.Directories");
 
-	SetSectionNote("Doom.AutoExec",
+	SetSectionNote("LAD.AutoExec",
 		"# Files to automatically execute when running the corresponding game.\n"
 		"# Each file should be on its own line, preceded by Path=\n\n");
 	SetSectionNote("Global.Autoload",
 		"# WAD files to always load. These are loaded after the IWAD but before\n"
 		"# any files added with -file. Place each file on its own line, preceded\n"
 		"# by Path=\n");
-	SetSectionNote("Doom.Autoload",
+	SetSectionNote("LAD.Autoload",
 		"# Wad files to automatically load depending on the game and IWAD you are\n"
 		"# playing.  You may have have files that are loaded for all similar IWADs\n"
 		"# (the game) and files that are only loaded for particular IWADs. For example,\n"
