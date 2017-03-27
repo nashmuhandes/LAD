@@ -63,6 +63,9 @@
 #include "r_data/colormaps.h"
 #include "g_levellocals.h"
 
+// [LAD]
+#include "g_LAD/LADModularCharacterPart.h"
+
 EXTERN_CVAR(Bool, r_fullbrightignoresectorcolor);
 EXTERN_CVAR(Bool, r_drawvoxels);
 
@@ -923,6 +926,12 @@ namespace swrenderer
 		RenderPortal *renderportal = Thread->Portal.get();
 		if (!renderportal->CurrentPortalInSkybox && renderportal->CurrentPortal && !!P_PointOnLineSidePrecise(thing->Pos(), renderportal->CurrentPortal->dst))
 			return false;
+
+		// [LAD] don't draw self modular character parts in first person view
+		if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADModularCharacterPart)) && thing->tracer == Thread->Viewport->viewpoint.camera)
+		{
+			return false;
+		}
 
 		return true;
 	}

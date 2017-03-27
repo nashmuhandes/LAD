@@ -58,6 +58,10 @@
 #include "gl/data/gl_vertexbuffer.h"
 #include "gl/renderer/gl_quaddrawer.h"
 
+// [LAD]
+#include "dobject.h"
+#include "g_LAD/LADModularCharacterPart.h"
+
 CVAR(Bool, gl_usecolorblending, true, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR(Bool, gl_spritebrightfog, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG);
 CVAR(Bool, gl_sprite_blend, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG);
@@ -666,6 +670,12 @@ void GLSprite::Process(AActor* thing, sector_t * sector, int thruportal)
 
 	// Don't waste time projecting sprites that are definitely not visible.
 	if ((thing->sprite == 0 && !isPicnumOverride) || !thing->IsVisibleToPlayer() || ((thing->renderflags & RF_MASKROTATION) && !thing->IsInsideVisibleAngles()))
+	{
+		return;
+	}
+
+	// [LAD] don't draw self modular character parts in first person view
+	if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADModularCharacterPart)) && thing->tracer == GLRenderer->mViewActor)
 	{
 		return;
 	}

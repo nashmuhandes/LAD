@@ -29,6 +29,9 @@
 #include "polyrenderer/poly_renderer.h"
 #include "polyrenderer/scene/poly_light.h"
 
+// [LAD]
+#include "g_LAD/LADModularCharacterPart.h"
+
 EXTERN_CVAR(Float, transsouls)
 EXTERN_CVAR(Int, r_drawfuzz)
 
@@ -227,6 +230,12 @@ bool RenderPolySprite::IsThingCulled(AActor *thing)
 		(thing->renderflags & RF_INVISIBLE) ||
 		!thing->RenderStyle.IsVisible(thing->Alpha) ||
 		!thing->IsVisibleToPlayer())
+	{
+		return true;
+	}
+
+	// [LAD] don't draw self modular character parts in first person view
+	if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADModularCharacterPart)) && thing->tracer == PolyRenderer::Instance()->Viewpoint.camera)
 	{
 		return true;
 	}
