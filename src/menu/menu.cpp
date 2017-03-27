@@ -1042,6 +1042,10 @@ CCMD(reset2saved)
 	R_SetViewSize (screenblocks);
 }
 
+CCMD(resetbindings)
+{
+	C_SetDefaultBindings();
+}
 
 // This really should be in the script but we can't do scripted CCMDs yet.
 CCMD(undocolorpic)
