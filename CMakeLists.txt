@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 2.8.7 )
-project(GZDoom)
+project(LAD)
 
 if( COMMAND cmake_policy )
 	if( POLICY CMP0011 )
@@ -96,9 +96,9 @@ function( add_pk3 PK3_NAME PK3_DIR )
 	assort_pk3_source_folder("Source Files" ${PK3_DIR})
 	# Phase 4: Add the resulting PK3 to the install target.
 	if( WIN32 )
-		set( INSTALL_PK3_PATH . CACHE STRING "Directory where zdoom.pk3 will be placed during install." )
+		set( INSTALL_PK3_PATH . CACHE STRING "Directory where engine.pk3 will be placed during install." )
 	else()
-		set( INSTALL_PK3_PATH share/games/doom CACHE STRING "Directory where zdoom.pk3 will be placed during install." )
+		set( INSTALL_PK3_PATH share/games/doom CACHE STRING "Directory where engine.pk3 will be placed during install." )
 	endif()
 	install(FILES "${PROJECT_BINARY_DIR}/${PK3_NAME}"
 			DESTINATION ${INSTALL_PK3_PATH}
@@ -121,8 +121,8 @@ IF( NOT CMAKE_BUILD_TYPE )
 		FORCE )
 ENDIF()
 
-set( ZDOOM_OUTPUT_DIR ${CMAKE_BINARY_DIR} CACHE PATH "Directory where zdoom.pk3 and the executable will be created." )
-set( ZDOOM_EXE_NAME "gzdoom" CACHE FILEPATH "Name of the executable to create" )
+set( ZDOOM_OUTPUT_DIR ${CMAKE_BINARY_DIR} CACHE PATH "Directory where engine.pk3 and the executable will be created." )
+set( ZDOOM_EXE_NAME "LAD" CACHE FILEPATH "Name of the executable to create" )
 if( MSVC )
 	# Allow the user to use ZDOOM_OUTPUT_DIR as a single release point.
 	# Use zdoom, zdoomd, zdoom64, and zdoomd64 for the binary names

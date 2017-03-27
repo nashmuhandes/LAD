@@ -66,7 +66,7 @@ const char *GetVersionString();
 // Version stored in the ini's [LastRun] section.
 // Bump it if you made some configuration change that you want to
 // be able to migrate in FGameConfigFile::DoGlobalSetup().
-#define LASTRUNVERSION "212"
+#define LASTRUNVERSION "211"
 
 // Protocol version used in demos.
 // Bump it if you change existing DEM_ commands or add new ones.
@@ -92,14 +92,14 @@ const char *GetVersionString();
 #define SAVEVER 4551
 
 // This is so that derivates can use the same savegame versions without worrying about engine compatibility
-#define GAMESIG "GZDOOM"
-#define BASEWAD "gzdoom.pk3"
+#define GAMESIG "LAD"
+#define BASEWAD "engine.pk3"
 
 // More stuff that needs to be different for derivatives.
-#define GAMENAME "GZDoom"
-#define GAMENAMELOWERCASE "gzdoom"
-#define FORUM_URL "http://forum.drdteam.org"
-#define BUGS_FORUM_URL	"http://forum.drdteam.org/viewforum.php?f=24"
+#define GAMENAME "LiveAnotherDay"
+#define GAMENAMELOWERCASE "liveanotherday"
+#define FORUM_URL "http://liveanotherday-game.com/"
+#define BUGS_FORUM_URL	"http://liveanotherday-game.com/forum/"
 
 #if defined(__APPLE__) || defined(_WIN32)
 #define GAME_DIR GAMENAME
