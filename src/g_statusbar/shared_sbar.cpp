@@ -117,11 +117,11 @@ CUSTOM_CVAR (Bool, st_scale, true, CVAR_ARCHIVE)
 	}
 }
 
-CVAR (Int, crosshair, 0, CVAR_ARCHIVE)
+CVAR (Int, crosshair, 7, CVAR_ARCHIVE)
 CVAR (Bool, crosshairforce, false, CVAR_ARCHIVE)
-CVAR (Color, crosshaircolor, 0xff0000, CVAR_ARCHIVE);
-CVAR (Bool, crosshairhealth, true, CVAR_ARCHIVE);
-CVAR (Float, crosshairscale, 1.0, CVAR_ARCHIVE);
+CVAR (Color, crosshaircolor, 0xffffff, CVAR_ARCHIVE);
+CVAR (Bool, crosshairhealth, false, CVAR_ARCHIVE);
+CVAR (Float, crosshairscale, 0.f, CVAR_ARCHIVE);
 CVAR (Bool, crosshairgrow, false, CVAR_ARCHIVE);
 CUSTOM_CVAR(Int, am_showmaplabel, 2, CVAR_ARCHIVE)
 {
