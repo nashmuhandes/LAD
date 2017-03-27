@@ -79,16 +79,16 @@
 //
 //=============================================================================
 
-CVAR (Int,   am_rotate,				0,			CVAR_ARCHIVE);
+CVAR (Int,   am_rotate,				1,			CVAR_ARCHIVE);
 CVAR (Int,   am_overlay,			0,			CVAR_ARCHIVE);
-CVAR (Bool,  am_showsecrets,		true,		CVAR_ARCHIVE);
-CVAR (Bool,  am_showmonsters,		true,		CVAR_ARCHIVE);
+CVAR (Bool,  am_showsecrets,		false,		CVAR_ARCHIVE);
+CVAR (Bool,  am_showmonsters,		false,		CVAR_ARCHIVE);
 CVAR (Bool,  am_showitems,			false,		CVAR_ARCHIVE);
-CVAR (Bool,  am_showtime,			true,		CVAR_ARCHIVE);
-CVAR (Bool,  am_showtotaltime,		false,		CVAR_ARCHIVE);
+CVAR (Bool,  am_showtime,			false,		CVAR_ARCHIVE);
+CVAR (Bool,  am_showtotaltime,		true,		CVAR_ARCHIVE);
 CVAR (Int,   am_colorset,			0,			CVAR_ARCHIVE);
 CVAR (Bool,  am_customcolors,		true,		CVAR_ARCHIVE);
-CVAR (Int,   am_map_secrets,		1,			CVAR_ARCHIVE);
+CVAR (Int,   am_map_secrets,		0,			CVAR_ARCHIVE);
 CVAR (Int,	 am_drawmapback,		1,			CVAR_ARCHIVE);
 CVAR (Bool,  am_showkeys,			true,		CVAR_ARCHIVE);
 CVAR (Int,   am_showtriggerlines,	0,			CVAR_ARCHIVE);
