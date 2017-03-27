@@ -448,9 +448,9 @@ LRESULT CALLBACK LConProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		hdc = GetDC (hWnd);
 		lf.lfHeight = -MulDiv(12, GetDeviceCaps(hdc, LOGPIXELSY), 72);
 		lf.lfCharSet = ANSI_CHARSET;
-		lf.lfWeight = FW_BOLD;
-		lf.lfPitchAndFamily = VARIABLE_PITCH | FF_ROMAN;
-		strcpy (lf.lfFaceName, "Trebuchet MS");
+		lf.lfWeight = FW_NORMAL;
+		lf.lfPitchAndFamily = VARIABLE_PITCH | FF_DONTCARE;
+		strcpy (lf.lfFaceName, "Fixedsys");
 		GameTitleFont = CreateFontIndirect (&lf);
 
 		oldfont = SelectObject (hdc, GetStockObject (DEFAULT_GUI_FONT));
@@ -483,7 +483,7 @@ LRESULT CALLBACK LConProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 		SendMessage (view, EM_SETREADONLY, TRUE, 0);
 		SendMessage (view, EM_EXLIMITTEXT, 0, 0x7FFFFFFE);
-		SendMessage (view, EM_SETBKGNDCOLOR, 0, RGB(70,70,70));
+		SendMessage (view, EM_SETBKGNDCOLOR, 0, RGB(0,0,128));
 		// Setup default font for the log.
 		//SendMessage (view, WM_SETFONT, (WPARAM)GetStockObject (DEFAULT_GUI_FONT), FALSE);
 		format.cbSize = sizeof(format);
@@ -492,8 +492,8 @@ LRESULT CALLBACK LConProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		format.yHeight = 200;
 		format.crTextColor = RGB(223,223,223);
 		format.bCharSet = ANSI_CHARSET;
-		format.bPitchAndFamily = FF_SWISS | VARIABLE_PITCH;
-		wcscpy(format.szFaceName, L"DejaVu Sans");	// At least I have it. :p
+		format.bPitchAndFamily = FF_DONTCARE | VARIABLE_PITCH;
+		wcscpy(format.szFaceName, L"Fixedsys");	// At least I have it. :p
 		SendMessageW(view, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&format);
 
 		ConWindow = view;
@@ -584,7 +584,7 @@ LRESULT CALLBACK LConProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			drawitem = (LPDRAWITEMSTRUCT)lParam;
 
 			// This background color should match the edit control's.
-			hbr = CreateSolidBrush (RGB(70,70,70));
+			hbr = CreateSolidBrush (RGB(0,0,128));
 			FillRect (drawitem->hDC, &drawitem->rcItem, hbr);
 			DeleteObject (hbr);
 

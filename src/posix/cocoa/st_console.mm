@@ -83,7 +83,7 @@ FConsoleWindow::FConsoleWindow()
 
 	[m_textView initWithFrame:initialRect];
 	[m_textView setEditable:NO];
-	[m_textView setBackgroundColor:RGB(70, 70, 70)];
+	[m_textView setBackgroundColor:RGB(0, 0, 128)];
 	[m_textView setMinSize:NSMakeSize(0.0f, initialHeight)];
 	[m_textView setMaxSize:NSMakeSize(FLT_MAX, FLT_MAX)];
 	[m_textView setVerticallyResizable:YES];
