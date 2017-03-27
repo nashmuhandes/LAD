@@ -972,6 +972,14 @@ void G_SerializeLevel(FSerializer &arc, bool hubload)
 	if (!hubload)
 		level.totaltime = i;
 
+	// [LAD]
+	{
+		int sc = level.saveCount;
+		arc("level.savecount", sc);
+		if (!hubload)
+			level.saveCount = sc;
+	}
+
 	if (arc.isReading())
 	{
 		sky1texture = level.skytexture1;
