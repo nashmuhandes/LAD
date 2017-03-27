@@ -253,3 +253,5 @@ version "2.5"
 #include "zscript/chex/chexitems.txt"
 #include "zscript/chex/chexdecorations.txt"
 #include "zscript/chex/chexplayer.txt"
+
+#include "zscript/LAD/LADModularCharacterPart.zc"
