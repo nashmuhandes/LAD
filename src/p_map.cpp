@@ -5201,7 +5201,7 @@ void P_RailAttack(FRailParams *p)
 //==========================================================================
 
 CVAR(Float, chase_height, -8.f, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
-CVAR(Float, chase_dist, 90.f, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
+CVAR(Float, chase_dist, 75.f, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 
 void P_AimCamera(AActor *t1, DVector3 &campos, DAngle &camangle, sector_t *&CameraSector, bool &unlinked)
 {
