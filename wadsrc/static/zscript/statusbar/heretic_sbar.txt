@@ -5,12 +5,13 @@ class HereticStatusBar : BaseStatusBar
 	HUDFont mIndexFont;
 	HUDFont mBigFont;
 	InventoryBarState diparms;
+	InventoryBarState diparms_sbar;
 	
 
 	override void Init()
 	{
 		Super.Init();
-		SetSize(48, 320, 200);
+		SetSize(42, 320, 200);
 
 		// Create the font used for the fullscreen HUD
 		Font fnt = "HUDFONT_RAVEN";
@@ -20,6 +21,7 @@ class HereticStatusBar : BaseStatusBar
 		fnt = "BIGFONT";
 		mBigFont = HUDFont.Create(fnt, fnt.GetCharWidth("0"), true, 2, 2);
 		diparms = InventoryBarState.Create(mIndexFont);
+		diparms_sbar = InventoryBarState.CreateNoBox(mIndexFont, boxsize:(31, 31), arrowoffs:(0,-10));
 		mHealthInterpolator = DynamicValueInterpolator.Create(0, 0.25, 1, 8);
 	}
 	
@@ -73,7 +75,7 @@ class HereticStatusBar : BaseStatusBar
 		DrawShader(SHADER_HORZ, (19, 190), (16, 10));
 		DrawShader(SHADER_HORZ|SHADER_REVERSE, (278, 190), (16, 10));
 
-		if (CPlayer.inventorytics == 0 || level.NoInventoryBar)
+		if (!isInventoryBarVisible())
 		{
 			//statbar
 			if (!deathmatch)
@@ -120,18 +122,16 @@ class HereticStatusBar : BaseStatusBar
 					DrawString(mIndexFont, FormatNumber(CPlayer.mo.InvSel.Amount, 3), (209, 182), DI_TEXT_ALIGN_RIGHT);
 				}
 			}
-			
 		}
 		else
 		{
 			DrawImage("INVBAR", (34, 160), DI_ITEM_OFFSETS);
-			//drawinventorybar Heretic, noartibox, 7, INDEXFONT_RAVEN, 50, 160, 77, 182, untranslated;
+			DrawInventoryBar(diparms_sbar, (49, 160), 7, DI_ITEM_LEFT_TOP, HX_SHADOW);
 		}
 	}
 
 	protected void DrawFullScreenStuff ()
 	{
-
 		//health
 		DrawImage("PTN1A0", (51, -3));
 		DrawString(mBigFont, FormatNumber(mHealthInterpolator.GetValue()), (41, -21), DI_TEXT_ALIGN_RIGHT);
@@ -189,7 +189,7 @@ class HereticStatusBar : BaseStatusBar
 			y -= 40;
 		}
 
-		if (CPlayer.inventorytics == 0 && CPlayer.mo.InvSel != null && !level.NoInventoryBar)
+		if (!isInventoryBarVisible() && !level.NoInventoryBar && CPlayer.mo.InvSel != null)
 		{
 			// This code was changed to always fit the item into the box, regardless of alignment or sprite size.
 			// Heretic's ARTIBOX is 30x30 pixels. 
@@ -200,7 +200,7 @@ class HereticStatusBar : BaseStatusBar
 				DrawString(mIndexFont, FormatNumber(CPlayer.mo.InvSel.Amount, 3), (-32, -2 - mIndexFont.mFont.GetHeight()), DI_TEXT_ALIGN_RIGHT);
 			}
 		}
-		if (CPlayer.inventorytics != 0 && !level.NoInventoryBar)
+		if (isInventoryBarVisible())
 		{
 			DrawInventoryBar(diparms, (0, 0), 7, DI_SCREEN_CENTER_BOTTOM, HX_SHADOW);
 		}
