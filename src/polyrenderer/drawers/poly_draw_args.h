@@ -61,6 +61,7 @@ public:
 	void SetWriteSubsectorDepth(bool enable) { mWriteSubsector = enable; }
 	void SetFaceCullCCW(bool counterclockwise) { mFaceCullCCW = counterclockwise; }
 	void SetStyle(TriBlendMode blendmode, double srcalpha = 1.0, double destalpha = 1.0) { mBlendMode = blendmode; mSrcAlpha = (uint32_t)(srcalpha * 256.0 + 0.5); mDestAlpha = (uint32_t)(destalpha * 256.0 + 0.5); }
+	void SetStyle(const FRenderStyle &renderstyle, double alpha, uint32_t fillcolor, uint32_t translationID, FTexture *texture, bool fullbright);
 	void SetTransform(const TriMatrix *objectToClip) { mObjectToClip = objectToClip; }
 	void SetColor(uint32_t bgra, uint8_t palindex);
 	void DrawArray(const TriVertex *vertices, int vcount, PolyDrawMode mode = PolyDrawMode::Triangles);
@@ -128,7 +129,7 @@ private:
 	uint8_t mStencilWriteValue = 0;
 	const uint8_t *mColormaps = nullptr;
 	float mClipPlane[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	TriBlendMode mBlendMode = TriBlendMode::Copy;
+	TriBlendMode mBlendMode = TriBlendMode::FillOpaque;
 	uint32_t mLight = 0;
 	uint32_t mSubsectorDepth = 0;
 	uint32_t mColor = 0;
