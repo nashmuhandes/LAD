@@ -140,12 +140,16 @@ public:
 
 protected:
    FName m_Name;
-   int m_Args[5];
-   double m_Param;
-   DVector3 m_Pos;
+   int m_Args[5] = { 0,0,0,0,0 };
+   double m_Param = 0;
+   DVector3 m_Pos = { 0,0,0 };
    ELightType m_type;
-   int8_t m_attenuate;
-   bool m_subtractive, m_additive, m_halo, m_dontlightself, m_dontlightactors;
+   int8_t m_attenuate = -1;
+   bool m_subtractive = false;
+   bool m_additive = false;
+   bool m_halo = false;
+   bool m_dontlightself = false;
+   bool m_dontlightactors = false;
    bool m_swapped = false;
 };
 
@@ -161,16 +165,6 @@ FLightDefaults::FLightDefaults(FName name, ELightType type)
 {
 	m_Name = name;
 	m_type = type;
-
-	m_Pos.Zero();
-	memset(m_Args, 0, sizeof(m_Args));
-	m_Param = 0;
-
-	m_subtractive = false;
-	m_additive = false;
-	m_halo = false;
-	m_dontlightself = false;
-	m_attenuate = -1;
 }
 
 void FLightDefaults::ApplyProperties(ADynamicLight * light) const
@@ -1058,7 +1052,7 @@ void InitializeActorLights()
 			void *mem = ClassDataAllocator.Alloc(sizeof(FInternalLightAssociation));
 			FInternalLightAssociation * iasso = new(mem) FInternalLightAssociation(&LightAssociations[i]);
 			if (iasso->Light() != nullptr)
-				ti->LightAssociations.Push(iasso);
+				ti->ActorInfo()->LightAssociations.Push(iasso);
 		}
 	}
 	// we don't need the parser data for the light associations anymore
@@ -1124,7 +1118,7 @@ void AActor::AttachLight(unsigned int count, const FLightDefaults *lightdef)
 
 void AActor::SetDynamicLights()
 {
-	TArray<FInternalLightAssociation *> & LightAssociations = GetClass()->LightAssociations;
+	TArray<FInternalLightAssociation *> & LightAssociations = GetInfo()->LightAssociations;
 	unsigned int count = 0;
 
 	if (state == NULL) return;
