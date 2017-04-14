@@ -42,6 +42,9 @@ struct _ native	// These are the global variables, the struct is only here to av
 	native readonly int Net_Arbitrator;
 	native ui BaseStatusBar StatusBar;
 	native readonly Weapon WP_NOCHANGE;
+
+	// [LAD]
+	native readonly int saveCount;
 	
 }
 

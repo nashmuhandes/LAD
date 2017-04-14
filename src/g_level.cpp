@@ -481,6 +481,9 @@ void G_InitNew (const char *mapname, bool bTitleLevel)
 		for (i = 0; i < MAXPLAYERS; i++)
 			players[i].playerstate = PST_ENTER;	// [BC]
 
+		// [LAD]
+		saveCount = 0;
+
 		STAT_StartNewGame(mapname);
 	}
 

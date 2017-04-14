@@ -254,4 +254,7 @@ extern int i_compatflags, i_compatflags2, ii_compatflags, ii_compatflags2, ib_co
 // Filters from AddAutoloadFiles(). Used to filter files from archives.
 extern FString LumpFilterIWAD;
 
+// [LAD]
+extern int saveCount;
+
 #endif
