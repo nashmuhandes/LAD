@@ -124,9 +124,6 @@ struct FLevelLocals
 	{
 		return headgamenode;
 	}
-
-	// [LAD]
-	int saveCount;
 };
 
 extern FLevelLocals level;

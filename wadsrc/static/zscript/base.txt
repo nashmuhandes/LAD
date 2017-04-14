@@ -534,9 +534,6 @@ struct LevelLocals native
 		int sec = Thinker.Tics2Seconds(totals? totaltime : time); 
 		return String.Format("%02d:%02d:%02d", sec / 3600, (sec % 3600) / 60, sec % 60);
 	}
-
-	// [LAD]
-	native readonly int saveCount;
 }
 
 struct StringTable native

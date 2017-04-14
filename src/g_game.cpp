@@ -2233,14 +2233,6 @@ static void PutSaveComment (FSerializer &arc)
 		levelTime/3600, (levelTime%3600)/60, levelTime%60);
 	comment[len+16] = 0;
 
-	// [LAD]
-	int sc = level.saveCount;
-	len = (uint16_t)strlen(comment);
-	mysnprintf(comment + len, countof(comment) - len,
-		"\nSaves: %04d",
-		sc);
-	comment[len + 12] = 0;
-
 	// Write out the comment
 	arc.AddString("Comment", comment);
 }
@@ -2282,9 +2274,6 @@ void G_DoSaveGame (bool okForQuicksave, FString filename, const char *descriptio
 	insave = true;
 	try
 	{
-		// [LAD] increment save counter
-		level.saveCount++;
-
 		G_SnapshotLevel();
 	}
 	catch(CRecoverableError &err)

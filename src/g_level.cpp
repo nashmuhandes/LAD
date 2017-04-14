@@ -472,9 +472,6 @@ void G_InitNew (const char *mapname, bool bTitleLevel)
 		level.maptime = 0;
 		level.totaltime = 0;
 
-		// [LAD]
-		level.saveCount = 0; 
-
 		if (!multiplayer || !deathmatch)
 		{
 			InitPlayerClasses ();
@@ -1927,9 +1924,6 @@ DEFINE_FIELD_BIT(FLevelLocals, flags2, nomonsters, LEVEL2_NOMONSTERS)
 DEFINE_FIELD_BIT(FLevelLocals, flags2, frozen, LEVEL2_FROZEN)
 DEFINE_FIELD_BIT(FLevelLocals, flags2, infinite_flight, LEVEL2_INFINITE_FLIGHT)
 DEFINE_FIELD_BIT(FLevelLocals, flags2, no_dlg_freeze, LEVEL2_CONV_SINGLE_UNFREEZE)
-
-// [LAD]
-DEFINE_FIELD(FLevelLocals, saveCount)
 
 //==========================================================================
 //
