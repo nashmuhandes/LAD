@@ -244,7 +244,7 @@ bool P_CreateCeiling(sector_t *sec, DCeiling::ECeiling type, line_t *line, int t
 	}
 	
 	// new door thinker
-	DCeiling *ceiling = new DCeiling (sec, speed, speed2, silent & ~4);
+	DCeiling *ceiling = Create<DCeiling> (sec, speed, speed2, silent & ~4);
 	vertex_t *spot = sec->Lines[0]->v1;
 
 	switch (type)
@@ -585,9 +585,9 @@ bool EV_CeilingCrushStop (int tag, bool remove)
 	return rtn;
 }
 
-bool EV_StopCeiling(int tag)
+bool EV_StopCeiling(int tag, line_t *line)
 {
-	FSectorTagIterator it(tag);
+	FSectorTagIterator it(tag, line);
 	while (int sec = it.Next())
 	{
 		if (level.sectors[sec].ceilingdata)

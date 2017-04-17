@@ -52,7 +52,6 @@
 #include "gl/renderer/gl_2ddrawer.h"
 #include "gl_debug.h"
 
-IMPLEMENT_CLASS(OpenGLFrameBuffer, false, false)
 EXTERN_CVAR (Float, vid_brightness)
 EXTERN_CVAR (Float, vid_contrast)
 EXTERN_CVAR (Bool, vid_vsync)
@@ -121,7 +120,10 @@ void OpenGLFrameBuffer::InitializeState()
 
 	if (first)
 	{
-		ogl_LoadFunctions();
+		if (ogl_LoadFunctions() == ogl_LOAD_FAILED)
+		{
+			I_FatalError("Failed to load OpenGL functions.");
+		}
 	}
 
 	gl_LoadExtensions();

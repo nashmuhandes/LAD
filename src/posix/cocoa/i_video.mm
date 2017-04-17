@@ -632,7 +632,6 @@ DFrameBuffer* CocoaVideo::CreateFrameBuffer(const int width, const int height, c
 		}
 
 		old->GetFlash(flashColor, flashAmount);
-		old->ObjectFlags |= OF_YesReallyDelete;
 
 		if (old == screen)
 		{
@@ -889,7 +888,10 @@ CocoaFrameBuffer::CocoaFrameBuffer(int width, int height, bool bgra, bool fullsc
 
 	if (!isOpenGLInitialized)
 	{
-		ogl_LoadFunctions();
+		if (ogl_LoadFunctions() == ogl_LOAD_FAILED)
+		{
+			I_FatalError("Failed to load OpenGL functions.");
+		}
 		isOpenGLInitialized = true;
 	}
 
@@ -1306,7 +1308,6 @@ void I_ShutdownGraphics()
 {
 	if (NULL != screen)
 	{
-		screen->ObjectFlags |= OF_YesReallyDelete;
 		delete screen;
 		screen = NULL;
 	}

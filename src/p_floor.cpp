@@ -282,7 +282,7 @@ bool P_CreateFloor(sector_t *sec, DFloor::EFloor floortype, line_t *line,
 
 	// new floor thinker
 	rtn = true;
-	floor = new DFloor(sec);
+	floor = Create<DFloor>(sec);
 	floor->m_Type = floortype;
 	floor->m_Crush = crush;
 	floor->m_Hexencrush = hexencrush;
@@ -543,10 +543,10 @@ bool EV_DoFloor (DFloor::EFloor floortype, line_t *line, int tag,
 //
 //==========================================================================
 
-bool EV_FloorCrushStop (int tag)
+bool EV_FloorCrushStop (int tag, line_t *line)
 {
 	int secnum;
-	FSectorTagIterator it(tag);
+	FSectorTagIterator it(tag, line);
 	while ((secnum = it.Next()) >= 0)
 	{
 		sector_t *sec = &level.sectors[secnum];
@@ -563,9 +563,9 @@ bool EV_FloorCrushStop (int tag)
 }
 
 // same as above but stops any floor mover that was active on the given sector.
-bool EV_StopFloor(int tag)
+bool EV_StopFloor(int tag, line_t *line)
 {
-	FSectorTagIterator it(tag);
+	FSectorTagIterator it(tag, line);
 	while (int sec = it.Next())
 	{
 		if (level.sectors[sec].floordata)
@@ -631,7 +631,7 @@ bool EV_BuildStairs (int tag, DFloor::EStair type, line_t *line,
 		
 		// new floor thinker
 		rtn = true;
-		floor = new DFloor (sec);
+		floor = Create<DFloor> (sec);
 		floor->m_Direction = (type == DFloor::buildUp) ? 1 : -1;
 		stairstep = stairsize * floor->m_Direction;
 		floor->m_Type = DFloor::buildStair;	//jff 3/31/98 do not leave uninited
@@ -734,7 +734,7 @@ bool EV_BuildStairs (int tag, DFloor::EStair type, line_t *line,
 				secnum = newsecnum;
 
 				// create and initialize a thinker for the next step
-				floor = new DFloor (sec);
+				floor = Create<DFloor> (sec);
 				floor->StartFloorSound ();
 				floor->m_Direction = (type == DFloor::buildUp) ? 1 : -1;
 				floor->m_FloorDestDist = sec->floorplane.PointToDist (DVector2(0, 0), height);
@@ -813,7 +813,7 @@ bool EV_DoDonut (int tag, line_t *line, double pillarspeed, double slimespeed)
 			s3 = ln->backsector;
 			
 			//	Spawn rising slime
-			floor = new DFloor (s2);
+			floor = Create<DFloor> (s2);
 			floor->m_Type = DFloor::donutRaise;
 			floor->m_Crush = -1;
 			floor->m_Hexencrush = false;
@@ -828,7 +828,7 @@ bool EV_DoDonut (int tag, line_t *line, double pillarspeed, double slimespeed)
 			floor->StartFloorSound ();
 			
 			//	Spawn lowering donut-hole
-			floor = new DFloor (s1);
+			floor = Create<DFloor> (s1);
 			floor->m_Type = DFloor::floorLowerToNearest;
 			floor->m_Crush = -1;
 			floor->m_Hexencrush = false;
@@ -1017,7 +1017,7 @@ bool EV_DoElevator (line_t *line, DElevator::EElevator elevtype,
 
 		// create and initialize new elevator thinker
 		rtn = true;
-		elevator = new DElevator (sec);
+		elevator = Create<DElevator> (sec);
 		elevator->m_Type = elevtype;
 		elevator->m_Speed = speed;
 		elevator->StartFloorSound ();
@@ -1327,12 +1327,12 @@ bool EV_StartWaggle (int tag, line_t *line, int height, int speed, int offset,
 		retCode = true;
 		if (ceiling)
 		{
-			waggle = new DCeilingWaggle (sector);
+			waggle = Create<DCeilingWaggle> (sector);
 			waggle->m_OriginalDist = sector->ceilingplane.fD();
 		}
 		else
 		{
-			waggle = new DFloorWaggle (sector);
+			waggle = Create<DFloorWaggle> (sector);
 			waggle->m_OriginalDist = sector->floorplane.fD();
 		}
 		waggle->m_Accumulator = offset;

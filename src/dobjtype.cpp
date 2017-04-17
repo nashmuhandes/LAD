@@ -226,7 +226,7 @@ void PClass::StaticInit ()
 
 	// WP_NOCHANGE must point to a valid object, although it does not need to be a weapon.
 	// A simple DObject is enough to give the GC the ability to deal with it, if subjected to it.
-	WP_NOCHANGE = (AWeapon*)new DObject;
+	WP_NOCHANGE = (AWeapon*)Create<DObject>();
 	WP_NOCHANGE->Release();
 }
 
@@ -242,7 +242,6 @@ void PClass::StaticShutdown ()
 {
 	if (WP_NOCHANGE != nullptr)
 	{
-		WP_NOCHANGE->ObjectFlags |= OF_YesReallyDelete;
 		delete WP_NOCHANGE;
 	}
 
@@ -268,6 +267,7 @@ void PClass::StaticShutdown ()
 	{
 		p.PendingWeapon = nullptr;
 	}
+	Namespaces.ReleaseSymbols();
 
 	// This must be done in two steps because the native classes are not ordered by inheritance,
 	// so all meta data must be gone before deleting the actual class objects.
@@ -276,7 +276,6 @@ void PClass::StaticShutdown ()
 	// Unless something went wrong, anything left here should be class and type objects only, which do not own any scripts.
 	bShutdown = true;
 	TypeTable.Clear();
-	Namespaces.ReleaseSymbols();
 	ClassDataAllocator.FreeAllBlocks();
 	AllClasses.Clear();
 	PClassActor::AllActorClasses.Clear();
