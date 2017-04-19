@@ -42,7 +42,6 @@
 #include <memory>
 #include <chrono>
 
-#include "except.h"
 #include "doomstat.h"
 #include "templates.h"
 #include "oalsound.h"
@@ -121,6 +120,10 @@ void I_BuildALDeviceList(FOptionValues *opt)
 	}
 #endif
 }
+
+
+ReverbContainer *ForcedEnvironment;
+
 
 #ifndef NO_OPENAL
 
@@ -629,8 +632,6 @@ public:
 	}
 };
 
-
-ReverbContainer *ForcedEnvironment;
 
 #define AREA_SOUND_RADIUS  (32.f)
 
