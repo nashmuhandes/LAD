@@ -1195,6 +1195,8 @@ std::pair<SoundHandle,bool> OpenALSoundRenderer::LoadSoundRaw(uint8_t *sfxdata, 
 	return std::make_pair(retval, channels==1);
 }
 
+void FindLoopTags(FileReader *fr, uint32_t *start, bool *startass, uint32_t *end, bool *endass);
+
 std::pair<SoundHandle,bool> OpenALSoundRenderer::LoadSound(uint8_t *sfxdata, int length, bool monoize)
 {
 	SoundHandle retval = { NULL };
@@ -1203,20 +1205,29 @@ std::pair<SoundHandle,bool> OpenALSoundRenderer::LoadSound(uint8_t *sfxdata, int
 	ChannelConfig chans;
 	SampleType type;
 	int srate;
+	uint32_t loop_start = 0, loop_end = ~0u;
+	bool startass = false, endass = false;
+
+	if (!memcmp(sfxdata, "OggS", 4) || !memcmp(sfxdata, "FLAC", 4))
+	{
+		MemoryReader mr((char*)sfxdata, length);
+		FindLoopTags(&mr, &loop_start, &startass, &loop_end, &endass);
+	}
 
 	std::unique_ptr<SoundDecoder> decoder(CreateDecoder(&reader));
 	if(!decoder) return std::make_pair(retval, true);
 
 	decoder->getInfo(&srate, &chans, &type);
+	int samplesize = 1;
 	if(chans == ChannelConfig_Mono || monoize)
 	{
-		if(type == SampleType_UInt8) format = AL_FORMAT_MONO8;
-		if(type == SampleType_Int16) format = AL_FORMAT_MONO16;
+		if(type == SampleType_UInt8) format = AL_FORMAT_MONO8, samplesize = 1;
+		if(type == SampleType_Int16) format = AL_FORMAT_MONO16, samplesize = 2;
 	}
 	else if(chans == ChannelConfig_Stereo)
 	{
-		if(type == SampleType_UInt8) format = AL_FORMAT_STEREO8;
-		if(type == SampleType_Int16) format = AL_FORMAT_STEREO16;
+		if(type == SampleType_UInt8) format = AL_FORMAT_STEREO8, samplesize = 2;
+		if(type == SampleType_Int16) format = AL_FORMAT_STEREO16, samplesize = 4;
 	}
 
 	if(format == AL_NONE)
@@ -1268,6 +1279,21 @@ std::pair<SoundHandle,bool> OpenALSoundRenderer::LoadSound(uint8_t *sfxdata, int
 		getALError();
 		return std::make_pair(retval, true);
 	}
+
+	if (!startass) loop_start = Scale(loop_start, srate, 1000);
+	if (!endass) loop_end = Scale(loop_end, srate, 1000);
+	const uint32_t samples = data.Size() / samplesize;
+	if (loop_start > samples) loop_start = 0;
+	if (loop_end > samples) loop_end = samples;
+
+	if ((loop_start > 0 || loop_end > 0) && loop_end > loop_start && AL.SOFT_loop_points)
+	{
+		ALint loops[2] = { static_cast<ALint>(loop_start), static_cast<ALint>(loop_end) };
+		DPrintf(DMSG_NOTIFY, "Setting loop points %d -> %d\n", loops[0], loops[1]);
+		alBufferiv(buffer, AL_LOOP_POINTS_SOFT, loops);
+		// no console messages here, please!
+	}
+
 
 	retval.data = MAKE_PTRID(buffer);
 	return std::make_pair(retval, (chans == ChannelConfig_Mono || monoize));
