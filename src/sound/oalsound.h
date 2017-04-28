@@ -5,6 +5,7 @@
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <unordered_map>
 
 #include "i_sound.h"
 #include "s_sound.h"
@@ -86,7 +87,8 @@ public:
 
 	virtual void SetSfxVolume(float volume);
 	virtual void SetMusicVolume(float volume);
-	virtual std::pair<SoundHandle,bool> LoadSound(uint8_t *sfxdata, int length, bool monoize);
+	virtual std::pair<SoundHandle, bool> LoadSound(uint8_t *sfxdata, int length, bool monoize, FSoundLoadBuffer *buffer);
+	virtual std::pair<SoundHandle,bool> LoadSoundBuffered(FSoundLoadBuffer *buffer,  bool monoize);
 	virtual std::pair<SoundHandle,bool> LoadSoundRaw(uint8_t *sfxdata, int length, int frequency, int channels, int bits, int loopstart, int loopend = -1, bool monoize = false);
 	virtual void UnloadSound(SoundHandle sfx);
 	virtual unsigned int GetMSLength(SoundHandle sfx);
@@ -200,8 +202,10 @@ private:
     void RemoveStream(OpenALSoundStream *stream);
 
 	void LoadReverb(const ReverbContainer *env);
+	void FreeSource(ALuint source);
 	void PurgeStoppedSources();
 	static FSoundChan *FindLowestChannel();
+	void ForceStopChannel(FISoundChannel *chan);
 
     std::thread StreamThread;
     std::mutex StreamLock;
@@ -221,6 +225,10 @@ private:
 	TArray<ALuint> PausableSfx;
 	TArray<ALuint> ReverbSfx;
 	TArray<ALuint> SfxGroup;
+
+	int UpdateTimeMS;
+	using SourceTimeMap = std::unordered_map<ALuint,int64_t>;
+	SourceTimeMap FadingSources;
 
 	const ReverbContainer *PrevEnvironment;
 

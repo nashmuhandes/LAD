@@ -86,6 +86,7 @@
 #include "serializer.h"
 #include "vm.h"
 #include "events.h"
+#include "dobjgc.h"
 
 #include "gi.h"
 
@@ -181,11 +182,14 @@ CCMD (map)
 	}
 	if (argv.argc() > 1)
 	{
+		const char *mapname = argv[1];
+		if (!strcmp(mapname, "*")) mapname = level.MapName.GetChars();
+
 		try
 		{
-			if (!P_CheckMapData(argv[1]))
+			if (!P_CheckMapData(mapname))
 			{
-				Printf ("No map %s\n", argv[1]);
+				Printf ("No map %s\n", mapname);
 			}
 			else
 			{
@@ -199,7 +203,7 @@ CCMD (map)
 					deathmatch = true;
 					multiplayernext = true;
 				}
-				G_DeferedInitNew (argv[1]);
+				G_DeferedInitNew (mapname);
 			}
 		}
 		catch(CRecoverableError &error)
@@ -228,11 +232,14 @@ CCMD(recordmap)
 	}
 	if (argv.argc() > 2)
 	{
+		const char *mapname = argv[2];
+		if (!strcmp(mapname, "*")) mapname = level.MapName.GetChars();
+
 		try
 		{
-			if (!P_CheckMapData(argv[2]))
+			if (!P_CheckMapData(mapname))
 			{
-				Printf("No map %s\n", argv[2]);
+				Printf("No map %s\n", mapname);
 			}
 			else
 			{
@@ -246,7 +253,7 @@ CCMD(recordmap)
 					deathmatch = true;
 					multiplayernext = true;
 				}
-				G_DeferedInitNew(argv[2]);
+				G_DeferedInitNew(mapname);
 				gameaction = ga_recordgame;
 				newdemoname = argv[1];
 				newdemomap = argv[2];
@@ -1022,7 +1029,7 @@ void G_DoLoadLevel (int position, bool autosave)
 	level.starttime = gametic;
 
 	G_UnSnapshotLevel (!savegamerestore);	// [RH] Restore the state of the level.
-	G_FinishTravel ();
+	int pnumerr = G_FinishTravel ();
 	// For each player, if they are viewing through a player, make sure it is themselves.
 	for (int ii = 0; ii < MAXPLAYERS; ++ii)
 	{
@@ -1063,6 +1070,10 @@ void G_DoLoadLevel (int position, bool autosave)
 	if (autosave && !savegamerestore && disableautosave < 1)
 	{
 		DAutosaver GCCNOWARN *dummy = Create<DAutosaver>();
+	}
+	if (pnumerr > 0)
+	{
+		I_Error("no start for player %d found.", pnumerr);
 	}
 }
 
@@ -1227,13 +1238,14 @@ void G_StartTravel ()
 //
 //==========================================================================
 
-void G_FinishTravel ()
+int G_FinishTravel ()
 {
 	TThinkerIterator<APlayerPawn> it (STAT_TRAVELLING);
 	APlayerPawn *pawn, *pawndup, *oldpawn, *next;
 	AInventory *inv;
 	FPlayerStart *start;
 	int pnum;
+	int failnum = 0;
 
 	// 
 	APlayerPawn* pawns[MAXPLAYERS];
@@ -1260,8 +1272,7 @@ void G_FinishTravel ()
 			else
 			{
 				// Could not find a start for this player at all. This really should never happen but if it does, let's better abort.
-				DThinker::DestroyThinkersInList(STAT_TRAVELLING);
-				I_Error ("No player %d start to travel to!\n", pnum + 1);
+				if (failnum == 0) failnum = pnum + 1;
 			}
 		}
 		oldpawn = pawndup;
@@ -1289,7 +1300,7 @@ void G_FinishTravel ()
 			pawn->Floorclip = pawndup->Floorclip;
 			pawn->waterlevel = pawndup->waterlevel;
 		}
-		else
+		else if (failnum == 0)	// In the failure case this may run into some undefined data.
 		{
 			P_FindFloorCeiling(pawn);
 		}
@@ -1339,6 +1350,7 @@ void G_FinishTravel ()
 	// Since this list is excluded from regular thinker cleaning, anything that may survive through here
 	// will endlessly multiply and severely break the following savegames or just simply crash on broken pointers.
 	DThinker::DestroyThinkersInList(STAT_TRAVELLING);
+	return failnum;
 }
  
 //==========================================================================
