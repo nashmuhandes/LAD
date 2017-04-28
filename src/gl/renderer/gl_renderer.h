@@ -184,6 +184,7 @@ public:
 	void DrawPresentTexture(const GL_IRECT &box, bool applyGamma);
 	void Flush();
 
+	void ApplyMenuBlur(); // [LAD]
 
 	bool StartOffscreen();
 	void EndOffscreen();
