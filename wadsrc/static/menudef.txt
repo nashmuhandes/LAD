@@ -309,6 +309,13 @@ OptionValue "OffOn"
 	1, "$OPTVAL_OFF"
 }
 
+OptionValue AutoOffOn
+{
+	-1, "$OPTVAL_AUTO"
+	0, "$OPTVAL_OFF"
+	1, "$OPTVAL_ON"
+}
+
 OptionMenuSettings
 {
 	// These can be overridden if a different menu fonts requires it.
@@ -699,7 +706,6 @@ OptionMenu "TrueColorOptions"
 	Option "$TCMNU_MINFILTER",				"r_minfilter", "OnOff"
 	Option "$TCMNU_MAGFILTER",				"r_magfilter", "OnOff"
 	Option "$TCMNU_MIPMAP",					"r_mipmap", "OnOff"
-	Option "$TCMNU_DYNLIGHTS",				"r_dynlights", "OnOff"
 }
 
 OptionMenu "SWROptions"
@@ -1629,6 +1635,7 @@ OptionMenu AdvSoundOptions
 {
 	Title "$ADVSNDMNU_TITLE"
 	Option "$ADVSNDMNU_SAMPLERATE",			"snd_samplerate", "SampleRates"
+	Option "$ADVSNDMNU_HRTF",				"snd_hrtf", "AutoOffOn"
 	StaticText " "
 	StaticText "$ADVSNDMNU_OPLSYNTHESIS",	1
 	Slider "$ADVSNDMNU_OPLNUMCHIPS", 		"opl_numchips", 1, 8, 1, 0
@@ -2086,7 +2093,8 @@ OptionMenu "GLTextureGLOptions"
 OptionMenu "GLLightOptions"
 {
 	Title "$GLLIGHTMNU_TITLE"
-	Option "$GLLIGHTMNU_LIGHTSENABLED",		gl_lights,						"YesNo"
+	Option "$TCMNU_DYNLIGHTS",				"r_dynlights", "OnOff"
+	Option "$GLLIGHTMNU_LIGHTSENABLED",		gl_lights,						"OnOff"
 	Option "$GLLIGHTMNU_LIGHTDEFS",			gl_attachedlights,				"YesNo"
 	Option "$GLLIGHTMNU_CLIPLIGHTS",		gl_lights_checkside,			"YesNo"
 	Option "$GLLIGHTMNU_LIGHTSPRITES",		gl_light_sprites,				"YesNo"
