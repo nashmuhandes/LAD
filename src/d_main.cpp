@@ -132,6 +132,7 @@ extern void M_SetDefaultMode ();
 extern void G_NewInit ();
 extern void SetupPlayerClasses ();
 extern void HUD_InitHud();
+void gl_PatchMenu();	// remove modern OpenGL options on old hardware.
 void DeinitMenus();
 const FIWADInfo *D_FindIWAD(TArray<FString> &wadfiles, const char *iwad, const char *basewad);
 
@@ -148,7 +149,7 @@ void ParseGLDefs();
 // PRIVATE FUNCTION PROTOTYPES ---------------------------------------------
 
 void D_DoomLoop ();
-static const char *BaseFileSearch (const char *file, const char *ext, bool lookfirstinprogdir=false);
+const char *BaseFileSearch (const char *file, const char *ext, bool lookfirstinprogdir=false);
 
 // EXTERNAL DATA DECLARATIONS ----------------------------------------------
 
@@ -1692,7 +1693,7 @@ static void D_AddDirectory (TArray<FString> &wadfiles, const char *dir)
 //
 //==========================================================================
 
-static const char *BaseFileSearch (const char *file, const char *ext, bool lookfirstinprogdir)
+const char *BaseFileSearch (const char *file, const char *ext, bool lookfirstinprogdir)
 {
 	static char wad[PATH_MAX];
 
@@ -2639,6 +2640,7 @@ void D_DoomMain (void)
 			}
 
 			V_Init2();
+			gl_PatchMenu();
 			UpdateJoystickMenu(NULL);
 
 			v = Args->CheckValue ("-loadgame");

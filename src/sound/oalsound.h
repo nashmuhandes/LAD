@@ -109,6 +109,12 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index);
 #endif
 #endif
 
+#ifndef AL_SOFT_source_spatialize
+#define AL_SOFT_source_spatialize
+#define AL_SOURCE_SPATIALIZE_SOFT                0x1214
+#define AL_AUTO_SOFT                             0x0002
+#endif
+
 
 class OpenALSoundStream;
 
@@ -169,8 +175,6 @@ public:
 	virtual void PrintDriversList();
 	virtual FString GatherStats();
 
-	virtual MIDIDevice* CreateMIDIDevice() const override;
-
 private:
     struct {
         bool EXT_EFX;
@@ -184,6 +188,7 @@ private:
         bool SOFT_deferred_updates;
         bool SOFT_loop_points;
         bool SOFT_source_resampler;
+        bool SOFT_source_spatialize;
     } AL;
 
 	// EFX Extension function pointer variables. Loaded after context creation
