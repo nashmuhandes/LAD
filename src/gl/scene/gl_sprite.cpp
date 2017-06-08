@@ -39,6 +39,7 @@
 #include "g_levellocals.h"
 #include "events.h"
 #include "actorinlines.h"
+#include "r_data/r_vanillatrans.h"
 
 #include "gl/system/gl_interface.h"
 #include "gl/system/gl_framebuffer.h"
@@ -810,7 +811,7 @@ void GLSprite::Process(AActor* thing, sector_t * sector, int thruportal)
 				sprangle = 0.;
 				rot = 0;
 			}
-			patch = sprites[spritenum].GetSpriteFrame(thing->frame, rot, sprangle, &mirror, !!(thing->flags7 & MF7_SPRITEFLIP));
+			patch = sprites[spritenum].GetSpriteFrame(thing->frame, rot, sprangle, &mirror, !!(thing->renderflags & RF_SPRITEFLIP));
 		}
 
 		if (!patch.isValid()) return;
@@ -826,7 +827,7 @@ void GLSprite::Process(AActor* thing, sector_t * sector, int thruportal)
 		gltexture->GetSpriteRect(&r);
 
 		// [SP] SpriteFlip
-		if (thing->flags7 & MF7_SPRITEFLIP)
+		if (thing->renderflags & RF_SPRITEFLIP)
 			thing->renderflags ^= RF_XFLIP;
 
 		if (mirror ^ !!(thing->renderflags & RF_XFLIP))
@@ -841,7 +842,7 @@ void GLSprite::Process(AActor* thing, sector_t * sector, int thruportal)
 			ur = gltexture->GetSpriteUL();
 		}
 
-		if (thing->flags7 & MF7_SPRITEFLIP) // [SP] Flip back
+		if (thing->renderflags & RF_SPRITEFLIP) // [SP] Flip back
 			thing->renderflags ^= RF_XFLIP;
 
 		r.Scale(sprscale.X, sprscale.Y);
@@ -1002,7 +1003,18 @@ void GLSprite::Process(AActor* thing, sector_t * sector, int thruportal)
 	{
 		trans = 1.f;
 	}
-
+	if (r_UseVanillaTransparency)
+	{
+		// [SP] "canonical transparency" - with the flip of a CVar, disable transparency for Doom objects,
+		//   and disable 'additive' translucency for certain objects from other games.
+		if (thing->renderflags & RF_ZDOOMTRANS)
+		{
+			trans = 1.f;
+			RenderStyle.BlendOp = STYLEOP_Add;
+			RenderStyle.SrcAlpha = STYLEALPHA_One;
+			RenderStyle.DestAlpha = STYLEALPHA_Zero;
+		}
+	}
 	if (trans >= 1.f - FLT_EPSILON && RenderStyle.BlendOp != STYLEOP_Shadow && (
 		(RenderStyle.SrcAlpha == STYLEALPHA_One && RenderStyle.DestAlpha == STYLEALPHA_Zero) ||
 		(RenderStyle.SrcAlpha == STYLEALPHA_Src && RenderStyle.DestAlpha == STYLEALPHA_InvSrc)
