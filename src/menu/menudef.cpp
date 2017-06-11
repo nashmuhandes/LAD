@@ -54,6 +54,7 @@
 #include "vm.h"
 #include "types.h"
 #include "gameconfigfile.h"
+#include "m_argv.h"
 
 
 
@@ -512,7 +513,7 @@ static void ParseListMenuBody(FScanner &sc, DListMenuDescriptor *desc)
 static bool CheckCompatible(DMenuDescriptor *newd, DMenuDescriptor *oldd)
 {
 	if (oldd->mClass == nullptr) return true;
-	return oldd->mClass == newd->mClass;
+	return newd->mClass->IsDescendantOf(oldd->mClass);
 }
 
 static bool ReplaceMenu(FScanner &sc, DMenuDescriptor *desc)
@@ -520,6 +521,12 @@ static bool ReplaceMenu(FScanner &sc, DMenuDescriptor *desc)
 	DMenuDescriptor **pOld = MenuDescriptors.CheckKey(desc->mMenuName);
 	if (pOld != nullptr && *pOld != nullptr) 
 	{
+		if ((*pOld)->mProtected)
+		{
+			sc.ScriptMessage("Cannot replace protected menu %s!", desc->mMenuName.GetChars());
+			return true;
+		}
+
 		if (!CheckCompatible(desc, *pOld))
 		{
 			sc.ScriptMessage("Tried to replace menu '%s' with a menu of different type", desc->mMenuName.GetChars());
@@ -874,6 +881,7 @@ static void ParseOptionMenu(FScanner &sc)
 	desc->mScrollTop = DefaultOptionMenuSettings->mScrollTop;
 	desc->mIndent =  DefaultOptionMenuSettings->mIndent;
 	desc->mDontDim =  DefaultOptionMenuSettings->mDontDim;
+	desc->mProtected = sc.CheckString("protected");
 
 	ParseOptionMenuBody(sc, desc);
 	ReplaceMenu(sc, desc);
@@ -980,6 +988,7 @@ void M_ParseMenuDefs()
 				sc.ScriptError("Unknown keyword '%s'", sc.String);
 			}
 		}
+		if (Args->CheckParm("-nocustommenu")) break;
 	}
 	DefaultListMenuClass = DefaultListMenuSettings->mClass;
 	DefaultListMenuSettings = nullptr;
