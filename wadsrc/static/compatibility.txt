@@ -344,8 +344,35 @@ F481922F4881F74760F3C0437FD5EDD0 // map03
 
 8B2AC8D4DB4A49A5DCCBB067E04434D6 // The Hell Factory Hub One, map04
 65A1EB4C87386F290816660A52932FF1 // Master Levels, garrison.wad
+3DEE4EFEFAF3260C800A30734F54CE75 // Hellbound, map14
 {
 	rebuildnodes
+}
+
+3D1E36E50F5A8D289E15433941605224 // Master Levels, catwalk.wad
+{
+	// make it impossible to open door to 1-way bridge before getting red key
+	setsectortag 35 0 // existing tag must be cleared before new one can be set
+	setsectortag 35 15
+	setactivation 605 1 // SPAC_PCross
+	setactivation 606 1
+	setactivation 607 1
+	setactivation 608 1
+	setlinespecial 605 Door_Open 15 64 0 0 0 // fast, stay open
+	setlinespecial 606 Door_Open 15 64 0 0 0
+	setlinespecial 607 Door_Open 15 64 0 0 0
+	setlinespecial 608 Door_Open 15 64 0 0 0
+}
+
+3B9CAA02952F405269353FAAD8F8EC33 // Master Levels, nessus.wad
+{
+	// move secret sector from too-thin doorframe to BFG closet
+	setsectorspecial 211 0
+	setsectorspecial 212 1024
+	// lower floor a bit so secret sector can be entered fully
+	setsectoroffset 212 floor -16
+	// make secret door stay open so you can't get locked in closet
+	setlinespecial 1008 Door_Open 0 64 0 0 0
 }
 
 1891E029994B023910CFE0B3209C3CDB // Ultimate Simplicity, map07
@@ -394,9 +421,47 @@ B9DFF13207EACAC675C71D82624D0007 // XtheaterIII map01
 	DisablePushWindowCheck
 }
 
+DFC18B92BF3E8142B8684ECD8BD2EF06 // TNT: Evilution map15
+{
+	// raise up sector with its counterpart so 100% kills becomes possible
+	setsectortag 330 11
+}
+
+2C4A3356C5EB3526D2C72A4AA4B18A36 // TNT: Evilution map29
+{
+	// remove mancubus who always gets stuck in teleport tunnel, preventing
+	// 100% kills on HMP
+	setthingflags 405 0
+}
+
 A53AE580A4AF2B5D0B0893F86914781E // TNT: Evilution map31
 {
 	setthingflags 470 2016
+}
+
+D99AD22FF21A41B4EECDB3A7C803D75E // TNT: Evilution map32
+{
+	// door can close permanently; make switch that opens it repeatable
+	setlineflags 872 0x200
+	// switch should only open way to red key, don't lower bars yet,
+	// instead make line just before red key open bars
+	setsectortag 197 0
+	setsectortag 197 8
+	setlinespecial 1279 Floor_LowerToLowest 8 32 0 0 0
+	setactivation 1240 1 // SPAC_PCross
+	setlinespecial 1240 Floor_LowerToLowest 38 32 0 0 0
+}
+
+279BB50468FE9F5B36C6D821E4902369 // Plutonia Experiment map30
+{
+	// flag items in deathmatch-only area correctly so that 100% items
+	// are possible in solo
+	setthingflags 250 17
+	setthingflags 251 17
+	setthingflags 252 17
+	setthingflags 253 17
+	setthingflags 254 17
+	setthingflags 206 17
 }
 
 4CB7AAC5C43CF32BDF05FD36481C1D9F // Plutonia: Revisited map27
@@ -736,4 +801,10 @@ CA3773ED313E8899311F3DD0CA195A68 // e3m6
 	setsectortexture 145 floor F_CONCRP
 	setsectorlight 138 192
 	setwalltexture 3431 back top BRKGRY01
+}
+
+3FFAF2F624C1B4BB6F581DCF7B99CBA7 // hexen.wad MAP36
+7DC65D5029DD834481CD716B3D71388A // hexdd.wad MAP47
+{
+	polyobj
 }
