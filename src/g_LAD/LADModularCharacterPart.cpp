@@ -39,13 +39,13 @@ void ALADModularCharacterPart::Tick()
 {
 	Super::Tick();
 
-	if (tracer == nullptr)
+	if (!tracer)
 	{
 		return;
 	}
 
 	// warp to "attached" player
-	if (tracer != nullptr && tracer->IsKindOf(RUNTIME_CLASS(APlayerPawn)))
+	if (tracer && tracer->IsKindOf(RUNTIME_CLASS(APlayerPawn)))
 	{
 		int flags = WARPF_NOCHECKPOSITION | WARPF_ABSOLUTEPOSITION | WARPF_ABSOLUTEOFFSET | WARPF_INTERPOLATE;
 		double x = tracer->X(), y = tracer->Y(), z = tracer->Z();
