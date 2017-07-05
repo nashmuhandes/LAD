@@ -134,13 +134,16 @@ namespace swrenderer
 	void RenderTranslucentPass::DrawMaskedSingle(bool renew)
 	{
 		RenderPortal *renderportal = Thread->Portal.get();
+		DrawSegmentList *drawseglist = Thread->DrawSegments.get();
 
 		auto &sortedSprites = Thread->SpriteList->SortedSprites;
 		for (int i = sortedSprites.Size(); i > 0; i--)
 		{
-			if (sortedSprites[i - 1]->IsCurrentPortalUniq(renderportal->CurrentPortalUniq))
+			VisibleSprite *sprite = sortedSprites[i - 1];
+
+			if (sprite->IsCurrentPortalUniq(renderportal->CurrentPortalUniq))
 			{
-				sortedSprites[i - 1]->Render(Thread);
+				sprite->Render(Thread);
 			}
 		}
 
@@ -151,7 +154,6 @@ namespace swrenderer
 			Thread->Clip3D->fake3D |= FAKE3D_REFRESHCLIP;
 		}
 
-		DrawSegmentList *drawseglist = Thread->DrawSegments.get();
 		for (unsigned int index = 0; index != drawseglist->SegmentsCount(); index++)
 		{
 			DrawSegment *ds = drawseglist->Segment(index);
@@ -159,8 +161,6 @@ namespace swrenderer
 			// [ZZ] the same as above
 			if (ds->CurrentPortalUniq != renderportal->CurrentPortalUniq)
 				continue;
-			// kg3D - no fake segs
-			if (ds->fake) continue;
 			if (ds->maskedtexturecol != nullptr || ds->bFogBoundary)
 			{
 				RenderDrawSegment renderer(Thread);
@@ -173,6 +173,9 @@ namespace swrenderer
 
 	void RenderTranslucentPass::Render()
 	{
+		if (Thread->MainThread)
+			MaskedCycles.Clock();
+
 		CollectPortals();
 		Thread->SpriteList->Sort();
 		Thread->DrawSegments->BuildSegmentGroups();
@@ -223,5 +226,8 @@ namespace swrenderer
 			clip3d->DeleteHeights();
 			clip3d->fake3D = 0;
 		}
+
+		if (Thread->MainThread)
+			MaskedCycles.Unclock();
 	}
 }

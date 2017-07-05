@@ -217,7 +217,6 @@ namespace swrenderer
 			draw_segment->swall = nullptr;
 			draw_segment->bFogBoundary = false;
 			draw_segment->curline = nullptr;
-			draw_segment->fake = 0;
 			draw_segment->foggy = false;
 			memcpy(draw_segment->sprbottomclip, floorclip + pl->left, (pl->right - pl->left) * sizeof(short));
 			memcpy(draw_segment->sprtopclip, ceilingclip + pl->left, (pl->right - pl->left) * sizeof(short));
@@ -438,10 +437,8 @@ namespace swrenderer
 		Thread->Clip3D->ResetClip(); // reset clips (floor/ceiling)
 		if (!savedvisibility && viewpoint.camera) viewpoint.camera->renderflags &= ~RF_INVISIBLE;
 
-		PlaneCycles.Clock();
 		Thread->PlaneList->Render();
 		RenderPlanePortals();
-		PlaneCycles.Unclock();
 
 		double vzp = viewpoint.Pos.Z;
 
@@ -458,9 +455,7 @@ namespace swrenderer
 		if (Thread->MainThread)
 			NetUpdate();
 
-		MaskedCycles.Clock(); // [ZZ] count sprites in portals/mirrors along with normal ones.
 		Thread->TranslucentPass->Render();	  //      this is required since with portals there often will be cases when more than 80% of the view is inside a portal.
-		MaskedCycles.Unclock();
 
 		if (Thread->MainThread)
 			NetUpdate();
@@ -532,8 +527,8 @@ namespace swrenderer
 	
 	void RenderPortal::SetMainPortal()
 	{
-		WindowLeft = 0;
-		WindowRight = viewwidth;
+		WindowLeft = Thread->X1;
+		WindowRight = Thread->X2;
 		MirrorFlags = 0;
 		CurrentPortal = nullptr;
 		CurrentPortalUniq = 0;
