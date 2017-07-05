@@ -861,6 +861,12 @@ void DBaseStatusBar::DrawCrosshair ()
 		return;
 	}
 
+	// [LAD] Don't draw crosshair if menus are up
+	if (menuactive != MENU_Off)
+	{
+		return;
+	}
+
 	if (crosshairscale > 0.0f)
 	{
 		size = SCREENHEIGHT * crosshairscale / 200.;
