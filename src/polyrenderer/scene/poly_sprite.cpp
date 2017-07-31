@@ -35,6 +35,8 @@
 
 EXTERN_CVAR(Float, transsouls)
 EXTERN_CVAR(Int, r_drawfuzz)
+EXTERN_CVAR (Bool, r_debug_disable_vis_filter)
+extern uint32_t r_renderercaps;
 
 bool RenderPolySprite::GetLine(AActor *thing, DVector2 &left, DVector2 &right)
 {
@@ -178,6 +180,12 @@ bool RenderPolySprite::IsThingCulled(AActor *thing)
 	{
 		return true;
 	}
+
+	// check renderrequired vs ~r_rendercaps, if anything matches we don't support that feature,
+	// check renderhidden vs r_rendercaps, if anything matches we do support that feature and should hide it.
+	if (!r_debug_disable_vis_filter && (!!(thing->RenderRequired & ~r_renderercaps)) ||
+		(!!(thing->RenderHidden & r_renderercaps)))
+		return true;
 
 	// [LAD] don't draw self modular character parts in first person view
 	if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADModularCharacterPart)) && thing->tracer == PolyRenderer::Instance()->Viewpoint.camera)
