@@ -2124,7 +2124,7 @@ void OpenALSoundRenderer::UpdateListener(SoundListener *listener)
 				env = S_FindEnvironment(0x1600);
 				LoadReverb(env ? env : DefaultEnvironments[0]);
 
-				alFilterf(EnvFilters[0], AL_LOWPASS_GAIN, 1.f);
+				alFilterf(EnvFilters[0], AL_LOWPASS_GAIN, 0.1);
 				alFilterf(EnvFilters[0], AL_LOWPASS_GAINHF, 0.125f);
 				alFilterf(EnvFilters[1], AL_LOWPASS_GAIN, 1.f);
 				alFilterf(EnvFilters[1], AL_LOWPASS_GAINHF, 1.f);
