@@ -302,7 +302,8 @@ bool RenderPolySprite::IsThingCulled(AActor *thing)
 		return true;
 
 	// [LAD] don't draw self modular character parts in first person view
-	if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADModularCharacterPart)) && thing->tracer == PolyRenderer::Instance()->Viewpoint.camera)
+	if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADModularCharacterPart)) && thing->tracer == PolyRenderer::Instance()->Viewpoint.camera
+		&& !PolyRenderer::Instance()->Viewpoint.showviewer)
 	{
 		return true;
 	}
