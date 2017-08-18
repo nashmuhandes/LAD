@@ -7,7 +7,7 @@ a +moveleft
 d +moveright
 e +use
 r +reload
-shift "netevent SprintKeyHandler"
+shift "netevent EV_Sprint"
 alt +speed
 space +jump
 ctrl crouch
@@ -15,8 +15,8 @@ c chase
 mouse1 +attack
 mouse2 +altattack
 mouse3 +zoom
-mwheelup "netevent PreviousHotkeyItemHandler"
-mwheeldown "netevent NextHotkeyItemHandler"
+mwheelup "netevent EV_HotkeyItemPrev"
+mwheeldown "netevent EV_HotkeyItemNext"
 capslock "toggle cl_run"
 f1 menu_help
 f2 menu_save
@@ -34,9 +34,9 @@ sysrq screenshot
 y messagemode
 \ +showscores
 f12 spynext
-tab "netevent OpenCharacterMenu"
-t "netevent OpenRestMenu"
-f "netevent LightKeyHandler"
+tab "netevent EV_OpenCharacterMenu"
+t "netevent EV_OpenRestMenu"
+f "netevent EV_TogglePlayerLight"
 
 // Generic joystick buttons
 /*
