@@ -45,6 +45,7 @@ public:
 	double floor2 = 0.0;
 
 	const seg_t *LineSeg = nullptr;
+	const line_t *LineSegLine = nullptr;
 	const line_t *Line = nullptr;
 	const side_t *Side = nullptr;
 	side_t::ETexpart Texpart = side_t::mid;
@@ -54,6 +55,7 @@ public:
 	double UnpeggedCeil2 = 0.0;
 	FSWColormap *Colormap = nullptr;
 	bool Masked = false;
+	bool FogBoundary = false;
 	uint32_t SubsectorDepth = 0;
 	uint32_t StencilValue = 0;
 	PolyDrawLinePortal *Polyportal = nullptr;
@@ -62,12 +64,14 @@ private:
 	void ClampHeight(TriVertex &v1, TriVertex &v2);
 	FTexture *GetTexture();
 	int GetLightLevel();
+
+	static bool IsFogBoundary(sector_t *front, sector_t *back);
 };
 
 class PolyWallTextureCoordsU
 {
 public:
-	PolyWallTextureCoordsU(FTexture *tex, const seg_t *lineseg, const line_t *line, const side_t *side, side_t::ETexpart texpart);
+	PolyWallTextureCoordsU(FTexture *tex, const seg_t *lineseg, const line_t *linesegline, const side_t *side, side_t::ETexpart texpart);
 
 	double u1, u2;
 };
@@ -80,7 +84,7 @@ public:
 	double v1, v2;
 
 private:
-	void CalcVTopPart(FTexture *tex, const line_t *line, const side_t *side, double topz, double bottomz, double vscale, double yoffset);
-	void CalcVMidPart(FTexture *tex, const line_t *line, const side_t *side, double topz, double bottomz, double vscale, double yoffset);
-	void CalcVBottomPart(FTexture *tex, const line_t *line, const side_t *side, double topz, double bottomz, double unpeggedceil, double vscale, double yoffset);
+	void CalcVTopPart(FTexture *tex, const line_t *line, const side_t *side, double topz, double bottomz, double yoffset);
+	void CalcVMidPart(FTexture *tex, const line_t *line, const side_t *side, double topz, double bottomz, double yoffset);
+	void CalcVBottomPart(FTexture *tex, const line_t *line, const side_t *side, double topz, double bottomz, double unpeggedceil, double yoffset);
 };
