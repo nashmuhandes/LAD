@@ -24,31 +24,20 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "actor.h"
-#include "p_local.h"
-#include "d_player.h"
+#ifndef __G_LADMODULARCHARACTERPARTBASE_H__
+#define __G_LADMODULARCHARACTERPARTBASE_H__
 
-#include "LADModularCharacterPart.h"
+class AActor;
 
 //===========================================================================
 //
 //===========================================================================
-IMPLEMENT_CLASS(ALADModularCharacterPart, false, false)
-
-void ALADModularCharacterPart::Tick()
+class ALADModularCharacterPartBase : public AActor
 {
-	Super::Tick();
+	DECLARE_CLASS(ALADModularCharacterPartBase, AActor)
 
-	if (!tracer)
-	{
-		return;
-	}
+public:
+	void Tick();
+};
 
-	// warp to "attached" player
-	if (tracer && tracer->IsKindOf(RUNTIME_CLASS(APlayerPawn)))
-	{
-		int flags = WARPF_NOCHECKPOSITION | WARPF_ABSOLUTEPOSITION | WARPF_ABSOLUTEOFFSET | WARPF_INTERPOLATE;
-		double x = tracer->X(), y = tracer->Y(), z = tracer->Z();
-		P_Thing_Warp(this, tracer, x, y, z, 0.f, flags, 0, 0, 0.f);
-	}
-}
+#endif //__G_LADMODULARCHARACTERPARTBASE_H__

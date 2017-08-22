@@ -1,0 +1,1 @@
+class LADModularCharacterPartBase : Actor native {}
