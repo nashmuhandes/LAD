@@ -166,12 +166,13 @@ void GLWall::PutPortal(int ptype)
 		portal=GLPortal::FindPortal(seg->linedef);
 		if (!portal) portal=new GLMirrorPortal(seg->linedef);
 		portal->AddLine(this);
-		if (gl_mirror_envmap) 
+		/*if (gl_mirror_envmap) 
 		{
+			// [LAD] disabled due to messing up with modular character sprite draw order when decals and envmap existing in the same view
 			// draw a reflective layer over the mirror
 			type=RENDERWALL_MIRRORSURFACE;
 			gl_drawinfo->drawlists[GLDL_TRANSLUCENTBORDER].AddWall(this);
-		}
+		}*/
 		break;
 
 	case PORTALTYPE_LINETOLINE:
