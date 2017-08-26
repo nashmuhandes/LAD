@@ -38,12 +38,4 @@ IMPLEMENT_CLASS(ALADModularCharacterPartBase, false, false)
 void ALADModularCharacterPartBase::Tick()
 {
 	Super::Tick();
-
-	// warp to "attached" player
-	if (tracer && tracer->IsKindOf(RUNTIME_CLASS(APlayerPawn)))
-	{
-		int flags = WARPF_NOCHECKPOSITION | WARPF_ABSOLUTEPOSITION | WARPF_ABSOLUTEOFFSET | WARPF_INTERPOLATE;
-		double x = tracer->X(), y = tracer->Y(), z = tracer->Z();
-		P_Thing_Warp(this, tracer, x, y, z, 0.f, flags, 0, 0, 0.f);
-	}
 }
