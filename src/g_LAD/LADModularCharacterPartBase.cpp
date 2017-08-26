@@ -39,11 +39,6 @@ void ALADModularCharacterPartBase::Tick()
 {
 	Super::Tick();
 
-	if (!tracer)
-	{
-		return;
-	}
-
 	// warp to "attached" player
 	if (tracer && tracer->IsKindOf(RUNTIME_CLASS(APlayerPawn)))
 	{
