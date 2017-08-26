@@ -6,7 +6,7 @@ s +back
 a +moveleft
 d +moveright
 e +use
-r +reload
+r "netevent EV_ReadyWeapon"
 shift "netevent EV_Sprint"
 alt +speed
 space +jump
