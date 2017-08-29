@@ -684,8 +684,15 @@ void D_Display ()
 
 	if (viewactive)
 	{
-		R_SetFOV (r_viewpoint, players[consoleplayer].camera && players[consoleplayer].camera->player ?
-			players[consoleplayer].camera->player->FOV : 90.f);
+		DAngle fov = 90.f;
+		AActor *cam = players[consoleplayer].camera;
+		if (cam)
+		{
+			if (cam->player)
+				fov = cam->player->FOV;
+			else fov = cam->CameraFOV;
+		}
+		R_SetFOV(r_viewpoint, fov);
 	}
 
 	// [RH] change the screen mode if needed
@@ -981,6 +988,7 @@ void D_ErrorCleanup ()
 		G_CheckDemoStatus ();
 	Net_ClearBuffers ();
 	G_NewInit ();
+	M_ClearMenus ();
 	singletics = false;
 	playeringame[0] = 1;
 	players[0].playerstate = PST_LIVE;

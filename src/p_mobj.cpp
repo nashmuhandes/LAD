@@ -346,6 +346,7 @@ DEFINE_FIELD(AActor, Conversation)
 DEFINE_FIELD(AActor, DecalGenerator)
 DEFINE_FIELD(AActor, fountaincolor)
 DEFINE_FIELD(AActor, CameraHeight)
+DEFINE_FIELD(AActor, CameraFOV)
 DEFINE_FIELD(AActor, RadiusDamageFactor)
 DEFINE_FIELD(AActor, SelfDamageFactor)
 DEFINE_FIELD(AActor, StealthAlpha)
@@ -520,6 +521,7 @@ void AActor::Serialize(FSerializer &arc)
 		A("spriterotation", SpriteRotation)
 		("alternative", alternative)
 		A("cameraheight", CameraHeight)
+		A("camerafov", CameraFOV)
 		A("tag", Tag)
 		A("visiblestartangle",VisibleStartAngle)
 		A("visibleendangle",VisibleEndAngle)
@@ -6745,6 +6747,7 @@ bool P_CheckMissileSpawn (AActor* th, double maxdist)
 
 	newpos = th->Vec3Offset(newpos);
 	th->SetXYZ(newpos);
+	th->Sector = P_PointInSector(th->Pos());
 
 	FCheckPosition tm(!!(th->flags2 & MF2_RIP));
 
