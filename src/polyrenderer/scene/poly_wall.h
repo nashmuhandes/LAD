@@ -31,11 +31,11 @@ class PolyCull;
 class RenderPolyWall
 {
 public:
-	static bool RenderLine(const TriMatrix &worldToClip, const PolyClipPlane &clipPlane, PolyCull &cull, seg_t *line, sector_t *frontsector, uint32_t subsectorDepth, uint32_t stencilValue, std::vector<PolyTranslucentObject*> &translucentWallsOutput, std::vector<std::unique_ptr<PolyDrawLinePortal>> &linePortals, line_t *lastPortalLine);
-	static void Render3DFloorLine(const TriMatrix &worldToClip, const PolyClipPlane &clipPlane, PolyCull &cull, seg_t *line, sector_t *frontsector, uint32_t subsectorDepth, uint32_t stencilValue, F3DFloor *fakeFloor, std::vector<PolyTranslucentObject*> &translucentWallsOutput);
+	static bool RenderLine(const TriMatrix &worldToClip, const PolyClipPlane &clipPlane, seg_t *line, sector_t *frontsector, uint32_t subsectorDepth, uint32_t stencilValue, std::vector<PolyTranslucentObject*> &translucentWallsOutput, std::vector<std::unique_ptr<PolyDrawLinePortal>> &linePortals, line_t *lastPortalLine);
+	static void Render3DFloorLine(const TriMatrix &worldToClip, const PolyClipPlane &clipPlane, seg_t *line, sector_t *frontsector, uint32_t subsectorDepth, uint32_t stencilValue, F3DFloor *fakeFloor, std::vector<PolyTranslucentObject*> &translucentWallsOutput);
 
 	void SetCoords(const DVector2 &v1, const DVector2 &v2, double ceil1, double floor1, double ceil2, double floor2);
-	void Render(const TriMatrix &worldToClip, const PolyClipPlane &clipPlane, PolyCull &cull);
+	void Render(const TriMatrix &worldToClip, const PolyClipPlane &clipPlane);
 
 	DVector2 v1;
 	DVector2 v2;
@@ -48,13 +48,16 @@ public:
 	const line_t *LineSegLine = nullptr;
 	const line_t *Line = nullptr;
 	const side_t *Side = nullptr;
-	side_t::ETexpart Texpart = side_t::mid;
+	FTexture *Texture = nullptr;
+	side_t::ETexpart Wallpart = side_t::mid;
 	double TopTexZ = 0.0;
 	double BottomTexZ = 0.0;
 	double UnpeggedCeil1 = 0.0;
 	double UnpeggedCeil2 = 0.0;
 	FSWColormap *Colormap = nullptr;
 	bool Masked = false;
+	bool Additive = false;
+	double Alpha = 1.0;
 	bool FogBoundary = false;
 	uint32_t SubsectorDepth = 0;
 	uint32_t StencilValue = 0;
@@ -62,18 +65,17 @@ public:
 
 private:
 	void ClampHeight(TriVertex &v1, TriVertex &v2);
-	FTexture *GetTexture();
 	int GetLightLevel();
-
 	void DrawStripes(PolyDrawArgs &args, TriVertex *vertices);
 
 	static bool IsFogBoundary(sector_t *front, sector_t *back);
+	static FTexture *GetTexture(const line_t *Line, const side_t *Side, side_t::ETexpart texpart);
 };
 
 class PolyWallTextureCoordsU
 {
 public:
-	PolyWallTextureCoordsU(FTexture *tex, const seg_t *lineseg, const line_t *linesegline, const side_t *side, side_t::ETexpart texpart);
+	PolyWallTextureCoordsU(FTexture *tex, const seg_t *lineseg, const line_t *linesegline, const side_t *side, side_t::ETexpart wallpart);
 
 	double u1, u2;
 };
@@ -81,7 +83,7 @@ public:
 class PolyWallTextureCoordsV
 {
 public:
-	PolyWallTextureCoordsV(FTexture *tex, const line_t *line, const side_t *side, side_t::ETexpart texpart, double topz, double bottomz, double unpeggedceil, double topTexZ, double bottomTexZ);
+	PolyWallTextureCoordsV(FTexture *tex, const line_t *line, const side_t *side, side_t::ETexpart wallpart, double topz, double bottomz, double unpeggedceil, double topTexZ, double bottomTexZ);
 
 	double v1, v2;
 
