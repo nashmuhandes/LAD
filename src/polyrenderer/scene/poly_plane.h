@@ -1,5 +1,5 @@
 /*
-**  Handling drawing a plane (ceiling, floor)
+**  Polygon Doom software renderer
 **  Copyright (c) 2016 Magnus Norddahl
 **
 **  This software is provided 'as-is', without any express or implied
@@ -25,7 +25,6 @@
 #include "polyrenderer/drawers/poly_triangle.h"
 
 class PolyDrawSectorPortal;
-class PolyCull;
 
 class PolyPlaneUVTransform
 {
@@ -48,19 +47,19 @@ private:
 class RenderPolyPlane
 {
 public:
-	static void RenderPlanes(const TriMatrix &worldToClip, const PolyClipPlane &clipPlane, PolyCull &cull, subsector_t *sub, uint32_t stencilValue, double skyCeilingHeight, double skyFloorHeight, std::vector<std::unique_ptr<PolyDrawSectorPortal>> &sectorPortals);
+	static void RenderPlanes(PolyRenderThread *thread, const TriMatrix &worldToClip, const PolyClipPlane &clipPlane, subsector_t *sub, uint32_t stencilValue, double skyCeilingHeight, double skyFloorHeight, std::vector<std::unique_ptr<PolyDrawSectorPortal>> &sectorPortals);
 
 private:
-	void Render(const TriMatrix &worldToClip, const PolyClipPlane &clipPlane, PolyCull &cull, subsector_t *sub, uint32_t stencilValue, bool ceiling, double skyHeight, std::vector<std::unique_ptr<PolyDrawSectorPortal>> &sectorPortals);
-	void RenderSkyWalls(PolyDrawArgs &args, subsector_t *sub, sector_t *frontsector, FSectorPortal *portal, PolyDrawSectorPortal *polyportal, bool ceiling, double skyHeight, const PolyPlaneUVTransform &transform);
+	void Render(PolyRenderThread *thread, const TriMatrix &worldToClip, const PolyClipPlane &clipPlane, subsector_t *sub, uint32_t stencilValue, bool ceiling, double skyHeight, std::vector<std::unique_ptr<PolyDrawSectorPortal>> &sectorPortals);
+	void RenderSkyWalls(PolyRenderThread *thread, PolyDrawArgs &args, subsector_t *sub, sector_t *frontsector, FSectorPortal *portal, PolyDrawSectorPortal *polyportal, bool ceiling, double skyHeight, const PolyPlaneUVTransform &transform);
 };
 
 class Render3DFloorPlane
 {
 public:
-	static void RenderPlanes(const TriMatrix &worldToClip, const PolyClipPlane &clipPlane, subsector_t *sub, uint32_t stencilValue, uint32_t subsectorDepth, std::vector<PolyTranslucentObject *> &translucentObjects);
+	static void RenderPlanes(PolyRenderThread *thread, const TriMatrix &worldToClip, const PolyClipPlane &clipPlane, subsector_t *sub, uint32_t stencilValue, uint32_t subsectorDepth, std::vector<PolyTranslucentObject *> &translucentObjects);
 
-	void Render(const TriMatrix &worldToClip, const PolyClipPlane &clipPlane);
+	void Render(PolyRenderThread *thread, const TriMatrix &worldToClip, const PolyClipPlane &clipPlane);
 
 	subsector_t *sub = nullptr;
 	uint32_t stencilValue = 0;
@@ -69,4 +68,17 @@ public:
 	bool Masked = false;
 	bool Additive = false;
 	double Alpha = 1.0;
+};
+
+class PolyTranslucent3DFloorPlane : public PolyTranslucentObject
+{
+public:
+	PolyTranslucent3DFloorPlane(Render3DFloorPlane plane, uint32_t subsectorDepth) : PolyTranslucentObject(subsectorDepth, 1e7), plane(plane) { }
+
+	void Render(PolyRenderThread *thread, const TriMatrix &worldToClip, const PolyClipPlane &portalPlane) override
+	{
+		plane.Render(thread, worldToClip, portalPlane);
+	}
+
+	Render3DFloorPlane plane;
 };
