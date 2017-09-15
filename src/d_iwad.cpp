@@ -51,7 +51,6 @@
 #include "doomerrors.h"
 #include "v_text.h"
 
-
 CVAR (Bool, queryiwad, true, CVAR_ARCHIVE|CVAR_GLOBALCONFIG);
 CVAR (String, defaultiwad, "", CVAR_ARCHIVE|CVAR_GLOBALCONFIG);
 
@@ -489,7 +488,7 @@ void FIWadManager::ValidateIWADs()
 
 static bool havepicked = false;
 
-int FIWadManager::IdentifyVersion (TArray<FString> &wadfiles, const char *iwad, const char *zdoom_wad)
+int FIWadManager::IdentifyVersion (TArray<FString> &wadfiles, const char *iwad, const char *zdoom_wad, const char *optional_wad)
 {
 	const char *iwadparm = Args->CheckValue ("-iwad");
 	FString custwad;
@@ -582,7 +581,7 @@ int FIWadManager::IdentifyVersion (TArray<FString> &wadfiles, const char *iwad, 
 		// scan the list of found IWADs for a matching one for the current PWAD.
 		for (auto &found : mFoundWads)
 		{
-			if (mIWadInfos[found.mInfoIndex].IWadname.CompareNoCase(iwad) == 0 && mIWadInfos[found.mInfoIndex].prio > pickedprio)
+			if (found.mInfoIndex >= 0 && mIWadInfos[found.mInfoIndex].IWadname.CompareNoCase(iwad) == 0 && mIWadInfos[found.mInfoIndex].prio > pickedprio)
 			{
 				picks.Clear();
 				picks.Push(found);
@@ -673,6 +672,12 @@ int FIWadManager::IdentifyVersion (TArray<FString> &wadfiles, const char *iwad, 
 	wadfiles.Clear();
 	D_AddFile (wadfiles, zdoom_wad);
 
+	// [SP] Load non-free assets if available. This must be done before the IWAD.
+	if (D_AddFile(wadfiles, optional_wad))
+		Wads.SetIwadNum(2);
+	else
+		Wads.SetIwadNum(1);
+
 	if (picks[pick].mRequiredPath.IsNotEmpty())
 	{
 		D_AddFile (wadfiles, picks[pick].mRequiredPath);
@@ -708,9 +713,9 @@ int FIWadManager::IdentifyVersion (TArray<FString> &wadfiles, const char *iwad, 
 //
 //==========================================================================
 
-const FIWADInfo *FIWadManager::FindIWAD(TArray<FString> &wadfiles, const char *iwad, const char *basewad)
+const FIWADInfo *FIWadManager::FindIWAD(TArray<FString> &wadfiles, const char *iwad, const char *basewad, const char *optionalwad)
 {
-	int iwadType = IdentifyVersion(wadfiles, iwad, basewad);
+	int iwadType = IdentifyVersion(wadfiles, iwad, basewad, optionalwad);
 	//gameiwad = iwadType;
 	const FIWADInfo *iwad_info = &mIWadInfos[iwadType];
 	if (DoomStartupInfo.Name.IsEmpty()) DoomStartupInfo.Name = iwad_info->Name;

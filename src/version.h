@@ -96,13 +96,14 @@ const char *GetVersionString();
 // This is so that derivates can use the same savegame versions without worrying about engine compatibility
 #define GAMESIG "LAD"
 #define BASEWAD "engine.pk3"
+#define OPTIONALWAD "zd_extra.pk3"
 #define BASESF "gzdoom.sf2"
 
 // More stuff that needs to be different for derivatives.
 #define GAMENAME "LiveAnotherDay"
 #define GAMENAMELOWERCASE "liveanotherday"
-#define FORUM_URL "http://liveanotherday-game.com/"
-#define BUGS_FORUM_URL	"http://liveanotherday-game.com/forum/"
+#define FORUM_URL "http://forum.zdoom.org/"
+#define BUGS_FORUM_URL	"http://forum.zdoom.org/viewforum.php?f=2"
 
 #if defined(__APPLE__) || defined(_WIN32)
 #define GAME_DIR GAMENAME

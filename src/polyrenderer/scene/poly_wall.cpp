@@ -112,7 +112,7 @@ bool RenderPolyWall::RenderLine(PolyRenderThread *thread, const TriMatrix &world
 	}
 	else
 	{
-		sector_t *backsector = (line->backsector != line->frontsector) ? line->backsector : line->frontsector;
+		sector_t *backsector = line->backsector;
 
 		double backceilz1 = backsector->ceilingplane.ZatPoint(line->v1);
 		double backfloorz1 = backsector->floorplane.ZatPoint(line->v1);
@@ -204,6 +204,9 @@ void RenderPolyWall::Render3DFloorLine(PolyRenderThread *thread, const TriMatrix
 	double frontfloorz2 = fakeFloor->bottom.plane->ZatPoint(line->v2);
 	double topTexZ = fakeFloor->model->GetPlaneTexZ(sector_t::ceiling);
 	double bottomTexZ = fakeFloor->model->GetPlaneTexZ(sector_t::floor);
+
+	if (frontceilz1 <= frontfloorz1 || frontceilz2 <= frontfloorz2)
+		return;
 
 	RenderPolyWall wall;
 	wall.LineSeg = line;
