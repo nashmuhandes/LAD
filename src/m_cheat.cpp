@@ -221,10 +221,10 @@ void cht_DoCheat (player_t *player, int cheat)
 
 	case CHT_CHASECAM:
 		player->cheats ^= CF_CHASECAM;
-		if (player->cheats & CF_CHASECAM)
+		/*if (player->cheats & CF_CHASECAM) // [LAD] blank this out to reduce text spam
 			msg = "chasecam ON";
 		else
-			msg = "chasecam OFF";
+			msg = "chasecam OFF";*/
 		R_ResetViewInterpolation ();
 		break;
 
