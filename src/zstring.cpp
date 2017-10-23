@@ -66,8 +66,7 @@ FString::FString (const char *copyStr)
 {
 	if (copyStr == NULL || *copyStr == '\0')
 	{
-		NullString.RefCount++;
-		Chars = &NullString.Nothing[0];
+		ResetToNull();
 	}
 	else
 	{
@@ -87,8 +86,7 @@ FString::FString (char oneChar)
 {
 	if (oneChar == '\0')
 	{
-		NullString.RefCount++;
-		Chars = &NullString.Nothing[0];
+		ResetToNull();
 	}
 	else
 	{
@@ -213,6 +211,21 @@ FString &FString::operator = (const FString &other)
 	}
 	return *this;
 }
+
+FString &FString::operator = (FString &&other)
+{
+	assert (Chars != NULL);
+
+	if (&other != this)
+	{
+		Data()->Release();
+		Chars = other.Chars;
+		other.ResetToNull();
+	}
+
+	return *this;
+}
+
 FString &FString::operator = (const char *copyStr)
 {
 	if (copyStr != Chars)
@@ -220,8 +233,7 @@ FString &FString::operator = (const char *copyStr)
 		if (copyStr == NULL || *copyStr == '\0')
 		{
 			Data()->Release();
-			NullString.RefCount++;
-			Chars = &NullString.Nothing[0];
+			ResetToNull();
 		}
 		else
 		{
@@ -362,8 +374,7 @@ FString &FString::CopyCStrPart(const char *tail, size_t tailLen)
 	else
 	{
 		Data()->Release();
-		NullString.RefCount++;
-		Chars = &NullString.Nothing[0];
+		ResetToNull();
 	}
 	return *this;
 }
@@ -373,8 +384,7 @@ void FString::Truncate(size_t newlen)
 	if (newlen == 0)
 	{
 		Data()->Release();
-		NullString.RefCount++;
-		Chars = &NullString.Nothing[0];
+		ResetToNull();
 	}
 	else if (newlen < Len())
 	{
