@@ -93,6 +93,7 @@ struct TexMan
 
 	native static TextureID CheckForTexture(String name, int usetype, int flags = TryAny);
 	native static void ReplaceTextures(String from, String to, int flags);
+	native static String GetName(TextureID tex);
 	native static int, int GetSize(TextureID tex);
 	native static Vector2 GetScaledSize(TextureID tex);
 	native static Vector2 GetScaledOffset(TextureID tex);
@@ -304,9 +305,11 @@ struct CVar native
 
 	native static CVar FindCVar(Name name);
 	native static CVar GetCVar(Name name, PlayerInfo player = null);
+	bool GetBool() { return GetInt(); }
 	native int GetInt();
 	native double GetFloat();
 	native String GetString();
+	void SetBool(bool b) { SetInt(b); }
 	native void SetInt(int v);
 	native void SetFloat(double v);
 	native void SetString(String s);
