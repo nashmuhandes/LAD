@@ -42,7 +42,7 @@
 #include "gl/system/gl_interface.h"
 #include "gl/system/gl_debug.h"
 #include "gl/data/gl_data.h"
-#include "gl/data/gl_matrix.h"
+#include "r_data/matrix.h"
 #include "gl/renderer/gl_renderer.h"
 #include "gl/renderer/gl_renderstate.h"
 #include "gl/system/gl_cvars.h"
@@ -682,6 +682,7 @@ void gl_ParseHardwareShader(FScanner &sc, int deflump)
 
 		PostProcessShader shaderdesc;
 		shaderdesc.Target = sc.String;
+		shaderdesc.Target.ToLower();
 
 		bool validTarget = false;
 		if (sc.Compare("beforebloom")) validTarget = true;

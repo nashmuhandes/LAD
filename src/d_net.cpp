@@ -26,6 +26,7 @@
 //-----------------------------------------------------------------------------
 
 #include <stddef.h>
+#include <inttypes.h>
 
 #include "version.h"
 #include "menu/menu.h"
@@ -68,6 +69,7 @@
 #include "intermission/intermission.h"
 #include "g_levellocals.h"
 #include "events.h"
+#include "i_time.h"
 
 EXTERN_CVAR (Int, disableautosave)
 EXTERN_CVAR (Int, autosavecount)
@@ -112,9 +114,9 @@ bool	 		remoteresend[MAXNETNODES];				// set when local needs tics
 int 			resendto[MAXNETNODES];					// set when remote needs tics
 int 			resendcount[MAXNETNODES];
 
-unsigned int	lastrecvtime[MAXPLAYERS];				// [RH] Used for pings
-unsigned int	currrecvtime[MAXPLAYERS];
-unsigned int	lastglobalrecvtime;						// Identify the last time a packet was received.
+uint64_t		lastrecvtime[MAXPLAYERS];				// [RH] Used for pings
+uint64_t		currrecvtime[MAXPLAYERS];
+uint64_t		lastglobalrecvtime;						// Identify the last time a packet was received.
 bool			hadlate;
 int				netdelay[MAXNETNODES][BACKUPTICS];		// Used for storing network delay times.
 int				lastaverage;
@@ -531,7 +533,7 @@ void HSendPacket (int node, int len)
 	{
 		PacketStore store;
 		store.message = doomcom;
-		store.timer = I_GetTime(false) + ((net_fakelatency / 2) / (1000 / TICRATE));
+		store.timer = I_GetTime() + ((net_fakelatency / 2) / (1000 / TICRATE));
 		OutBuffer.Push(store);
 	}
 	else
@@ -539,7 +541,7 @@ void HSendPacket (int node, int len)
 
 	for (unsigned int i = 0; i < OutBuffer.Size(); i++)
 	{
-		if (OutBuffer[i].timer <= I_GetTime(false))
+		if (OutBuffer[i].timer <= I_GetTime())
 		{
 			doomcom = OutBuffer[i].message;
 			I_NetCmd();
@@ -580,7 +582,7 @@ bool HGetPacket (void)
 	{
 		PacketStore store;
 		store.message = doomcom;
-		store.timer = I_GetTime(false) + ((net_fakelatency / 2) / (1000 / TICRATE));
+		store.timer = I_GetTime() + ((net_fakelatency / 2) / (1000 / TICRATE));
 		InBuffer.Push(store);
 		doomcom.remotenode = -1;
 	}
@@ -590,7 +592,7 @@ bool HGetPacket (void)
 		bool gotmessage = false;
 		for (unsigned int i = 0; i < InBuffer.Size(); i++)
 		{
-			if (InBuffer[i].timer <= I_GetTime(false))
+			if (InBuffer[i].timer <= I_GetTime())
 			{
 				doomcom = InBuffer[i].message;
 				InBuffer.Delete(i);
@@ -782,7 +784,7 @@ void GetPackets (void)
 		// [RH] Get "ping" times - totally useless, since it's bound to the frequency
 		// packets go out at.
 		lastrecvtime[netconsole] = currrecvtime[netconsole];
-		currrecvtime[netconsole] = I_MSTime ();
+		currrecvtime[netconsole] = I_msTime ();
 
 		// check for exiting the game
 		if (netbuffer[0] & NCMD_EXIT)
@@ -956,7 +958,7 @@ void NetUpdate (void)
 	}
 
 	// check time
-	nowtime = I_GetTime (false);
+	nowtime = I_GetTime ();
 	newtics = nowtime - gametime;
 	gametime = nowtime;
 
@@ -1830,7 +1832,7 @@ void TryRunTics (void)
 	}
 	else
 	{
-		entertic = I_GetTime (false);
+		entertic = I_GetTime ();
 	}
 	realtics = entertic - oldentertics;
 	oldentertics = entertic;
@@ -1913,7 +1915,7 @@ void TryRunTics (void)
 		Net_CheckLastReceived (counts);
 
 		// don't stay in here forever -- give the menu a chance to work
-		if (I_GetTime (false) - entertic >= 1)
+		if (I_GetTime () - entertic >= 1)
 		{
 			C_Ticker ();
 			M_Ticker ();
@@ -1928,7 +1930,7 @@ void TryRunTics (void)
 	hadlate = false;
 	for (i = 0; i < MAXPLAYERS; i++)
 		players[i].waiting = false;
-	lastglobalrecvtime = I_GetTime (false); //Update the last time the game tic'd over
+	lastglobalrecvtime = I_GetTime (); //Update the last time the game tic'd over
 
 	// run the count tics
 	if (counts > 0)
@@ -1947,8 +1949,6 @@ void TryRunTics (void)
 			if (debugfile) fprintf (debugfile, "run tic %d\n", gametic);
 			C_Ticker ();
 			M_Ticker ();
-			I_GetTime (true);
-			I_SetFrameTime();
 			G_Ticker();
 			gametic++;
 
@@ -1963,9 +1963,9 @@ void Net_CheckLastReceived (int counts)
 {
 	// [Ed850] Check to see the last time a packet was received.
 	// If it's longer then 3 seconds, a node has likely stalled.
-	if (I_GetTime(false) - lastglobalrecvtime >= TICRATE * 3)
+	if (I_GetTime() - lastglobalrecvtime >= TICRATE * 3)
 	{
-		lastglobalrecvtime = I_GetTime(false); //Bump the count
+		lastglobalrecvtime = I_GetTime(); //Bump the count
 
 		if (NetMode == NET_PeerToPeer || consoleplayer == Net_Arbitrator)
 		{
@@ -2872,7 +2872,7 @@ CCMD (pings)
 	int i;
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
-			Printf ("% 4d %s\n", currrecvtime[i] - lastrecvtime[i],
+			Printf ("% 4" PRId64 " %s\n", currrecvtime[i] - lastrecvtime[i],
 					players[i].userinfo.GetName());
 }
 

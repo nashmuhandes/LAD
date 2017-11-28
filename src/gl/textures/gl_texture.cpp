@@ -564,7 +564,7 @@ void gl_ParseBrightmap(FScanner &sc, int deflump)
 	else sc.UnGet();
 
 	sc.MustGetString();
-	FTextureID no = TexMan.CheckForTexture(sc.String, type);
+	FTextureID no = TexMan.CheckForTexture(sc.String, type, FTextureManager::TEXMAN_TryAny | FTextureManager::TEXMAN_Overridable);
 	FTexture *tex = TexMan[no];
 
 	sc.MustGetToken('{');
@@ -890,10 +890,11 @@ void gl_PrecacheTexture(uint8_t *texhitlist, TMap<PClassActor*, bool> &actorhitl
 		}
 
 		// cache all used models
+		FGLModelRenderer renderer;
 		for (unsigned i = 0; i < Models.Size(); i++)
 		{
 			if (modellist[i]) 
-				Models[i]->BuildVertexBuffer();
+				Models[i]->BuildVertexBuffer(&renderer);
 		}
 	}
 

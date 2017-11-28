@@ -26,7 +26,6 @@
 **
 **/
 
-#include "gl/system/gl_system.h"
 #include "w_wad.h"
 #include "cmdlib.h"
 #include "sc_man.h"
@@ -38,19 +37,12 @@
 #include "colormatcher.h"
 #include "textures/bitmap.h"
 #include "g_levellocals.h"
-//#include "gl/gl_intern.h"
+#include "models.h"
+#include "v_palette.h"
 
-#include "gl/system/gl_interface.h"
-#include "gl/renderer/gl_renderer.h"
-#include "gl/data/gl_vertexbuffer.h"
-#include "gl/scene/gl_drawinfo.h"
-#include "gl/models/gl_models.h"
-#include "gl/textures/gl_material.h"
-#include "gl/utility/gl_geometric.h"
-#include "gl/utility/gl_convert.h"
-#include "gl/renderer/gl_renderstate.h"
-
-extern int modellightindex;
+#ifdef _MSC_VER
+#pragma warning(disable:4244) // warning C4244: conversion from 'double' to 'float', possible loss of data
+#endif
 
 //===========================================================================
 //
@@ -364,13 +356,13 @@ void FVoxelModel::Initialize()
 //
 //===========================================================================
 
-void FVoxelModel::BuildVertexBuffer()
+void FVoxelModel::BuildVertexBuffer(FModelRenderer *renderer)
 {
 	if (mVBuf == NULL)
 	{
 		Initialize();
 
-		mVBuf = new FModelVertexBuffer(true, true);
+		mVBuf = renderer->CreateVertexBuffer(true, true);
 		FModelVertex *vertptr = mVBuf->LockVertexBuffer(mVertices.Size());
 		unsigned int *indxptr = mVBuf->LockIndexBuffer(mIndices.Size());
 
@@ -440,14 +432,10 @@ float FVoxelModel::getAspectFactor()
 //
 //===========================================================================
 
-void FVoxelModel::RenderFrame(FTexture * skin, int frame, int frame2, double inter, int translation)
+void FVoxelModel::RenderFrame(FModelRenderer *renderer, FTexture * skin, int frame, int frame2, double inter, int translation)
 {
-	FMaterial * tex = FMaterial::ValidateTexture(skin, false);
-	gl_RenderState.SetMaterial(tex, CLAMP_NOFILTER, translation, -1, false);
-
-	gl_RenderState.Apply();
-	if (modellightindex != -1) gl_RenderState.ApplyLightIndex(modellightindex);
-	mVBuf->SetupFrame(0, 0, 0);
-	glDrawElements(GL_TRIANGLES, mNumIndices, GL_UNSIGNED_INT, (void*)(intptr_t)0);
+	renderer->SetMaterial(skin, true, translation);
+	mVBuf->SetupFrame(renderer, 0, 0, 0);
+	renderer->DrawElements(mNumIndices, 0);
 }
 

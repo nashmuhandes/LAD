@@ -51,6 +51,7 @@
 
 #include "doomerrors.h"
 
+#include "i_time.h"
 #include "d_gui.h"
 #include "m_random.h"
 #include "doomdef.h"
@@ -127,6 +128,7 @@ void DrawHUD();
 
 // EXTERNAL FUNCTION PROTOTYPES --------------------------------------------
 
+extern void I_SetWindowTitle(const char* caption);
 extern void ReadStatistics();
 extern void M_RestoreMode ();
 extern void M_SetDefaultMode ();
@@ -163,6 +165,7 @@ EXTERN_CVAR (Bool, lookstrafe)
 EXTERN_CVAR (Int, screenblocks)
 EXTERN_CVAR (Bool, sv_cheats)
 EXTERN_CVAR (Bool, sv_unlimited_pickup)
+EXTERN_CVAR (Bool, I_FriendlyWindowTitle)
 
 extern int testingmode;
 extern bool setmodeneeded;
@@ -280,7 +283,7 @@ void D_ProcessEvents (void)
 		{
 			M_SetDefaultMode ();
 		}
-		else if (testingmode <= I_GetTime(false))
+		else if (testingmode <= I_GetTime())
 		{
 			M_RestoreMode ();
 		}
@@ -778,9 +781,9 @@ void D_Display ()
 
 
 	{
-		unsigned int nowtime = I_FPSTime();
-		TexMan.UpdateAnimations(nowtime);
-		R_UpdateSky(nowtime);
+		screen->FrameTime = I_msTime();
+		TexMan.UpdateAnimations(screen->FrameTime);
+		R_UpdateSky(screen->FrameTime);
 		switch (gamestate)
 		{
 		case GS_FULLCONSOLE:
@@ -937,14 +940,14 @@ void D_Display ()
 	else
 	{
 		// wipe update
-		unsigned int wipestart, nowtime, diff;
+		uint64_t wipestart, nowtime, diff;
 		bool done;
 
 		GSnd->SetSfxPaused(true, 1);
 		I_FreezeTime(true);
 		screen->WipeEndScreen ();
 
-		wipestart = I_MSTime();
+		wipestart = I_msTime();
 		NetUpdate();		// send out any new accumulation
 
 		do
@@ -952,7 +955,7 @@ void D_Display ()
 			do
 			{
 				I_WaitVBL(2);
-				nowtime = I_MSTime();
+				nowtime = I_msTime();
 				diff = (nowtime - wipestart) * 40 / 1000;	// Using 35 here feels too slow.
 			} while (diff < 1);
 			wipestart = nowtime;
@@ -2741,6 +2744,9 @@ void D_DoomMain (void)
 			setmodeneeded = false;			// This may be set to true here, but isn't needed for a restart
 		}
 
+		if (I_FriendlyWindowTitle)
+			I_SetWindowTitle(DoomStartupInfo.Name.GetChars());
+
 		D_DoomLoop ();		// this only returns if a 'restart' CCMD is given.
 		// 
 		// Clean up after a restart
@@ -2775,6 +2781,10 @@ void D_DoomMain (void)
 		DestroyCVarsFlagged(CVAR_MOD);	// Delete any cvar left by mods
 		FS_Close();						// destroy the global FraggleScript.
 		DeinitMenus();
+
+		// delete DoomStartupInfo data
+		DoomStartupInfo.Name = (const char*)0;
+		DoomStartupInfo.BkColor = DoomStartupInfo.FgColor = DoomStartupInfo.Type = 0;
 
 		GC::FullGC();					// clean up before taking down the object list.
 
@@ -2895,3 +2905,12 @@ DEFINE_FIELD_X(InputEventData, event_t, data2)
 DEFINE_FIELD_X(InputEventData, event_t, data3)
 DEFINE_FIELD_X(InputEventData, event_t, x)
 DEFINE_FIELD_X(InputEventData, event_t, y)
+
+
+CUSTOM_CVAR(Bool, I_FriendlyWindowTitle, true, CVAR_GLOBALCONFIG|CVAR_ARCHIVE|CVAR_NOINITCALL)
+{
+	if (self)
+		I_SetWindowTitle(DoomStartupInfo.Name.GetChars());
+	else
+		I_SetWindowTitle(NULL);
+}

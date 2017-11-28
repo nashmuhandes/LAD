@@ -86,10 +86,6 @@ int I_PickIWad_Cocoa (WadStuff *wads, int numwads, bool showwin, int defaultiwad
 double PerfToSec, PerfToMillisec;
 uint32_t LanguageIDs[4];
 	
-int (*I_GetTime) (bool saveMS);
-int (*I_WaitForTic) (int);
-void (*I_FreezeTime) (bool frozen);
-
 void I_Tactile (int /*on*/, int /*off*/, int /*total*/)
 {
 }
@@ -109,18 +105,6 @@ void I_EndRead(void)
 }
 
 
-void I_WaitVBL (int count)
-{
-    // I_WaitVBL is never used to actually synchronize to the
-    // vertical blank. Instead, it's used for delay purposes.
-    struct timespec delay, rem;
-    delay.tv_sec = count / 70;
-    /* Avoid overflow. Microsec res should be good enough. */
-    delay.tv_nsec = (count%70)*1000000/70 * 1000;
-    while(nanosleep(&delay, &rem) == -1 && errno == EINTR)
-        delay = rem;
-}
-
 //
 // SetLanguageIDs
 //
@@ -135,9 +119,6 @@ void SetLanguageIDs ()
 	LanguageIDs[3] = LanguageIDs[2] = LanguageIDs[1] = LanguageIDs[0] = lang;
 }
 
-void I_InitTimer ();
-void I_ShutdownTimer ();
-
 //
 // I_Init
 //
@@ -148,7 +129,6 @@ void I_Init (void)
 
 	atterm (I_ShutdownSound);
     I_InitSound ();
-	I_InitTimer ();
 }
 
 //
@@ -164,8 +144,6 @@ void I_Quit (void)
 		G_CheckDemoStatus();
 
 	C_DeinitConsole();
-
-	I_ShutdownTimer();
 }
 
 

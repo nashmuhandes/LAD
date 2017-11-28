@@ -20,27 +20,21 @@
 //--------------------------------------------------------------------------
 //
 /*
-** gl_models.cpp
+** models.cpp
 **
 ** MD2/DMD model format code
 **
 **/
 
-#include "gl/system/gl_system.h"
 #include "w_wad.h"
 #include "cmdlib.h"
 #include "sc_man.h"
 #include "m_crc32.h"
+#include "r_data/models/models.h"
 
-#include "gl/renderer/gl_renderer.h"
-#include "gl/renderer/gl_renderstate.h"
-#include "gl/scene/gl_drawinfo.h"
-#include "gl/models/gl_models.h"
-#include "gl/textures/gl_material.h"
-#include "gl/shaders/gl_shader.h"
-#include "gl/data/gl_vertexbuffer.h"
-
-extern int modellightindex;
+#ifdef _MSC_VER
+#pragma warning(disable:4244) // warning C4244: conversion from 'double' to 'float', possible loss of data
+#endif
 
 static float   avertexnormals[NUMVERTEXNORMALS][3] = {
 #include "tab_anorms.h"
@@ -286,7 +280,7 @@ FDMDModel::~FDMDModel()
 //
 //===========================================================================
 
-void FDMDModel::BuildVertexBuffer()
+void FDMDModel::BuildVertexBuffer(FModelRenderer *renderer)
 {
 	if (mVBuf == NULL)
 	{
@@ -295,7 +289,7 @@ void FDMDModel::BuildVertexBuffer()
 		int VertexBufferSize = info.numFrames * lodInfo[0].numTriangles * 3;
 		unsigned int vindex = 0;
 
-		mVBuf = new FModelVertexBuffer(false, info.numFrames == 1);
+		mVBuf = renderer->CreateVertexBuffer(false, info.numFrames == 1);
 		FModelVertex *vertptr = mVBuf->LockVertexBuffer(VertexBufferSize);
 
 		for (int i = 0; i < info.numFrames; i++)
@@ -364,7 +358,7 @@ int FDMDModel::FindFrame(const char * name)
 //
 //===========================================================================
 
-void FDMDModel::RenderFrame(FTexture * skin, int frameno, int frameno2, double inter, int translation)
+void FDMDModel::RenderFrame(FModelRenderer *renderer, FTexture * skin, int frameno, int frameno2, double inter, int translation)
 {
 	if (frameno >= info.numFrames || frameno2 >= info.numFrames) return;
 
@@ -375,16 +369,11 @@ void FDMDModel::RenderFrame(FTexture * skin, int frameno, int frameno2, double i
 		if (!skin) return;
 	}
 
-	FMaterial * tex = FMaterial::ValidateTexture(skin, false);
-
-	gl_RenderState.SetMaterial(tex, CLAMP_NONE, translation, -1, false);
-	gl_RenderState.SetInterpolationFactor((float)inter);
-
-	gl_RenderState.Apply();
-	if (modellightindex != -1) gl_RenderState.ApplyLightIndex(modellightindex);
-	mVBuf->SetupFrame(frames[frameno].vindex, frames[frameno2].vindex, lodInfo[0].numTriangles * 3);
-	glDrawArrays(GL_TRIANGLES, 0, lodInfo[0].numTriangles * 3);
-	gl_RenderState.SetInterpolationFactor(0.f);
+	renderer->SetInterpolation(inter);
+	renderer->SetMaterial(skin, false, translation);
+	mVBuf->SetupFrame(renderer, frames[frameno].vindex, frames[frameno2].vindex, lodInfo[0].numTriangles * 3);
+	renderer->DrawArrays(0, lodInfo[0].numTriangles * 3);
+	renderer->SetInterpolation(0.f);
 }
 
 

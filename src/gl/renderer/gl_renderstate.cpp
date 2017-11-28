@@ -37,6 +37,7 @@
 #include "gl/renderer/gl_colormap.h"
 #include "gl/dynlights//gl_lightbuffer.h"
 #include "gl/renderer/gl_renderbuffers.h"
+#include "g_levellocals.h"
 
 void gl_SetTextureMode(int type);
 
@@ -48,6 +49,11 @@ CVAR(Bool, gl_bandedswlight, false, CVAR_ARCHIVE)
 
 static VSMatrix identityMatrix(1);
 TArray<VSMatrix> gl_MatrixStack;
+
+static void matrixToGL(const VSMatrix &mat, int loc)
+{
+	glUniformMatrix4fv(loc, 1, false, (float*)&mat);
+}
 
 //==========================================================================
 //
@@ -118,6 +124,12 @@ void FRenderState::Reset()
 
 bool FRenderState::ApplyShader()
 {
+	static uint64_t firstFrame = 0;
+	// if firstFrame is not yet initialized, initialize it to current time
+	// if we're going to overflow a float (after ~4.6 hours, or 24 bits), re-init to regain precision
+	if ((firstFrame == 0) || (screen->FrameTime - firstFrame >= 1<<24) || level.ShaderStartTime >= firstFrame)
+		firstFrame = screen->FrameTime;
+
 	static const float nulvec[] = { 0.f, 0.f, 0.f, 0.f };
 	if (mSpecialEffect > EFF_NONE)
 	{
@@ -161,7 +173,7 @@ bool FRenderState::ApplyShader()
 	activeShader->muInterpolationFactor.Set(mInterpolationFactor);
 	activeShader->muClipHeight.Set(mClipHeight);
 	activeShader->muClipHeightDirection.Set(mClipHeightDirection);
-	activeShader->muTimer.Set(gl_frameMS * mShaderTimer / 1000.f);
+	activeShader->muTimer.Set((double)(screen->FrameTime - firstFrame) * mShaderTimer / 1000.f);
 	activeShader->muAlphaThreshold.Set(mAlphaThreshold);
 	activeShader->muLightIndex.Set(mLightIndex);	// will always be -1 for now
 	activeShader->muClipSplit.Set(mClipSplit);
@@ -266,28 +278,28 @@ bool FRenderState::ApplyShader()
 	}
 	if (mTextureMatrixEnabled)
 	{
-		mTextureMatrix.matrixToGL(activeShader->texturematrix_index);
+		matrixToGL(mTextureMatrix, activeShader->texturematrix_index);
 		activeShader->currentTextureMatrixState = true;
 	}
 	else if (activeShader->currentTextureMatrixState)
 	{
 		activeShader->currentTextureMatrixState = false;
-		identityMatrix.matrixToGL(activeShader->texturematrix_index);
+		matrixToGL(identityMatrix, activeShader->texturematrix_index);
 	}
 
 	if (mModelMatrixEnabled)
 	{
-		mModelMatrix.matrixToGL(activeShader->modelmatrix_index);
+		matrixToGL(mModelMatrix, activeShader->modelmatrix_index);
 		VSMatrix norm;
 		norm.computeNormalMatrix(mModelMatrix);
-		norm.matrixToGL(activeShader->normalmodelmatrix_index);
+		matrixToGL(norm, activeShader->normalmodelmatrix_index);
 		activeShader->currentModelMatrixState = true;
 	}
 	else if (activeShader->currentModelMatrixState)
 	{
 		activeShader->currentModelMatrixState = false;
-		identityMatrix.matrixToGL(activeShader->modelmatrix_index);
-		identityMatrix.matrixToGL(activeShader->normalmodelmatrix_index);
+		matrixToGL(identityMatrix, activeShader->modelmatrix_index);
+		matrixToGL(identityMatrix, activeShader->normalmodelmatrix_index);
 	}
 	return true;
 }

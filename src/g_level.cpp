@@ -94,6 +94,7 @@
 #include "g_levellocals.h"
 #include "actorinlines.h"
 #include "vm.h"
+#include "i_time.h"
 
 #include <string.h>
 
@@ -1024,7 +1025,7 @@ void G_DoLoadLevel (int position, bool autosave)
 
 		if (firstTime)
 		{
-			starttime = I_GetTime (false);
+			starttime = I_GetTime ();
 			firstTime = false;
 		}
 	}

@@ -126,10 +126,38 @@ void PolyDrawArgs::SetColor(uint32_t bgra, uint8_t palindex)
 	}
 }
 
+void PolyDrawArgs::DrawArray(const DrawerCommandQueuePtr &queue, const TriVertex *vertices, int vcount, PolyDrawMode mode)
+{
+	mVertices = vertices;
+	mVertexCount = vcount;
+	mElements = nullptr;
+	mDrawMode = mode;
+	queue->Push<DrawPolyTrianglesCommand>(*this, PolyTriangleDrawer::is_mirror());
+}
+
+void PolyDrawArgs::DrawElements(const DrawerCommandQueuePtr &queue, const TriVertex *vertices, const unsigned int *elements, int count, PolyDrawMode mode)
+{
+	mVertices = vertices;
+	mElements = elements;
+	mVertexCount = count;
+	mDrawMode = mode;
+	queue->Push<DrawPolyTrianglesCommand>(*this, PolyTriangleDrawer::is_mirror());
+}
+
 void PolyDrawArgs::DrawArray(PolyRenderThread *thread, const TriVertex *vertices, int vcount, PolyDrawMode mode)
 {
 	mVertices = vertices;
 	mVertexCount = vcount;
+	mElements = nullptr;
+	mDrawMode = mode;
+	thread->DrawQueue->Push<DrawPolyTrianglesCommand>(*this, PolyTriangleDrawer::is_mirror());
+}
+
+void PolyDrawArgs::DrawElements(PolyRenderThread *thread, const TriVertex *vertices, const unsigned int *elements, int count, PolyDrawMode mode)
+{
+	mVertices = vertices;
+	mElements = elements;
+	mVertexCount = count;
 	mDrawMode = mode;
 	thread->DrawQueue->Push<DrawPolyTrianglesCommand>(*this, PolyTriangleDrawer::is_mirror());
 }

@@ -193,9 +193,9 @@ namespace swrenderer
 
 	void R_UpdateFuzzPosFrameStart()
 	{
-		if (r_fuzzscale)
+		if (r_fuzzscale || r_polyrenderer)
 		{
-			int next_random = 0;
+			static int next_random = 0;
 
 			fuzzpos = (fuzzpos + fuzz_random_x_offset[next_random] * FUZZTABLE / 100) % FUZZTABLE;
 
@@ -207,12 +207,133 @@ namespace swrenderer
 
 	void R_UpdateFuzzPos(const SpriteDrawerArgs &args)
 	{
-		if (!r_fuzzscale)
+		if (!r_fuzzscale && !r_polyrenderer)
 		{
 			int yl = MAX(args.FuzzY1(), 1);
 			int yh = MIN(args.FuzzY2(), fuzzviewheight);
 			if (yl <= yh)
 				fuzzpos = (fuzzpos + yh - yl + 1) % FUZZTABLE;
 		}
+	}
+
+	class DepthColumnCommand : public DrawerCommand
+	{
+	public:
+		DepthColumnCommand(const WallDrawerArgs &args, float idepth) : idepth(idepth)
+		{
+			auto rendertarget = args.Viewport()->RenderTarget;
+			if (rendertarget->IsBgra())
+			{
+				uint32_t *destorg = (uint32_t*)rendertarget->GetBuffer();
+				uint32_t *dest = (uint32_t*)args.Dest();
+				int offset  = (int)(ptrdiff_t)(dest - destorg);
+				x = offset % rendertarget->GetPitch();
+				y = offset / rendertarget->GetPitch();
+			}
+			else
+			{
+				uint8_t *destorg = rendertarget->GetBuffer();
+				uint8_t *dest = (uint8_t*)args.Dest();
+				int offset = (int)(ptrdiff_t)(dest - destorg);
+				x = offset % rendertarget->GetPitch();
+				y = offset / rendertarget->GetPitch();
+			}
+			count = args.Count();
+		}
+
+		DepthColumnCommand(const SkyDrawerArgs &args, float idepth) : idepth(idepth)
+		{
+			auto rendertarget = args.Viewport()->RenderTarget;
+			if (rendertarget->IsBgra())
+			{
+				uint32_t *destorg = (uint32_t*)rendertarget->GetBuffer();
+				uint32_t *dest = (uint32_t*)args.Dest();
+				int offset = (int)(ptrdiff_t)(dest - destorg);
+				x = offset % rendertarget->GetPitch();
+				y = offset / rendertarget->GetPitch();
+			}
+			else
+			{
+				uint8_t *destorg = rendertarget->GetBuffer();
+				uint8_t *dest = (uint8_t*)args.Dest();
+				int offset = (int)(ptrdiff_t)(dest - destorg);
+				x = offset % rendertarget->GetPitch();
+				y = offset / rendertarget->GetPitch();
+			}
+			count = args.Count();
+		}
+
+		FString DebugInfo() override { return "DepthColumnCommand"; }
+
+		void Execute(DrawerThread *thread) override
+		{
+			auto zbuffer = PolyZBuffer::Instance();
+			int pitch = PolyStencilBuffer::Instance()->BlockWidth() * 8;
+			float *values = zbuffer->Values() + y * pitch + x;
+			int cnt = count;
+
+			values = thread->dest_for_thread(y, pitch, values);
+			cnt = thread->count_for_thread(y, cnt);
+			pitch *= thread->num_cores;
+
+			float depth = idepth;
+			for (int i = 0; i < cnt; i++)
+			{
+				*values = depth;
+				values += pitch;
+			}
+		}
+
+	private:
+		int x, y, count;
+		float idepth;
+	};
+
+	class DepthSpanCommand : public DrawerCommand
+	{
+	public:
+		DepthSpanCommand(const SpanDrawerArgs &args, float idepth) : idepth(idepth)
+		{
+			y = args.DestY();
+			x1 = args.DestX1();
+			x2 = args.DestX2();
+		}
+
+		FString DebugInfo() override { return "DepthSpanCommand"; }
+
+		void Execute(DrawerThread *thread) override
+		{
+			if (thread->skipped_by_thread(y))
+				return;
+
+			auto zbuffer = PolyZBuffer::Instance();
+			int pitch = PolyStencilBuffer::Instance()->BlockWidth() * 8;
+			float *values = zbuffer->Values() + y * pitch;
+			int end = x2;
+			float depth = idepth;
+			for (int x = x1; x <= end; x++)
+			{
+				values[x] = depth;
+			}
+		}
+
+	private:
+		int y, x1, x2;
+		float idepth;
+	};
+
+	void SWPixelFormatDrawers::DrawDepthSkyColumn(const SkyDrawerArgs &args, float idepth)
+	{
+		Queue->Push<DepthColumnCommand>(args, idepth);
+	}
+
+	void SWPixelFormatDrawers::DrawDepthWallColumn(const WallDrawerArgs &args, float idepth)
+	{
+		Queue->Push<DepthColumnCommand>(args, idepth);
+	}
+
+	void SWPixelFormatDrawers::DrawDepthSpan(const SpanDrawerArgs &args, float idepth)
+	{
+		Queue->Push<DepthSpanCommand>(args, idepth);
 	}
 }
