@@ -178,6 +178,7 @@ struct Screen native
 	native static void SetClipRect(int x, int y, int w, int h);
 	native static void ClearClipRect();
 	native static int, int, int, int GetClipRect();
+	native static int, int, int, int GetViewWindow();
 	
 	
 	// This is a leftover of the abandoned Inventory.DrawPowerup method.
@@ -357,6 +358,7 @@ class Object native
 	native static void S_PauseSound (bool notmusic, bool notsfx);
 	native static void S_ResumeSound (bool notsfx);
 	native static bool S_ChangeMusic(String music_name, int order = 0, bool looping = true, bool force = false);
+	native static float S_GetLength(Sound sound_id);
 	native static uint BAM(double angle);
 	native static void SetMusicVolume(float vol);
 	native static uint MSTime();
