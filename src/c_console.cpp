@@ -146,8 +146,8 @@ static bool ConsoleDrawing;
 static char *work = NULL;
 static int worklen = 0;
 
-CVAR(Float, con_notifytime, 5.f, CVAR_ARCHIVE)			// [LAD] increase notification time
-CVAR(Bool, con_centernotify, true, CVAR_ARCHIVE)		// [LAD] default to center notification
+CVAR(Float, con_notifytime, 3.f, CVAR_ARCHIVE)
+CVAR(Bool, con_centernotify, false, CVAR_ARCHIVE)
 CUSTOM_CVAR(Int, con_scaletext, 0, CVAR_ARCHIVE)		// Scale notify text at high resolutions?
 {
 	if (self < 0) self = 0;
@@ -1058,7 +1058,7 @@ void FNotifyBuffer::Draw()
 			else
 				screen->DrawText (SmallFont, color, (screen->GetWidth() -
 					SmallFont->StringWidth (notify.Text) * scale) / 2 / scale,
-					(screen->GetHeight() / scale) - (lineadv * 3) - line, notify.Text, // [LAD] originate from the bottom of the screen only for centered text
+					line, notify.Text,
 					DTA_VirtualWidth, screen->GetWidth() / scale,
 					DTA_VirtualHeight, screen->GetHeight() / scale,
 					DTA_KeepRatio, true,
