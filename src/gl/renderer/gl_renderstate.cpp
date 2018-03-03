@@ -87,6 +87,8 @@ void FRenderState::Reset()
 	mSpecialEffect = EFF_NONE;
 	mClipHeight = 0.f;
 	mClipHeightDirection = 0.f;
+	mGlossiness = 0.0f;
+	mSpecularLevel = 0.0f;
 	mShaderTimer = 0.0f;
 	ClearClipSplit();
 
@@ -137,7 +139,7 @@ bool FRenderState::ApplyShader()
 	}
 	else
 	{
-		activeShader = GLRenderer->mShaderManager->Get(mTextureEnabled ? mEffectState : 4, mAlphaThreshold >= 0.f, mPassType);
+		activeShader = GLRenderer->mShaderManager->Get(mTextureEnabled ? mEffectState : SHADER_NoTexture, mAlphaThreshold >= 0.f, mPassType);
 		activeShader->Bind();
 	}
 
@@ -164,7 +166,7 @@ bool FRenderState::ApplyShader()
 	activeShader->muFogEnabled.Set(fogset);
 	activeShader->muPalLightLevels.Set(static_cast<int>(gl_bandedswlight) | (static_cast<int>(gl_fogmode) << 8));
 	activeShader->muGlobVis.Set(GLRenderer->mGlobVis / 32.0f);
-	activeShader->muTextureMode.Set(mTextureMode);
+	activeShader->muTextureMode.Set(mTextureMode == TM_MODULATE && mTempTM == TM_OPAQUE ? TM_OPAQUE : mTextureMode);
 	activeShader->muCameraPos.Set(mCameraPos.vec);
 	activeShader->muLightParms.Set(mLightParms);
 	activeShader->muFogColor.Set(mFogColor);
@@ -178,6 +180,7 @@ bool FRenderState::ApplyShader()
 	activeShader->muLightIndex.Set(mLightIndex);	// will always be -1 for now
 	activeShader->muClipSplit.Set(mClipSplit);
 	activeShader->muViewHeight.Set(viewheight);
+	activeShader->muSpecularMaterial.Set(mGlossiness, mSpecularLevel);
 
 	if (mGlowEnabled)
 	{

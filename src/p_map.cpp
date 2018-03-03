@@ -898,7 +898,9 @@ bool PIT_CheckLine(FMultiBlockLinesIterator &mit, FMultiBlockLinesIterator::Chec
 		}
 
 		// check if the actor can step through the ceiling portal. In this case one-sided lines in the current area should not block
-		if (!cres.line->frontsector->PortalBlocksMovement(sector_t::ceiling))
+		// Use the same rules for stepping through a portal as for non-portal case.
+		bool ismissile = (tm.thing->flags & MF_MISSILE) && !(tm.thing->flags6 & MF6_STEPMISSILE) && !(tm.thing->flags3 & MF3_FLOORHUGGER);
+		if (!ismissile && !cres.line->frontsector->PortalBlocksMovement(sector_t::ceiling))
 		{
 			double portz = cres.line->frontsector->GetPortalPlaneZ(sector_t::ceiling);
 			if (tm.thing->Z() < portz && tm.thing->Z() + tm.thing->MaxStepHeight >= portz && tm.floorz < portz)
@@ -1008,7 +1010,9 @@ bool PIT_CheckLine(FMultiBlockLinesIterator &mit, FMultiBlockLinesIterator::Chec
 	FLineOpening open;
 
 	P_LineOpening(open, tm.thing, ld, ref, &cres.Position, cres.portalflags);
-	if (!tm.thing->Sector->PortalBlocksMovement(sector_t::ceiling))
+	// Use the same rules for stepping through a portal as for non-portal case.
+	bool ismissile = (tm.thing->flags & MF_MISSILE) && !(tm.thing->flags6 & MF6_STEPMISSILE) && !(tm.thing->flags3 & MF3_FLOORHUGGER);
+	if (!ismissile && !tm.thing->Sector->PortalBlocksMovement(sector_t::ceiling))
 	{
 		sector_t *oppsec = cres.line->frontsector == tm.thing->Sector ? cres.line->backsector : cres.line->frontsector;
 		if (oppsec->PortalBlocksMovement(sector_t::ceiling))
@@ -2707,8 +2711,8 @@ bool P_TryMove(AActor *thing, const DVector2 &pos,
 		FLinkContext ctx;
 		DVector3 oldpos = thing->Pos();
 		thing->UnlinkFromWorld(&ctx);
-		thing->SetXYZ(thing->PosRelative(thing->Sector->GetOppositePortalGroup(sector_t::ceiling)));
-		thing->Prev = thing->Pos() - oldpos;
+		thing->SetXYZ(thing->PosRelative(tm.portalgroup));
+		thing->Prev += thing->Pos() - oldpos;
 		thing->Sector = P_PointInSector(thing->Pos());
 		thing->PrevPortalGroup = thing->Sector->PortalGroup;
 		thing->LinkToWorld(&ctx);
@@ -4898,17 +4902,9 @@ bool P_LineTrace(AActor *t1, DAngle angle, double distance,
 		outdata->HitLine = trace.Line;
 		outdata->HitSector = trace.Sector;
 		outdata->Hit3DFloor = trace.ffloor;
-		switch ( trace.HitType )
+		outdata->SectorPlane = (trace.HitType == TRACE_HitCeiling) ? 1 : 0;
+		if ( trace.HitType == TRACE_HitWall )
 		{
-		case TRACE_HitFloor:
-			outdata->SectorPlane = 0;
-			outdata->HitTexture = trace.Sector->planes[0].Texture;
-			break;
-		case TRACE_HitCeiling:
-			outdata->SectorPlane = 1;
-			outdata->HitTexture = trace.Sector->planes[1].Texture;
-			break;
-		case TRACE_HitWall:
 			outdata->LineSide = trace.Side;
 			int txpart;
 			switch ( trace.Tier )
@@ -4930,10 +4926,10 @@ bool P_LineTrace(AActor *t1, DAngle angle, double distance,
 				outdata->HitTexture = trace.ffloor->master->sidedef[0]->textures[txpart].texture;
 				break;
 			}
-		default:
-			break;
 		}
+		else outdata->HitTexture = trace.HitTexture;
 		outdata->HitLocation = trace.HitPos;
+		outdata->HitDir = trace.HitVector;
 		outdata->Distance = trace.Distance;
 		outdata->NumPortals = TData.NumPortals;
 		outdata->HitType = trace.HitType;
@@ -6378,6 +6374,11 @@ void P_DoCrunch(AActor *thing, FChangePosition *cpos)
 					if (thing->BloodTranslation != 0 && !(mo->flags2 & MF2_DONTTRANSLATE))
 					{
 						mo->Translation = thing->BloodTranslation;
+					}
+
+					if (mo->flags5 & MF5_PUFFGETSOWNER)
+					{
+						mo->target = thing;
 					}
 
 					if (!(cl_bloodtype <= 1)) mo->renderflags |= RF_INVISIBLE;

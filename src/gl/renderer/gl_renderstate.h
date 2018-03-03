@@ -94,6 +94,7 @@ class FRenderState
 	bool mLastDepthClamp;
 	float mInterpolationFactor;
 	float mClipHeight, mClipHeightDirection;
+	float mGlossiness, mSpecularLevel;
 	float mShaderTimer;
 
 	FVertexBuffer *mVertexBuffer, *mCurrentVertexBuffer;
@@ -112,6 +113,7 @@ class FRenderState
 
 	int mEffectState;
 	int mColormapState;
+	int mTempTM = TM_MODULATE;
 
 	float stAlphaThreshold;
 	int stSrcBlend, stDstBlend;
@@ -150,8 +152,17 @@ public:
 		{
 			if (mat->tex->UseBasePalette() || gl.legacyMode) translation = TRANSLATION(TRANSLATION_Standard, 8);
 		}
+		if (mat->tex->bHasCanvas)
+		{
+			mTempTM = TM_OPAQUE;
+		}
+		else
+		{
+			mTempTM = TM_MODULATE;
+		}
 		mEffectState = overrideshader >= 0? overrideshader : mat->mShaderIndex;
 		mShaderTimer = mat->tex->gl_info.shaderspeed;
+		SetSpecular(mat->tex->gl_info.Glossiness, mat->tex->gl_info.SpecularLevel);
 		mat->Bind(clampmode, translation);
 	}
 
@@ -384,6 +395,12 @@ public:
 	void SetObjectColor2(PalEntry pe)
 	{
 		mObjectColor2 = pe;
+	}
+
+	void SetSpecular(float glossiness, float specularLevel)
+	{
+		mGlossiness = glossiness;
+		mSpecularLevel = specularLevel;
 	}
 
 	void SetFog(PalEntry c, float d)

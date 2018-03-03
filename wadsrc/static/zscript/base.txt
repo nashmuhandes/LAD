@@ -798,6 +798,8 @@ struct StringStruct native
 class SectorEffect : Thinker native
 {
 	native protected Sector m_Sector;
+
+	native Sector GetSector();
 }
 
 class Mover : SectorEffect native

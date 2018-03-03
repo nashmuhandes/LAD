@@ -149,12 +149,33 @@ FGameConfigFile::FGameConfigFile ()
 		SetValueForKey ("Path", "$PROGDIR", true);
 #else
 		SetValueForKey ("Path", "$HOME/" GAME_DIR, true);
+		SetValueForKey ("Path", SHARE_DIR, true);
 		SetValueForKey ("Path", "/usr/local/share/doom", true);
 		SetValueForKey ("Path", "/usr/local/share/games/doom", true);
 		SetValueForKey ("Path", "/usr/share/doom", true);
 		SetValueForKey ("Path", "/usr/share/games/doom", true);
 #endif
 		SetValueForKey ("Path", "$DOOMWADDIR", true);
+	}
+
+	// Set default search paths if none present
+	if (!SetSection("SoundfontSearch.Directories"))
+	{
+		SetSection("SoundfontSearch.Directories", true);
+#ifdef __APPLE__
+		SetValueForKey("Path", user_docs + "/soundfonts", true);
+		SetValueForKey("Path", user_app_support + "/soundfonts", true);
+		SetValueForKey("Path", "$PROGDIR/soundfonts", true);
+		SetValueForKey("Path", local_app_support + "/soundfonts", true);
+#elif !defined(__unix__)
+		SetValueForKey("Path", "$PROGDIR/soundfonts", true);
+#else
+		SetValueForKey("Path", "$HOME/" GAME_DIR "/soundfonts", true);
+		SetValueForKey("Path", "/usr/local/share/doom/soundfonts", true);
+		SetValueForKey("Path", "/usr/local/share/games/doom/soundfonts", true);
+		SetValueForKey("Path", "/usr/share/doom/soundfonts", true);
+		SetValueForKey("Path", "/usr/share/games/doom/soundfonts", true);
+#endif
 	}
 
 	// Add some self-documentation.
@@ -165,6 +186,9 @@ FGameConfigFile::FGameConfigFile ()
 		"# These are the directories to search for wads added with the -file\n"
 		"# command line parameter, if they cannot be found with the path\n"
 		"# as-is. Layout is the same as for IWADSearch.Directories\n");
+	SetSectionNote("SoundfontSearch.Directories",
+		"# These are the directories to search for soundfonts that let listed in the menu.\n"
+		"# Layout is the same as for IWADSearch.Directories\n");
 }
 
 FGameConfigFile::~FGameConfigFile ()
@@ -230,6 +254,7 @@ void FGameConfigFile::DoAutoloadSetup (FIWadManager *iwad_man)
 	CreateStandardAutoExec("LAD.AutoExec", true);
 
 	// Move search paths back to the top.
+	MoveSectionToStart("SoundfontSearch.Directories");
 	MoveSectionToStart("FileSearch.Directories");
 	MoveSectionToStart("IWADSearch.Directories");
 
