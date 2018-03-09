@@ -274,7 +274,8 @@ CUSTOM_CVAR(Int, fluid_chorus_type, FLUID_CHORUS_DEFAULT_TYPE, CVAR_ARCHIVE|CVAR
 //
 //==========================================================================
 
-FluidSynthMIDIDevice::FluidSynthMIDIDevice(const char *args)
+FluidSynthMIDIDevice::FluidSynthMIDIDevice(const char *args, int samplerate)
+	: SoftSynthMIDIDevice(samplerate <= 0? fluid_samplerate : samplerate, 22050, 96000)
 {
 	FluidSynth = NULL;
 	FluidSettings = NULL;
@@ -289,11 +290,6 @@ FluidSynthMIDIDevice::FluidSynthMIDIDevice(const char *args)
 	{
 		printf("Failed to create FluidSettings.\n");
 		return;
-	}
-	SampleRate = fluid_samplerate;
-	if (SampleRate < 22050 || SampleRate > 96000)
-	{ // Match sample rate to SFX rate
-		SampleRate = clamp((int)GSnd->GetOutputRate(), 22050, 96000);
 	}
 	fluid_settings_setnum(FluidSettings, "synth.sample-rate", SampleRate);
 	fluid_settings_setnum(FluidSettings, "synth.gain", fluid_gain);
@@ -656,10 +652,9 @@ FString FluidSynthMIDIDevice::GetStats()
 	int polyphony = fluid_synth_get_polyphony(FluidSynth);
 	int voices = fluid_synth_get_active_voice_count(FluidSynth);
 	double load = fluid_synth_get_cpu_load(FluidSynth);
-	char *chorus, *reverb;
-	int maxpoly;
-	fluid_settings_getstr(FluidSettings, "synth.chorus.active", &chorus);
-	fluid_settings_getstr(FluidSettings, "synth.reverb.active", &reverb);
+	int chorus, reverb, maxpoly;
+	fluid_settings_getint(FluidSettings, "synth.chorus.active", &chorus);
+	fluid_settings_getint(FluidSettings, "synth.reverb.active", &reverb);
 	fluid_settings_getint(FluidSettings, "synth.polyphony", &maxpoly);
 	CritSec.Leave();
 
@@ -667,7 +662,7 @@ FString FluidSynthMIDIDevice::GetStats()
 			   TEXTCOLOR_YELLOW "%6.2f" TEXTCOLOR_NORMAL "%% CPU   "
 			   "Reverb: " TEXTCOLOR_YELLOW "%3s" TEXTCOLOR_NORMAL
 			   " Chorus: " TEXTCOLOR_YELLOW "%3s",
-		voices, polyphony, maxpoly, load, reverb, chorus);
+		voices, polyphony, maxpoly, load, reverb ? "yes" : "no", chorus ? "yes" : "no");
 	return out;
 }
 
@@ -691,7 +686,6 @@ DYN_FLUID_SYM(delete_fluid_settings);
 DYN_FLUID_SYM(fluid_settings_setnum);
 DYN_FLUID_SYM(fluid_settings_setstr);
 DYN_FLUID_SYM(fluid_settings_setint);
-DYN_FLUID_SYM(fluid_settings_getstr);
 DYN_FLUID_SYM(fluid_settings_getint);
 DYN_FLUID_SYM(fluid_synth_set_reverb_on);
 DYN_FLUID_SYM(fluid_synth_set_chorus_on);

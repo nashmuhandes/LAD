@@ -2398,7 +2398,9 @@ void G_DoSaveGame (bool okForQuicksave, FString filename, const char *descriptio
 	level.info->Snapshot.Clean();
 		
 	insave = false;
-	I_FreezeTime(false);
+
+	if (cl_waitforsave)
+		I_FreezeTime(false);
 }
 
 

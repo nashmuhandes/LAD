@@ -453,7 +453,7 @@ namespace swrenderer
 	}
 
 	// kg3D - add fake segs, never rendered
-	void RenderOpaquePass::FakeDrawLoop(subsector_t *sub, VisiblePlane *floorplane, VisiblePlane *ceilingplane, bool foggy, FDynamicColormap *basecolormap)
+	void RenderOpaquePass::FakeDrawLoop(subsector_t *sub, VisiblePlane *floorplane, VisiblePlane *ceilingplane, bool foggy, FDynamicColormap *basecolormap, Fake3DOpaque opaque3dfloor)
 	{
 		int 		 count;
 		seg_t*		 line;
@@ -465,7 +465,7 @@ namespace swrenderer
 		{
 			if ((line->sidedef) && !(line->sidedef->Flags & WALLF_POLYOBJ))
 			{
-				renderline.Render(line, InSubsector, frontsector, nullptr, floorplane, ceilingplane, foggy, basecolormap);
+				renderline.Render(line, InSubsector, frontsector, nullptr, floorplane, ceilingplane, foggy, basecolormap, opaque3dfloor);
 			}
 			line++;
 		}
@@ -568,7 +568,9 @@ namespace swrenderer
 				frontsector->planes[sector_t::ceiling].xform,
 				frontsector->sky,
 				portal,
-				basecolormap
+				basecolormap,
+				Fake3DOpaque::Normal,
+				0
 			) : nullptr;
 
 		if (ceilingplane)
@@ -609,7 +611,9 @@ namespace swrenderer
 				frontsector->planes[sector_t::floor].xform,
 				frontsector->sky,
 				portal,
-				basecolormap
+				basecolormap,
+				Fake3DOpaque::Normal,
+				0
 			) : nullptr;
 
 		if (floorplane)
@@ -637,7 +641,7 @@ namespace swrenderer
 				if (!(clip3d->fakeFloor->fakeFloor->flags & FF_RENDERPLANES)) continue;
 				if (clip3d->fakeFloor->fakeFloor->alpha == 0) continue;
 				if (clip3d->fakeFloor->fakeFloor->flags & FF_THISINSIDE && clip3d->fakeFloor->fakeFloor->flags & FF_INVERTSECTOR) continue;
-				clip3d->fakeAlpha = MIN<fixed_t>(Scale(clip3d->fakeFloor->fakeFloor->alpha, OPAQUE, 255), OPAQUE);
+				fixed_t fakeAlpha = MIN<fixed_t>(Scale(clip3d->fakeFloor->fakeFloor->alpha, OPAQUE, 255), OPAQUE);
 				if (clip3d->fakeFloor->validcount != validcount)
 				{
 					clip3d->fakeFloor->validcount = validcount;
@@ -647,7 +651,6 @@ namespace swrenderer
 				if (fakeHeight < Thread->Viewport->viewpoint.Pos.Z &&
 					fakeHeight > frontsector->floorplane.ZatPoint(frontsector->centerspot))
 				{
-					clip3d->fake3D = FAKE3D_FAKEFLOOR;
 					tempsec = *clip3d->fakeFloor->fakeFloor->model;
 					tempsec.floorplane = *clip3d->fakeFloor->fakeFloor->top.plane;
 					tempsec.ceilingplane = *clip3d->fakeFloor->fakeFloor->bottom.plane;
@@ -675,13 +678,14 @@ namespace swrenderer
 						frontsector->planes[position].xform,
 						frontsector->sky,
 						nullptr,
-						basecolormap);
+						basecolormap,
+						Fake3DOpaque::FakeFloor,
+						fakeAlpha);
 
 					if (floorplane)
 						floorplane->AddLights(Thread, frontsector->lighthead);
 
-					FakeDrawLoop(sub, floorplane, ceilingplane, foggy, basecolormap);
-					clip3d->fake3D = 0;
+					FakeDrawLoop(sub, floorplane, ceilingplane, foggy, basecolormap, Fake3DOpaque::FakeFloor);
 					frontsector = sub->sector;
 				}
 			}
@@ -699,7 +703,7 @@ namespace swrenderer
 				if (!(clip3d->fakeFloor->fakeFloor->flags & FF_RENDERPLANES)) continue;
 				if (clip3d->fakeFloor->fakeFloor->alpha == 0) continue;
 				if (!(clip3d->fakeFloor->fakeFloor->flags & FF_THISINSIDE) && (clip3d->fakeFloor->fakeFloor->flags & (FF_SWIMMABLE | FF_INVERTSECTOR)) == (FF_SWIMMABLE | FF_INVERTSECTOR)) continue;
-				clip3d->fakeAlpha = MIN<fixed_t>(Scale(clip3d->fakeFloor->fakeFloor->alpha, OPAQUE, 255), OPAQUE);
+				fixed_t fakeAlpha = MIN<fixed_t>(Scale(clip3d->fakeFloor->fakeFloor->alpha, OPAQUE, 255), OPAQUE);
 
 				if (clip3d->fakeFloor->validcount != validcount)
 				{
@@ -710,7 +714,6 @@ namespace swrenderer
 				if (fakeHeight > Thread->Viewport->viewpoint.Pos.Z &&
 					fakeHeight < frontsector->ceilingplane.ZatPoint(frontsector->centerspot))
 				{
-					clip3d->fake3D = FAKE3D_FAKECEILING;
 					tempsec = *clip3d->fakeFloor->fakeFloor->model;
 					tempsec.floorplane = *clip3d->fakeFloor->fakeFloor->top.plane;
 					tempsec.ceilingplane = *clip3d->fakeFloor->fakeFloor->bottom.plane;
@@ -741,13 +744,14 @@ namespace swrenderer
 						frontsector->planes[position].xform,
 						frontsector->sky,
 						nullptr,
-						basecolormap);
+						basecolormap,
+						Fake3DOpaque::FakeCeiling,
+						fakeAlpha);
 
 					if (ceilingplane)
 						ceilingplane->AddLights(Thread, frontsector->lighthead);
 
-					FakeDrawLoop(sub, floorplane, ceilingplane, foggy, basecolormap);
-					clip3d->fake3D = 0;
+					FakeDrawLoop(sub, floorplane, ceilingplane, foggy, basecolormap, Fake3DOpaque::FakeCeiling);
 					frontsector = sub->sector;
 				}
 			}
@@ -790,7 +794,7 @@ namespace swrenderer
 			if (dist1 > line_distance_cull && dist2 > line_distance_cull)
 			{
 				FarClipLine farclip(Thread);
-				farclip.Render(line, InSubsector, floorplane, ceilingplane);
+				farclip.Render(line, InSubsector, floorplane, ceilingplane, Fake3DOpaque::Normal);
 			}
 			else if (!outersubsector || line->sidedef == nullptr || !(line->sidedef->Flags & WALLF_POLYOBJ))
 			{
@@ -808,7 +812,7 @@ namespace swrenderer
 						if (!(clip3d->fakeFloor->fakeFloor->flags & FF_EXISTS)) continue;
 						if (!(clip3d->fakeFloor->fakeFloor->flags & FF_RENDERPLANES)) continue;
 						if (!clip3d->fakeFloor->fakeFloor->model) continue;
-						clip3d->fake3D = FAKE3D_FAKEBACK;
+						Fake3DOpaque opaque3dfloor = Fake3DOpaque::FakeBack;
 						tempsec = *clip3d->fakeFloor->fakeFloor->model;
 						tempsec.floorplane = *clip3d->fakeFloor->fakeFloor->top.plane;
 						tempsec.ceilingplane = *clip3d->fakeFloor->fakeFloor->bottom.plane;
@@ -817,14 +821,13 @@ namespace swrenderer
 							clip3d->fakeFloor->validcount = validcount;
 							clip3d->NewClip();
 						}
-						renderline.Render(line, InSubsector, frontsector, &tempsec, floorplane, ceilingplane, foggy, basecolormap); // fake
+						renderline.Render(line, InSubsector, frontsector, &tempsec, floorplane, ceilingplane, foggy, basecolormap, opaque3dfloor); // fake
 					}
 					clip3d->fakeFloor = nullptr;
-					clip3d->fake3D = 0;
 					floorplane = backupfp;
 					ceilingplane = backupcp;
 				}
-				renderline.Render(line, InSubsector, frontsector, nullptr, floorplane, ceilingplane, foggy, basecolormap); // now real
+				renderline.Render(line, InSubsector, frontsector, nullptr, floorplane, ceilingplane, foggy, basecolormap, Fake3DOpaque::Normal); // now real
 			}
 			line++;
 		}
