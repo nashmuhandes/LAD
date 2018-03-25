@@ -177,8 +177,8 @@ class FFontChar1 : public FTexture
 {
 public:
    FFontChar1 (FTexture *sourcelump);
-   const uint8_t *GetColumn (unsigned int column, const Span **spans_out);
-   const uint8_t *GetPixels ();
+   const uint8_t *GetColumn(FRenderStyle style, unsigned int column, const Span **spans_out);
+   const uint8_t *GetPixels (FRenderStyle style);
    void SetSourceRemap(const uint8_t *sourceremap);
    void Unload ();
    ~FFontChar1 ();
@@ -198,8 +198,8 @@ public:
 	FFontChar2 (int sourcelump, int sourcepos, int width, int height, int leftofs=0, int topofs=0);
 	~FFontChar2 ();
 
-	const uint8_t *GetColumn (unsigned int column, const Span **spans_out);
-	const uint8_t *GetPixels ();
+	const uint8_t *GetColumn(FRenderStyle style, unsigned int column, const Span **spans_out);
+	const uint8_t *GetPixels (FRenderStyle style);
 	void SetSourceRemap(const uint8_t *sourceremap);
 	void Unload ();
 
@@ -321,7 +321,7 @@ FFont *V_GetFont(const char *name)
 		{
 			uint32_t head;
 			{
-				FWadLump lumpy = Wads.OpenLumpNum (lump);
+				auto lumpy = Wads.OpenLumpReader (lump);
 				lumpy.Read (&head, 4);
 			}
 			if ((head & MAKE_ID(255,255,255,0)) == MAKE_ID('F','O','N',0) ||
@@ -559,7 +559,7 @@ void RecordTextureColors (FTexture *pic, uint8_t *usedcolors)
 	for (x = pic->GetWidth() - 1; x >= 0; x--)
 	{
 		const FTexture::Span *spans;
-		const uint8_t *column = pic->GetColumn (x, &spans);
+		const uint8_t *column = pic->GetColumn(DefaultRenderStyle(), x, &spans);	// This shouldn't use the spans...
 
 		while (spans->Length != 0)
 		{
@@ -973,6 +973,9 @@ void FFont::LoadTranslations()
 // means all the characters of a font have a better chance of being packed
 // into the same hardware texture.
 //
+// (Note that this is a rather dumb implementation. The atlasing should
+// occur at a higher level, independently of the renderer being used.)
+//
 //==========================================================================
 
 void FFont::Preload() const
@@ -989,7 +992,7 @@ void FFont::Preload() const
 		FTexture *pic = GetChar(i, &foo);
 		if (pic != NULL)
 		{
-			pic->GetNative(false);
+			pic->GetNative(pic->GetFormat(), false);
 		}
 	}
 }
@@ -1649,9 +1652,11 @@ FFontChar1::FFontChar1 (FTexture *sourcelump)
 //
 // FFontChar1 :: GetPixels
 //
+// Render style is not relevant for fonts. This must not use it!
+//
 //==========================================================================
 
-const uint8_t *FFontChar1::GetPixels ()
+const uint8_t *FFontChar1::GetPixels (FRenderStyle)
 {
 	if (Pixels == NULL)
 	{
@@ -1666,12 +1671,12 @@ const uint8_t *FFontChar1::GetPixels ()
 //
 //==========================================================================
 
-void FFontChar1::MakeTexture ()
+void FFontChar1::MakeTexture ()	
 {
 	// Make the texture as normal, then remap it so that all the colors
 	// are at the low end of the palette
 	Pixels = new uint8_t[Width*Height];
-	const uint8_t *pix = BaseTexture->GetPixels();
+	const uint8_t *pix = BaseTexture->GetPixels(DefaultRenderStyle());
 
 	if (!SourceRemap)
 	{
@@ -1692,14 +1697,14 @@ void FFontChar1::MakeTexture ()
 //
 //==========================================================================
 
-const uint8_t *FFontChar1::GetColumn (unsigned int column, const Span **spans_out)
+const uint8_t *FFontChar1::GetColumn(FRenderStyle, unsigned int column, const Span **spans_out)
 {
 	if (Pixels == NULL)
 	{
 		MakeTexture ();
 	}
 
-	BaseTexture->GetColumn(column, spans_out);
+	BaseTexture->GetColumn(DefaultRenderStyle(), column, spans_out);
 	return Pixels + column*Height;
 }
 
@@ -1797,9 +1802,11 @@ void FFontChar2::Unload ()
 //
 // FFontChar2 :: GetPixels
 //
+// Like for FontChar1, the render style has no relevance here as well.
+//
 //==========================================================================
 
-const uint8_t *FFontChar2::GetPixels ()
+const uint8_t *FFontChar2::GetPixels (FRenderStyle)
 {
 	if (Pixels == NULL)
 	{
@@ -1814,7 +1821,7 @@ const uint8_t *FFontChar2::GetPixels ()
 //
 //==========================================================================
 
-const uint8_t *FFontChar2::GetColumn (unsigned int column, const Span **spans_out)
+const uint8_t *FFontChar2::GetColumn(FRenderStyle, unsigned int column, const Span **spans_out)
 {
 	if (Pixels == NULL)
 	{
@@ -1855,7 +1862,7 @@ void FFontChar2::SetSourceRemap(const uint8_t *sourceremap)
 
 void FFontChar2::MakeTexture ()
 {
-	FWadLump lump = Wads.OpenLumpNum (SourceLump);
+	auto lump = Wads.OpenLumpReader (SourceLump);
 	int destSize = Width * Height;
 	uint8_t max = 255;
 	bool rle = true;
@@ -1868,18 +1875,18 @@ void FFontChar2::MakeTexture ()
 		{
 			lump.Read (buff, 7);
 			max = buff[6];
-			lump.Seek (SourcePos - 11, SEEK_CUR);
+			lump.Seek (SourcePos - 11, FileReader::SeekCur);
 		}
 		else if (buff[3] == 0x1A)
 		{
 			lump.Read(buff, 13);
 			max = buff[12] - 1;
-			lump.Seek (SourcePos - 17, SEEK_CUR);
+			lump.Seek (SourcePos - 17, FileReader::SeekCur);
 			rle = false;
 		}
 		else
 		{
-			lump.Seek (SourcePos - 4, SEEK_CUR);
+			lump.Seek (SourcePos - 4, FileReader::SeekCur);
 		}
 	}
 
@@ -1899,9 +1906,7 @@ void FFontChar2::MakeTexture ()
 			{
 				if (runlen != 0)
 				{
-					uint8_t color;
-
-					lump >> color;
+					uint8_t color = lump.ReadUInt8();
 					color = MIN (color, max);
 					if (SourceRemap != NULL)
 					{
@@ -1921,18 +1926,14 @@ void FFontChar2::MakeTexture ()
 				}
 				else
 				{
-					int8_t code;
-
-					lump >> code;
+					int8_t code = lump.ReadInt8();
 					if (code >= 0)
 					{
 						runlen = code + 1;
 					}
 					else if (code != -128)
 					{
-						uint8_t color;
-
-						lump >> color;
+						uint8_t color = lump.ReadUInt8();
 						setlen = (-code) + 1;
 						setval = MIN (color, max);
 						if (SourceRemap != NULL)
@@ -1951,8 +1952,7 @@ void FFontChar2::MakeTexture ()
 		{
 			for (int x = Width; x != 0; --x)
 			{
-				uint8_t color;
-				lump >> color;
+				uint8_t color = lump.ReadUInt8();
 				if (color > max)
 				{
 					color = max;

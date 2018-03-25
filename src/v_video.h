@@ -53,6 +53,7 @@ void V_CalcCleanFacs (int designwidth, int designheight, int realwidth, int real
 
 class FTexture;
 struct FColormap;
+enum FTextureFormat : uint32_t;
 
 // TagItem definitions for DrawTexture. As far as I know, tag lists
 // originated on the Amiga.
@@ -336,7 +337,11 @@ protected:
 // This class represents a native texture, as opposed to an FTexture.
 class FNativeTexture
 {
+protected:
+	FTexture * mGameTex;
+	FTextureFormat mFormat;
 public:
+	FNativeTexture(FTexture *tex, FTextureFormat fmt) : mGameTex(tex), mFormat(fmt) {}
 	virtual ~FNativeTexture();
 	virtual bool Update() = 0;
 	virtual bool CheckWrapping(bool wrapping);
@@ -405,6 +410,7 @@ public:
 	virtual void SetBlendingRect (int x1, int y1, int x2, int y2);
 
 	bool Accel2D;	// If true, 2D drawing can be accelerated.
+	virtual bool LegacyHardware() const { return false; }	// only for reporting SM1.4 support to the stat collector
 
 	// Begin 2D drawing operations. This is like Update, but it doesn't end
 	// the scene, and it doesn't present the image yet. If you are going to
@@ -424,7 +430,7 @@ public:
 	virtual void DrawBlendingRect();
 
 	// Create a native texture from a game texture.
-	virtual FNativeTexture *CreateTexture(FTexture *gametex, bool wrapping);
+	virtual FNativeTexture *CreateTexture(FTexture *gametex, FTextureFormat fmt, bool wrapping);
 
 	// Create a palette texture from a remap/palette table.
 	virtual FNativePalette *CreatePalette(FRemapTable *remap);

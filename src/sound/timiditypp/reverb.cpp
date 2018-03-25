@@ -29,6 +29,7 @@
  */
 
 #include <string.h>
+#include <stdint.h>
 #include "timidity.h"
 #include "tables.h"
 #include "common.h"
@@ -1875,6 +1876,14 @@ void Reverb::do_ch_stereo_chorus(int32_t *buf, int32_t count, InfoStereoChorus *
 		free_delay(&(info->delayL));
 		free_delay(&(info->delayR));
 		return;
+	}
+
+	if (bufL == nullptr)
+	{
+		set_delay(&(info->delayL), info->rpt0);
+		set_delay(&(info->delayR), info->rpt0);
+		bufL = info->delayL.buf;
+		bufR = info->delayR.buf;
 	}
 
 	/* LFO */

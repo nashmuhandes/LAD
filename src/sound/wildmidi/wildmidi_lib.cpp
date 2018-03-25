@@ -676,7 +676,7 @@ static int WM_LoadConfig(const char *config_file, bool main) {
 	int token_count = 0;
 	auto config_parm = config_file;
 
-	FileReader *fr = nullptr;
+	FileReader fr;
 	if (main)
 	{
 		if (!_WM_InitReader(config_file)) return -1;	// unable to open this as a config file.
@@ -2943,7 +2943,7 @@ void WildMidi_Renderer::ComputeOutput(float *fbuffer, int len)
 	}
 	for (; buffer < newbuf; ++buffer)
 	{
-		*(float *)buffer = (float)*buffer * (2.f / 32768.f);	// boost the volume because Wildmidi is far more quiet than the other synths and therefore hard to balance.
+		*(float *)buffer = (float)*buffer * (1.3f / 32768.f);	// boost the volume because Wildmidi is far more quiet than the other synths and therefore hard to balance.
 	}
 }
 

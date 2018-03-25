@@ -30,73 +30,91 @@
 
 #include "resourcefiles/resourcefile.h"
 #include "doomdata.h"
+#include "r_defs.h"
 
 
 struct MapData
 {
+private:
 	struct MapLump
 	{
-		char Name[8];
-		FileReader *Reader;
+		char Name[8] = { 0 };
+		FileReader Reader;
 	} MapLumps[ML_MAX];
-	bool HasBehavior;
-	bool Encrypted;
-	bool isText;
-	bool InWad;
-	int lumpnum;
-	FileReader * file;
-	FResourceFile * resource;
-	
-	MapData()
-	{
-		memset(MapLumps, 0, sizeof(MapLumps));
-		file = NULL;
-		resource = NULL;
-		lumpnum = -1;
-		HasBehavior = false;
-		Encrypted = false;
-		isText = false;
-		InWad = false;
-	}
+	FileReader nofile;
+public:
+	bool HasBehavior = false;
+	bool Encrypted = false;
+	bool isText = false;
+	bool InWad = false;
+	int lumpnum = -1;
+	FResourceFile * resource = nullptr;
 	
 	~MapData()
 	{
-		for (unsigned int i = 0;i < ML_MAX;++i)
-			delete MapLumps[i].Reader;
-
-		delete resource;
-		resource = NULL;
+		if (resource != nullptr) delete resource;
+		resource = nullptr;
 	}
 
+	/*
 	void Seek(unsigned int lumpindex)
 	{
 		if (lumpindex<countof(MapLumps))
 		{
-			file = MapLumps[lumpindex].Reader;
-			file->Seek(0, SEEK_SET);
+			file = &MapLumps[lumpindex].Reader;
+			file->Seek(0, FileReader::SeekSet);
 		}
+	}
+	*/
+
+	FileReader &Reader(unsigned int lumpindex)
+	{
+		if (lumpindex < countof(MapLumps))
+		{
+			auto &file = MapLumps[lumpindex].Reader;
+			file.Seek(0, FileReader::SeekSet);
+			return file;
+		}
+		return nofile;
 	}
 
 	void Read(unsigned int lumpindex, void * buffer, int size = -1)
 	{
 		if (lumpindex<countof(MapLumps))
 		{
-			if (size == -1) size = MapLumps[lumpindex].Reader->GetLength();
-			Seek(lumpindex);
-			file->Read(buffer, size);
+			if (size == -1) size = Size(lumpindex);
+			if (size > 0)
+			{
+				auto &file = MapLumps[lumpindex].Reader;
+				file.Seek(0, FileReader::SeekSet);
+				file.Read(buffer, size);
+			}
 		}
 	}
 
 	uint32_t Size(unsigned int lumpindex)
 	{
-		if (lumpindex<countof(MapLumps) && MapLumps[lumpindex].Reader)
+		if (lumpindex<countof(MapLumps) && MapLumps[lumpindex].Reader.isOpen())
 		{
-			return MapLumps[lumpindex].Reader->GetLength();
+			return (uint32_t)MapLumps[lumpindex].Reader.GetLength();
 		}
 		return 0;
 	}
 
+	bool CheckName(unsigned int lumpindex, const char *name)
+	{
+		if (lumpindex < countof(MapLumps))
+		{
+			return !strnicmp(MapLumps[lumpindex].Name, name, 8);
+		}
+		return false;
+	}
+
 	void GetChecksum(uint8_t cksum[16]);
+
+	friend bool P_LoadGLNodes(MapData * map);
+	friend MapData *P_OpenMapData(const char * mapname, bool justcheck);
+
 };
 
 MapData * P_OpenMapData(const char * mapname, bool justcheck);
@@ -163,14 +181,8 @@ struct FMissingCount
 };
 typedef TMap<FString,FMissingCount> FMissingTextureTracker;
 
-// Record of user data for UDMF maps
-struct FMapThingUserData
-{
-	FName Property;
-	int Value;
-};
 extern TMap<unsigned,unsigned> MapThingsUserDataIndex;	// from mapthing idx -> user data idx
-extern TArray<FMapThingUserData> MapThingsUserData;
+extern TArray<FUDMFKey> MapThingsUserData;
 
 
 #endif
