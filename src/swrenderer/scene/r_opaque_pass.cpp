@@ -1053,7 +1053,7 @@ namespace swrenderer
 			sprite.picnum = thing->picnum;
 
 			sprite.tex = TexMan(sprite.picnum);
-			if (sprite.tex->UseType == FTexture::TEX_Null)
+			if (sprite.tex->UseType == ETextureType::Null)
 			{
 				return false;
 			}
@@ -1125,7 +1125,7 @@ namespace swrenderer
 					return false;
 			}
 
-			if (sprite.voxel == nullptr && (sprite.tex == nullptr || sprite.tex->UseType == FTexture::TEX_Null))
+			if (sprite.voxel == nullptr && (sprite.tex == nullptr || sprite.tex->UseType == ETextureType::Null))
 			{
 				return false;
 			}

@@ -228,7 +228,7 @@ namespace swrenderer
 		flip = sprframe->Flip & 1;
 		tex = TexMan(picnum);
 
-		if (tex->UseType == FTexture::TEX_Null)
+		if (tex->UseType == ETextureType::Null)
 			return;
 
 		if (pspr->firstTic)
@@ -357,7 +357,8 @@ namespace swrenderer
 				invertcolormap = !invertcolormap;
 			}
 
-			bool fullbright = !foggy && pspr->GetState()->GetFullbright();
+			const FState* const psprState = pspr->GetState();
+			bool fullbright = !foggy && (psprState == nullptr ? false : psprState->GetFullbright());
 			bool fadeToBlack = (vis.RenderStyle.Flags & STYLEF_FadeToBlack) != 0;
 
 			vis.Light.SetColormap(0, spriteshade, basecolormap, fullbright, invertcolormap, fadeToBlack);

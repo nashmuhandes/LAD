@@ -746,7 +746,7 @@ void G_DoCompleted (void)
 		AM_Stop ();
 
 	wminfo.finished_ep = level.cluster - 1;
-	wminfo.LName0 = TexMan.CheckForTexture(level.info->PName, FTexture::TEX_MiscPatch);
+	wminfo.LName0 = TexMan.CheckForTexture(level.info->PName, ETextureType::MiscPatch);
 	wminfo.current = level.MapName;
 
 	if (deathmatch &&
@@ -767,7 +767,7 @@ void G_DoCompleted (void)
 		else
 		{
 			wminfo.next = nextinfo->MapName;
-			wminfo.LName1 = TexMan.CheckForTexture(nextinfo->PName, FTexture::TEX_MiscPatch);
+			wminfo.LName1 = TexMan.CheckForTexture(nextinfo->PName, ETextureType::MiscPatch);
 		}
 	}
 
@@ -958,7 +958,7 @@ void G_DoLoadLevel (int position, bool autosave)
 	//	a flat. The data is in the WAD only because
 	//	we look for an actual index, instead of simply
 	//	setting one.
-	skyflatnum = TexMan.GetTexture (gameinfo.SkyFlatName, FTexture::TEX_Flat, FTextureManager::TEXMAN_Overridable);
+	skyflatnum = TexMan.GetTexture (gameinfo.SkyFlatName, ETextureType::Flat, FTextureManager::TEXMAN_Overridable);
 
 	// DOOM determines the sky texture to be used
 	// depending on the current episode and the game version.
@@ -1430,8 +1430,8 @@ void G_InitLevelLocals ()
 	level.info = info;
 	level.skyspeed1 = info->skyspeed1;
 	level.skyspeed2 = info->skyspeed2;
-	level.skytexture1 = TexMan.GetTexture(info->SkyPic1, FTexture::TEX_Wall, FTextureManager::TEXMAN_Overridable | FTextureManager::TEXMAN_ReturnFirst);
-	level.skytexture2 = TexMan.GetTexture(info->SkyPic2, FTexture::TEX_Wall, FTextureManager::TEXMAN_Overridable | FTextureManager::TEXMAN_ReturnFirst);
+	level.skytexture1 = TexMan.GetTexture(info->SkyPic1, ETextureType::Wall, FTextureManager::TEXMAN_Overridable | FTextureManager::TEXMAN_ReturnFirst);
+	level.skytexture2 = TexMan.GetTexture(info->SkyPic2, ETextureType::Wall, FTextureManager::TEXMAN_Overridable | FTextureManager::TEXMAN_ReturnFirst);
 	level.fadeto = info->fadeto;
 	level.cdtrack = info->cdtrack;
 	level.cdid = info->cdid;
