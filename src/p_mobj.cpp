@@ -495,6 +495,7 @@ void AActor::Serialize(FSerializer &arc)
 		A("score", Score)
 		A("designatedteam", DesignatedTeam)
 		A("lastpush", lastpush)
+		A("activationtype", activationtype)
 		A("lastbump", lastbump)
 		A("painthreshold", PainThreshold)
 		A("damagefactor", DamageFactor)
@@ -741,10 +742,7 @@ bool AActor::SetState (FState *newstate, bool nofunction)
 		newstate = newstate->GetNextState();
 	} while (tics == 0);
 
-	if (Renderer != NULL)
-	{
-		SetDynamicLights();
-	}
+	SetDynamicLights();
 	return true;
 }
 

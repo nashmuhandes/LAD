@@ -39,10 +39,8 @@
 #include "swrenderer/viewport/r_viewport.h"
 #include "swrenderer/r_swcolormaps.h"
 
-EXTERN_CVAR(Bool, r_shadercolormaps)
 EXTERN_CVAR(Int, screenblocks)
 EXTERN_CVAR(Float, r_visibility)
-void InitGLRMapinfoData();
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -56,61 +54,71 @@ PolyRenderer::PolyRenderer()
 {
 }
 
-void PolyRenderer::RenderView(player_t *player)
+void PolyRenderer::RenderView(player_t *player, DCanvas *target)
 {
 	using namespace swrenderer;
 	
-	RenderTarget = screen;
+	R_ExecuteSetViewSize(Viewpoint, Viewwindow);
 
-	int width = SCREENWIDTH;
-	int height = SCREENHEIGHT;
-	float trueratio;
-	ActiveRatio(width, height, &trueratio);
-	//viewport->SetViewport(&Thread, width, height, trueratio);
+	RenderTarget = target;
+	RenderToCanvas = false;
 
 	RenderActorView(player->mo, false);
 
-	// Apply special colormap if the target cannot do it
-	CameraLight *cameraLight = CameraLight::Instance();
-	if (cameraLight->ShaderColormap() && RenderTarget->IsBgra() && !(r_shadercolormaps && screen->Accel2D))
-	{
-		Threads.MainThread()->DrawQueue->Push<ApplySpecialColormapRGBACommand>(cameraLight->ShaderColormap(), screen);
-	}
-	
 	Threads.MainThread()->FlushDrawQueue();
+	PolyDrawerWaitCycles.Clock();
 	DrawerThreads::WaitForWorkers();
+	PolyDrawerWaitCycles.Unclock();
 }
 
 void PolyRenderer::RenderViewToCanvas(AActor *actor, DCanvas *canvas, int x, int y, int width, int height, bool dontmaplines)
 {
-	const bool savedviewactive = viewactive;
+	// Save a bunch of silly globals:
+	auto savedViewpoint = Viewpoint;
+	auto savedViewwindow = Viewwindow;
+	auto savedviewwindowx = viewwindowx;
+	auto savedviewwindowy = viewwindowy;
+	auto savedviewwidth = viewwidth;
+	auto savedviewheight = viewheight;
+	auto savedviewactive = viewactive;
+	auto savedRenderTarget = RenderTarget;
 
-	viewwidth = width;
+	// Setup the view:
 	RenderTarget = canvas;
+	RenderToCanvas = true;
 	R_SetWindow(Viewpoint, Viewwindow, 12, width, height, height, true);
-	//viewport->SetViewport(&Thread, width, height, Viewwindow.WidescreenRatio);
 	viewwindowx = x;
 	viewwindowy = y;
 	viewactive = true;
 	
-	canvas->Lock(true);
-	
+	// Render:
 	RenderActorView(actor, dontmaplines);
 	Threads.MainThread()->FlushDrawQueue();
 	DrawerThreads::WaitForWorkers();
-	
-	canvas->Unlock();
 
-	RenderTarget = screen;
-	R_ExecuteSetViewSize(Viewpoint, Viewwindow);
-	float trueratio;
-	ActiveRatio(width, height, &trueratio);
-	//viewport->SetViewport(&Thread, width, height, viewport->viewwindow.WidescreenRatio);
+	RenderToCanvas = false;
+
+	// Restore silly globals:
+	Viewpoint = savedViewpoint;
+	Viewwindow = savedViewwindow;
+	viewwindowx = savedviewwindowx;
+	viewwindowy = savedviewwindowy;
+	viewwidth = savedviewwidth;
+	viewheight = savedviewheight;
 	viewactive = savedviewactive;
+	RenderTarget = savedRenderTarget;
 }
 
 void PolyRenderer::RenderActorView(AActor *actor, bool dontmaplines)
 {
+	PolyTotalBatches = 0;
+	PolyTotalTriangles = 0;
+	PolyTotalDrawCalls = 0;
+	PolyCullCycles.Reset();
+	PolyOpaqueCycles.Reset();
+	PolyMaskedCycles.Reset();
+	PolyDrawerWaitCycles.Reset();
+
 	NetUpdate();
 	
 	DontMapLines = dontmaplines;
@@ -118,6 +126,13 @@ void PolyRenderer::RenderActorView(AActor *actor, bool dontmaplines)
 	R_SetupFrame(Viewpoint, Viewwindow, actor);
 	P_FindParticleSubsectors();
 	PO_LinkToSubsectors();
+
+	static bool firstcall = true;
+	if (firstcall)
+	{
+		swrenderer::R_InitFuzzTable(RenderTarget->GetPitch());
+		firstcall = false;
+	}
 
 	swrenderer::R_UpdateFuzzPosFrameStart();
 
@@ -129,23 +144,31 @@ void PolyRenderer::RenderActorView(AActor *actor, bool dontmaplines)
 	PolyCameraLight::Instance()->SetCamera(Viewpoint, RenderTarget, actor);
 	//Viewport->SetupFreelook();
 
-	ActorRenderFlags savedflags = Viewpoint.camera->renderflags;
-	// Never draw the player unless in chasecam mode
-	if (!Viewpoint.showviewer)
-		Viewpoint.camera->renderflags |= RF_INVISIBLE;
+	ActorRenderFlags savedflags = 0;
+	if (Viewpoint.camera)
+	{
+		savedflags = Viewpoint.camera->renderflags;
+
+		// Never draw the player unless in chasecam mode
+		if (!Viewpoint.showviewer)
+			Viewpoint.camera->renderflags |= RF_INVISIBLE;
+	}
 
 	ScreenTriangle::FuzzStart = (ScreenTriangle::FuzzStart + 14) % FUZZTABLE;
 
 	ClearBuffers();
 	SetSceneViewport();
-	SetupPerspectiveMatrix();
-	MainPortal.SetViewpoint(WorldToClip, PolyClipPlane(0.0f, 0.0f, 0.0f, 1.0f), GetNextStencilValue());
-	MainPortal.Render(0);
-	Skydome.Render(Threads.MainThread(), WorldToClip);
-	MainPortal.RenderTranslucent(0);
-	PlayerSprites.Render(Threads.MainThread());
 
-	Viewpoint.camera->renderflags = savedflags;
+	PolyPortalViewpoint mainViewpoint = SetupPerspectiveMatrix();
+	mainViewpoint.StencilValue = GetNextStencilValue();
+	mainViewpoint.PortalPlane = PolyClipPlane(0.0f, 0.0f, 0.0f, 1.0f);
+	Scene.CurrentViewpoint = &mainViewpoint;
+	Scene.Render(&mainViewpoint);
+	PlayerSprites.Render(Threads.MainThread());
+	Scene.CurrentViewpoint = nullptr;
+
+	if (Viewpoint.camera)
+		Viewpoint.camera->renderflags = savedflags;
 	interpolator.RestoreInterpolations ();
 	
 	NetUpdate();
@@ -159,16 +182,18 @@ void PolyRenderer::RenderRemainingPlayerSprites()
 void PolyRenderer::ClearBuffers()
 {
 	Threads.Clear();
-	PolyStencilBuffer::Instance()->Clear(RenderTarget->GetWidth(), RenderTarget->GetHeight(), 0);
-	PolyZBuffer::Instance()->Resize(RenderTarget->GetPitch(), RenderTarget->GetHeight());
+	PolyTriangleDrawer::ClearBuffers(RenderTarget);
 	NextStencilValue = 0;
+	Threads.MainThread()->SectorPortals.clear();
+	Threads.MainThread()->LinePortals.clear();
+	Threads.MainThread()->TranslucentObjects.clear();
 }
 
 void PolyRenderer::SetSceneViewport()
 {
 	using namespace swrenderer;
 	
-	if (RenderTarget == screen) // Rendering to screen
+	if (!RenderToCanvas) // Rendering to screen
 	{
 		int height;
 		if (screenblocks >= 10)
@@ -177,25 +202,16 @@ void PolyRenderer::SetSceneViewport()
 			height = (screenblocks*SCREENHEIGHT / 10) & ~7;
 
 		int bottom = SCREENHEIGHT - (height + viewwindowy - ((height - viewheight) / 2));
-		PolyTriangleDrawer::set_viewport(viewwindowx, SCREENHEIGHT - bottom - height, viewwidth, height, RenderTarget);
+		PolyTriangleDrawer::SetViewport(Threads.MainThread()->DrawQueue, viewwindowx, SCREENHEIGHT - bottom - height, viewwidth, height, RenderTarget, false);
 	}
 	else // Rendering to camera texture
 	{
-		PolyTriangleDrawer::set_viewport(0, 0, RenderTarget->GetWidth(), RenderTarget->GetHeight(), RenderTarget);
+		PolyTriangleDrawer::SetViewport(Threads.MainThread()->DrawQueue, 0, 0, RenderTarget->GetWidth(), RenderTarget->GetHeight(), RenderTarget, false);
 	}
 }
 
-void PolyRenderer::SetupPerspectiveMatrix()
+PolyPortalViewpoint PolyRenderer::SetupPerspectiveMatrix(bool mirror)
 {
-	static bool bDidSetup = false;
-
-	if (!bDidSetup)
-	{
-		InitGLRMapinfoData();
-		bDidSetup = true;
-	}
-
-	// Code provided courtesy of Graf Zahl. Now we just have to plug it into the viewmatrix code...
 	// We have to scale the pitch to account for the pixel stretching, because the playsim doesn't know about this and treats it as 1:1.
 	double radPitch = Viewpoint.Angles.Pitch.Normalized180().Radians();
 	double angx = cos(radPitch);
@@ -206,15 +222,37 @@ void PolyRenderer::SetupPerspectiveMatrix()
 
 	float ratio = Viewwindow.WidescreenRatio;
 	float fovratio = (Viewwindow.WidescreenRatio >= 1.3f) ? 1.333333f : ratio;
+
 	float fovy = (float)(2 * DAngle::ToDegrees(atan(tan(Viewpoint.FieldOfView.Radians() / 2) / fovratio)).Degrees);
 
-	WorldToView =
-		TriMatrix::rotate((float)Viewpoint.Angles.Roll.Radians(), 0.0f, 0.0f, 1.0f) *
-		TriMatrix::rotate(adjustedPitch, 1.0f, 0.0f, 0.0f) *
-		TriMatrix::rotate(adjustedViewAngle, 0.0f, -1.0f, 0.0f) *
-		TriMatrix::scale(1.0f, level.info->pixelstretch, 1.0f) *
-		TriMatrix::swapYZ() *
-		TriMatrix::translate((float)-Viewpoint.Pos.X, (float)-Viewpoint.Pos.Y, (float)-Viewpoint.Pos.Z);
+	PolyPortalViewpoint portalViewpoint;
 
-	WorldToClip = TriMatrix::perspective(fovy, ratio, 5.0f, 65535.0f) * WorldToView;
+	portalViewpoint.WorldToView =
+		Mat4f::Rotate((float)Viewpoint.Angles.Roll.Radians(), 0.0f, 0.0f, 1.0f) *
+		Mat4f::Rotate(adjustedPitch, 1.0f, 0.0f, 0.0f) *
+		Mat4f::Rotate(adjustedViewAngle, 0.0f, -1.0f, 0.0f) *
+		Mat4f::Scale(1.0f, level.info->pixelstretch, 1.0f) *
+		Mat4f::SwapYZ() *
+		Mat4f::Translate((float)-Viewpoint.Pos.X, (float)-Viewpoint.Pos.Y, (float)-Viewpoint.Pos.Z);
+
+	portalViewpoint.Mirror = mirror;
+
+	if (mirror)
+		portalViewpoint.WorldToView = Mat4f::Scale(-1.0f, 1.0f, 1.0f) * portalViewpoint.WorldToView;
+
+	portalViewpoint.WorldToClip = Mat4f::Perspective(fovy, ratio, 5.0f, 65535.0f, Handedness::Right, ClipZRange::NegativePositiveW) * portalViewpoint.WorldToView;
+
+	return portalViewpoint;
+}
+
+cycle_t PolyCullCycles, PolyOpaqueCycles, PolyMaskedCycles, PolyDrawerWaitCycles;
+int PolyTotalBatches, PolyTotalTriangles, PolyTotalDrawCalls;
+
+ADD_STAT(polyfps)
+{
+	FString out;
+	out.Format("frame=%04.1f ms  cull=%04.1f ms  opaque=%04.1f ms  masked=%04.1f ms  drawers=%04.1f ms",
+		FrameCycles.TimeMS(), PolyCullCycles.TimeMS(), PolyOpaqueCycles.TimeMS(), PolyMaskedCycles.TimeMS(), PolyDrawerWaitCycles.TimeMS());
+	out.AppendFormat("\nbatches drawn: %d  triangles drawn: %d  drawcalls: %d", PolyTotalBatches, PolyTotalTriangles, PolyTotalDrawCalls);
+	return out;
 }

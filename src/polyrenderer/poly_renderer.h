@@ -30,48 +30,50 @@
 #include "r_utility.h"
 #include "scene/poly_portal.h"
 #include "scene/poly_playersprite.h"
-#include "scene/poly_sky.h"
 #include "scene/poly_light.h"
 #include "swrenderer/r_memory.h"
 #include "poly_renderthread.h"
+#include "stats.h"
 
 class AActor;
 class DCanvas;
+class PolyPortalViewpoint;
 class DrawerCommandQueue;
 typedef std::shared_ptr<DrawerCommandQueue> DrawerCommandQueuePtr;
+
+extern cycle_t PolyCullCycles, PolyOpaqueCycles, PolyMaskedCycles, PolyDrawerWaitCycles;
+extern int PolyTotalBatches, PolyTotalTriangles, PolyTotalDrawCalls;
 
 class PolyRenderer
 {
 public:
 	PolyRenderer();
 	
-	void RenderView(player_t *player);
+	void RenderView(player_t *player, DCanvas *target);
 	void RenderViewToCanvas(AActor *actor, DCanvas *canvas, int x, int y, int width, int height, bool dontmaplines);
 	void RenderRemainingPlayerSprites();
 
 	static PolyRenderer *Instance();
-	
+
+	PolyPortalViewpoint SetupPerspectiveMatrix(bool mirror = false);
+
 	uint32_t GetNextStencilValue() { uint32_t value = NextStencilValue; NextStencilValue += 2; return value; }
 
 	bool DontMapLines = false;
 	
 	PolyRenderThreads Threads;
 	DCanvas *RenderTarget = nullptr;
+	bool RenderToCanvas = false;
 	FViewWindow Viewwindow;
 	FRenderViewpoint Viewpoint;
 	PolyLightVisibility Light;
-
-	TriMatrix WorldToView;
-	TriMatrix WorldToClip;
+	RenderPolyScene Scene;
 
 private:
 	void RenderActorView(AActor *actor, bool dontmaplines);
 	void ClearBuffers();
 	void SetSceneViewport();
-	void SetupPerspectiveMatrix();
 
-	RenderPolyScene MainPortal;
-	PolySkyDome Skydome;
 	RenderPolyPlayerSprites PlayerSprites;
 	uint32_t NextStencilValue = 0;
 };
