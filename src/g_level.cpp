@@ -132,7 +132,7 @@ CUSTOM_CVAR(Bool, gl_notexturefill, false, CVAR_NOINITCALL)
 	if (level.info->notexturefill == -1) level.notexturefill = self;
 }
 
-CUSTOM_CVAR(Int, gl_lightmode, 3, CVAR_ARCHIVE | CVAR_NOINITCALL)
+CUSTOM_CVAR(Int, gl_lightmode, 0, CVAR_ARCHIVE | CVAR_NOINITCALL) // [LAD] default to 0
 {
 	int newself = self;
 	if (newself > 4) newself = 8;	// use 8 for software lighting to avoid conflicts with the bit mask
