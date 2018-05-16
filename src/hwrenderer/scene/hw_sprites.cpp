@@ -52,6 +52,10 @@
 #include "hwrenderer/textures/hw_material.h"
 #include "hwrenderer/dynlights/hw_dynlightdata.h"
 
+// [LAD]
+#include "dobject.h"
+#include "g_LAD/LADModularCharacterPartBase.h"
+
 extern TArray<spritedef_t> sprites;
 extern TArray<spriteframe_t> SpriteFrames;
 extern uint32_t r_renderercaps;
@@ -399,6 +403,12 @@ void GLSprite::Process(HWDrawInfo *di, AActor* thing, sector_t * sector, area_t 
 
 	// Don't waste time projecting sprites that are definitely not visible.
 	if ((thing->sprite == 0 && !isPicnumOverride) || !thing->IsVisibleToPlayer() || ((thing->renderflags & RF_MASKROTATION) && !thing->IsInsideVisibleAngles()))
+	{
+		return;
+	}
+
+	// [LAD] don't draw self modular character parts in first person view
+	if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADModularCharacterPartBase)) && thing->tracer == di->mViewActor)
 	{
 		return;
 	}
