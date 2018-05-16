@@ -94,7 +94,7 @@ CCMD(gl_flush)
 	screen->FlushTextures();
 }
 
-CUSTOM_CVAR(Int, gl_texture_filter, 4, CVAR_ARCHIVE|CVAR_GLOBALCONFIG|CVAR_NOINITCALL)
+CUSTOM_CVAR(Int, gl_texture_filter, 6, CVAR_ARCHIVE|CVAR_GLOBALCONFIG|CVAR_NOINITCALL) // [LAD] default to no filtering, trilinear
 {
 	if (self < 0 || self > 6) self=4;
 	screen->TextureFilterChanged();
