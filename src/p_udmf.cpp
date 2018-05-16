@@ -36,15 +36,12 @@
 #include "doomstat.h"
 #include "p_setup.h"
 #include "p_lnspec.h"
-#include "templates.h"
 #include "i_system.h"
 #include "gi.h"
 #include "r_sky.h"
 #include "g_level.h"
-#include "v_palette.h"
 #include "p_udmf.h"
 #include "r_state.h"
-#include "r_data/colormaps.h"
 #include "w_wad.h"
 #include "p_tags.h"
 #include "p_terrain.h"
@@ -1581,11 +1578,11 @@ public:
 					continue;
 
 				case NAME_hidden:
-					Flag(sec->MoreFlags, SECF_HIDDEN, key);
+					Flag(sec->MoreFlags, SECMF_HIDDEN, key);
 					break;
 
 				case NAME_Waterzone:
-					Flag(sec->MoreFlags, SECF_UNDERWATER, key);
+					Flag(sec->MoreFlags, SECMF_UNDERWATER, key);
 					break;
 
 				case NAME_floorplane_a:

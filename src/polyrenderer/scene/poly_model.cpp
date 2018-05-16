@@ -36,21 +36,21 @@
 void gl_FlushModels();
 bool polymodelsInUse;
 
-void PolyRenderModel(PolyRenderThread *thread, const Mat4f &worldToClip, const PolyClipPlane &clipPlane, uint32_t stencilValue, float x, float y, float z, FSpriteModelFrame *smf, AActor *actor)
+void PolyRenderModel(PolyRenderThread *thread, const Mat4f &worldToClip, uint32_t stencilValue, float x, float y, float z, FSpriteModelFrame *smf, AActor *actor)
 {
-	PolyModelRenderer renderer(thread, worldToClip, clipPlane, stencilValue);
+	PolyModelRenderer renderer(thread, worldToClip, stencilValue);
 	renderer.RenderModel(x, y, z, smf, actor);
 }
 
-void PolyRenderHUDModel(PolyRenderThread *thread, const Mat4f &worldToClip, const PolyClipPlane &clipPlane, uint32_t stencilValue, DPSprite *psp, float ofsx, float ofsy)
+void PolyRenderHUDModel(PolyRenderThread *thread, const Mat4f &worldToClip, uint32_t stencilValue, DPSprite *psp, float ofsx, float ofsy)
 {
-	PolyModelRenderer renderer(thread, worldToClip, clipPlane, stencilValue);
+	PolyModelRenderer renderer(thread, worldToClip, stencilValue);
 	renderer.RenderHUDModel(psp, ofsx, ofsy);
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
-PolyModelRenderer::PolyModelRenderer(PolyRenderThread *thread, const Mat4f &worldToClip, const PolyClipPlane &clipPlane, uint32_t stencilValue) : Thread(thread), WorldToClip(worldToClip), ClipPlane(clipPlane), StencilValue(stencilValue)
+PolyModelRenderer::PolyModelRenderer(PolyRenderThread *thread, const Mat4f &worldToClip, uint32_t stencilValue) : Thread(thread), WorldToClip(worldToClip), StencilValue(stencilValue)
 {
 	if (!polymodelsInUse)
 	{
@@ -105,11 +105,13 @@ void PolyModelRenderer::BeginDrawHUDModel(AActor *actor, const VSMatrix &objectT
 	ModelActor = actor;
 	const_cast<VSMatrix &>(objectToWorldMatrix).copy(ObjectToWorld.Matrix);
 	SetTransform();
+	PolyTriangleDrawer::SetWeaponScene(Thread->DrawQueue, true);
 }
 
 void PolyModelRenderer::EndDrawHUDModel(AActor *actor)
 {
 	ModelActor = nullptr;
+	PolyTriangleDrawer::SetWeaponScene(Thread->DrawQueue, false);
 }
 
 void PolyModelRenderer::SetInterpolation(double interpolation)
@@ -177,11 +179,6 @@ void PolyModelRenderer::DrawElements(int numIndices, size_t offset)
 	args.SetWriteDepth(true);
 	args.SetWriteStencil(false);
 	args.DrawElements(Thread->DrawQueue, VertexBuffer, IndexBuffer + offset / sizeof(unsigned int), numIndices);
-}
-
-double PolyModelRenderer::GetTimeFloat()
-{
-	return (double)I_msTime() * (double)TICRATE / 1000.;
 }
 
 /////////////////////////////////////////////////////////////////////////////

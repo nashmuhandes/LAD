@@ -362,13 +362,6 @@ if( ZD_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
 		endif ()
 	endif ()
 
-	# With standard Apple tools -stdlib=libc++ needs to be specified in order to get
-	# C++11 support using SDKs 10.7 and 10.8.
-	if ( APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" )
-		set( CMAKE_CXX_FLAGS "-stdlib=libc++ ${CMAKE_CXX_FLAGS}" )
-		set( CMAKE_EXE_LINKER_FLAGS "-stdlib=libc++ ${CMAKE_EXE_LINKER_FLAGS}" )
-	endif ()
-
 	# Remove extra warnings when using the official DirectX headers.
 	# Also, TDM-GCC 4.4.0 no longer accepts glibc-style printf formats as valid,
 	# which is a royal pain. The previous version I had been using was fine with them.
@@ -637,19 +630,7 @@ add_definitions(-DADLMIDI_DISABLE_MUS_SUPPORT -DADLMIDI_DISABLE_XMI_SUPPORT -DAD
 
 # Project files should be aware of the header files. We can GLOB these since
 # there's generally a new cpp for every header so this file will get changed
-if( WIN32 )
-	set( EXTRA_HEADER_DIRS win32/*.h )
-elseif( APPLE )
-	if( OSX_COCOA_BACKEND )
-		set( EXTRA_HEADER_DIRS posix/*.h posix/cocoa/*.h )
-	else()
-		set( EXTRA_HEADER_DIRS posix/*.h posix/sdl/*.h )
-	endif()
-else()
-	set( EXTRA_HEADER_DIRS posix/*.h posix/sdl/*.h )
-endif()
 file( GLOB HEADER_FILES
-	${EXTRA_HEADER_DIRS}
 	fragglescript/*.h
 	g_shared/*.h
 	g_statusbar/*.h
@@ -664,6 +645,7 @@ file( GLOB HEADER_FILES
 	posix/*.h
 	posix/cocoa/*.h
 	posix/sdl/*.h
+	win32/*.h
 	r_data/*.h
 	r_data/models/*.h
 	rapidjson/*.h
@@ -701,6 +683,9 @@ file( GLOB HEADER_FILES
 	polyrenderer/scene/*.h
 	hwrenderer/data/*.h
 	hwrenderer/dynlights/*.h
+	hwrenderer/scene/*.h
+	hwrenderer/textures/*.h
+	hwrenderer/utilities/*.h
 	gl/*.h
 	gl/data/*.h
 	gl/dynlights/*.h
@@ -804,12 +789,13 @@ set( NOT_COMPILED_SOURCE_FILES
 )
 
 # This is disabled for now because I cannot find a way to give the .pch file a different name.
-# Visual C++ 2015 seems hell-bent of only allowing one .pch file with the same name as the executable.
+# Visual C++ 2015 seems hell-bent on only allowing one .pch file with the same name as the executable.
 #enable_precompiled_headers( g_pch2.h FASTMATH_PCH_SOURCES )
 
 # Enable fast math for some sources
 set( FASTMATH_SOURCES
 	swrenderer/r_all.cpp
+	swrenderer/r_swscene.cpp
 	polyrenderer/poly_all.cpp
 	sound/oplsynth/opl_mus_player.cpp
 	sound/mpg123_decoder.cpp
@@ -818,7 +804,6 @@ set( FASTMATH_SOURCES
 	sound/sndfile_decoder.cpp
 	sound/timiditypp/fft4g.cpp
 	sound/timiditypp/reverb.cpp
-	gl/utility/gl_clock.cpp
 	textures/hires/hqnx/init.cpp
 	textures/hires/hqnx/hq2x.cpp
 	textures/hires/hqnx/hq3x.cpp
@@ -826,26 +811,28 @@ set( FASTMATH_SOURCES
 	textures/hires/xbr/xbrz.cpp
 	textures/hires/xbr/xbrz_old.cpp
 	gl/scene/gl_bsp.cpp
-	gl/scene/gl_fakeflat.cpp
-	gl/scene/gl_clipper.cpp
-	gl/scene/gl_decal.cpp
 	gl/scene/gl_drawinfo.cpp
 	gl/scene/gl_flats.cpp
-	gl/scene/gl_walls.cpp
 	gl/scene/gl_sprite.cpp
 	gl/scene/gl_skydome.cpp
-	gl/scene/gl_renderhacks.cpp
 	gl/scene/gl_weapon.cpp
 	gl/scene/gl_scene.cpp
-	gl/scene/gl_swscene.cpp
-	gl/scene/gl_sky.cpp
 	gl/scene/gl_portal.cpp
 	gl/scene/gl_walls_draw.cpp
-	gl/scene/gl_vertex.cpp
-	gl/scene/gl_spritelight.cpp
 	gl_load/gl_load.c
-	gl/models/gl_models.cpp
 	hwrenderer/dynlights/hw_dynlightdata.cpp
+	hwrenderer/scene/hw_fakeflat.cpp
+	hwrenderer/scene/hw_decal.cpp
+	hwrenderer/scene/hw_drawlist.cpp
+	hwrenderer/scene/hw_clipper.cpp
+	hwrenderer/scene/hw_flats.cpp
+	hwrenderer/scene/hw_renderhacks.cpp
+	hwrenderer/scene/hw_sky.cpp
+	hwrenderer/scene/hw_sprites.cpp
+	hwrenderer/scene/hw_spritelight.cpp
+	hwrenderer/scene/hw_walls.cpp
+	hwrenderer/scene/hw_walls_vertex.cpp
+	hwrenderer/scene/hw_weapon.cpp
 	r_data/models/models.cpp
 	r_data/matrix.cpp
 	sound/adlmidi/adldata.cpp
@@ -920,7 +907,6 @@ set (PCH_SOURCES
 	i_time.cpp
 	info.cpp
 	keysections.cpp
-	lumpconfigfile.cpp
 	m_alloc.cpp
 	m_argv.cpp
 	m_bbox.cpp
@@ -1033,6 +1019,7 @@ set (PCH_SOURCES
 	gl/data/gl_vertexbuffer.cpp
 	gl/dynlights/gl_lightbuffer.cpp
 	gl/dynlights/gl_shadowmap.cpp
+	gl/models/gl_models.cpp
 	gl/renderer/gl_quaddrawer.cpp
 	gl/renderer/gl_renderer.cpp
 	gl/renderer/gl_renderstate.cpp
@@ -1064,14 +1051,18 @@ set (PCH_SOURCES
 	gl/system/gl_interface.cpp
 	gl/system/gl_framebuffer.cpp
 	gl/system/gl_debug.cpp
-	gl/system/gl_menu.cpp
 	gl/system/gl_wipe.cpp
 	gl/textures/gl_hwtexture.cpp
-	gl/textures/gl_texture.cpp
-	gl/textures/gl_material.cpp
 	gl/textures/gl_samplers.cpp
 	hwrenderer/data/flatvertices.cpp
 	hwrenderer/dynlights/hw_aabbtree.cpp
+	hwrenderer/dynlights/hw_shadowmap.cpp
+	hwrenderer/scene/hw_skydome.cpp
+	hwrenderer/textures/hw_material.cpp
+	hwrenderer/textures/hw_precache.cpp
+	hwrenderer/utility/hw_clock.cpp
+	hwrenderer/utility/hw_cvars.cpp
+	hwrenderer/utility/hw_lighting.cpp
 	
 	menu/joystickmenu.cpp
 	menu/loadsavemenu.cpp
@@ -1145,6 +1136,7 @@ set (PCH_SOURCES
 	r_data/models/models_md3.cpp
 	r_data/models/models_md2.cpp
 	r_data/models/models_voxel.cpp
+	r_data/models/models_ue1.cpp
 	scripting/symbols.cpp
 	scripting/types.cpp
 	scripting/thingdef.cpp

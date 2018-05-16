@@ -65,9 +65,7 @@
 
 #include "m_bbox.h"
 #include "m_random.h"
-#include "i_system.h"
 #include "c_dispatch.h"
-#include "math/cmath.h"
 
 #include "doomdef.h"
 #include "p_local.h"
@@ -85,19 +83,12 @@
 #include "p_3dmidtex.h"
 #include "vm.h"
 
-#include "s_sound.h"
 #include "decallib.h"
 
 // State.
-#include "doomstat.h"
-#include "r_state.h"
-
-#include "gi.h"
 
 #include "a_sharedglobal.h"
 #include "p_conversation.h"
-#include "r_data/r_translate.h"
-#include "g_level.h"
 #include "r_sky.h"
 #include "g_levellocals.h"
 #include "actorinlines.h"
@@ -2691,7 +2682,7 @@ bool P_TryMove(AActor *thing, const DVector2 &pos,
 			newsec->TriggerSectorActions(thing, SECSPAC_EyesDive);
 		}
 
-		if (!(hs->MoreFlags & SECF_FAKEFLOORONLY))
+		if (!(hs->MoreFlags & SECMF_FAKEFLOORONLY))
 		{
 			fakez = hs->ceilingplane.ZatPoint(pos);
 			if (!oldAboveFakeCeiling && eyez > fakez)
@@ -3089,7 +3080,7 @@ void FSlide::SlideTraverse(const DVector2 &start, const DVector2 &end)
 		if (!in->isaline)
 		{
 			// should never happen
-			Printf("PTR_SlideTraverse: not a line?");
+			Printf("PTR_SlideTraverse: not a line?\n");
 			continue;
 		}
 
@@ -3446,7 +3437,7 @@ bool FSlide::BounceTraverse(const DVector2 &start, const DVector2 &end)
 
 		if (!in->isaline)
 		{
-			Printf("PTR_BounceTraverse: not a line?");
+			Printf("PTR_BounceTraverse: not a line?\n");
 			continue;
 		}
 
@@ -6881,7 +6872,7 @@ bool P_ChangeSector(sector_t *sector, int crunch, double amt, int floorOrCeil, b
 
 	if (floorOrCeil != 2) sector->CheckPortalPlane(floorOrCeil);	// check for portal obstructions after everything is done.
 
-	if (!cpos.nofit && !isreset /* && sector->MoreFlags & (SECF_UNDERWATERMASK)*/)
+	if (!cpos.nofit && !isreset /* && sector->MoreFlags & (SECMF_UNDERWATERMASK)*/)
 	{
 		// If this is a control sector for a deep water transfer, all actors in affected
 		// sectors need to have their waterlevel information updated and if applicable,

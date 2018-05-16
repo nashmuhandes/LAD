@@ -28,27 +28,20 @@
 
 #include "gl/system/gl_system.h"
 #include "w_wad.h"
-#include "cmdlib.h"
-#include "sc_man.h"
-#include "m_crc32.h"
-#include "c_console.h"
 #include "g_game.h"
 #include "doomstat.h"
 #include "g_level.h"
 #include "r_state.h"
 #include "d_player.h"
 #include "g_levellocals.h"
-#include "r_utility.h"
 #include "i_time.h"
-//#include "resources/voxels.h"
-//#include "gl/gl_intern.h"
+#include "hwrenderer/textures/hw_material.h"
 
 #include "gl/system/gl_interface.h"
 #include "gl/renderer/gl_renderer.h"
 #include "gl/scene/gl_drawinfo.h"
 #include "gl/scene/gl_portal.h"
 #include "gl/models/gl_models.h"
-#include "gl/textures/gl_material.h"
 #include "gl/renderer/gl_renderstate.h"
 #include "gl/shaders/gl_shader.h"
 
@@ -151,11 +144,6 @@ void FGLModelRenderer::DrawArrays(int start, int count)
 void FGLModelRenderer::DrawElements(int numIndices, size_t offset)
 {
 	glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, (void*)(intptr_t)offset);
-}
-
-double FGLModelRenderer::GetTimeFloat()
-{
-	return (double)I_msTime() * (double)TICRATE / 1000.;
 }
 
 //===========================================================================

@@ -34,9 +34,7 @@
 */
 
 #include "files.h"
-#include "i_system.h"
 #include "templates.h"
-#include "m_misc.h"
 
 
 
@@ -350,7 +348,11 @@ public:
 bool FileReader::OpenFile(const char *filename, FileReader::Size start, FileReader::Size length)
 {
 	auto reader = new StdFileReader;
-	if (!reader->Open(filename, (long)start, (long)length)) return false;
+	if (!reader->Open(filename, (long)start, (long)length))
+	{
+		delete reader;
+		return false;
+	}
 	Close();
 	mReader = reader;
 	return true;

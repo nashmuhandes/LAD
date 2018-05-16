@@ -28,26 +28,16 @@
 
 // HEADER FILES ------------------------------------------------------------
 
-#ifdef _WIN32
-#include <direct.h>
-#define mkdir(a,b) _mkdir (a)
-#else
-#include <sys/stat.h>
-#endif
-
 #ifdef HAVE_FPU_CONTROL
 #include <fpu_control.h>
 #endif
-#include <float.h>
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <unistd.h>
 #endif
 
-#include <time.h>
 #include <math.h>
 #include <assert.h>
-#include <sys/stat.h>
 
 #include "doomerrors.h"
 
@@ -67,7 +57,6 @@
 #include "menu/menu.h"
 #include "c_console.h"
 #include "c_dispatch.h"
-#include "i_system.h"
 #include "i_sound.h"
 #include "i_video.h"
 #include "g_game.h"
@@ -81,40 +70,30 @@
 #include "d_main.h"
 #include "d_dehacked.h"
 #include "cmdlib.h"
-#include "s_sound.h"
-#include "m_swap.h"
 #include "v_text.h"
 #include "gi.h"
-#include "b_bot.h"		//Added by MC:
-#include "stats.h"
+#include "a_dynlight.h"
 #include "gameconfigfile.h"
 #include "sbar.h"
 #include "decallib.h"
 #include "version.h"
-#include "v_text.h"
 #include "st_start.h"
-#include "templates.h"
 #include "teaminfo.h"
 #include "hardware.h"
 #include "sbarinfo.h"
 #include "d_net.h"
-#include "g_level.h"
 #include "d_event.h"
 #include "d_netinf.h"
-#include "v_palette.h"
 #include "m_cheat.h"
 #include "compatibility.h"
 #include "m_joy.h"
-#include "sc_man.h"
 #include "po_man.h"
-#include "resourcefiles/resourcefile.h"
 #include "r_renderer.h"
 #include "p_local.h"
 #include "autosegs.h"
 #include "fragglescript/t_fs.h"
 #include "g_levellocals.h"
 #include "events.h"
-#include "r_utility.h"
 #include "vm.h"
 #include "types.h"
 #include "r_data/r_vanillatrans.h"
@@ -251,6 +230,7 @@ FStartupInfo DoomStartupInfo;
 FString lastIWAD;
 int restart = 0;
 bool batchrun;	// just run the startup and collect all error messages in a logfile, then quit without any interaction
+bool AppActive = true;
 
 cycle_t FrameCycles;
 
@@ -659,6 +639,8 @@ CVAR (Flag, compat_multiexit,			compatflags2, COMPATF2_MULTIEXIT);
 CVAR (Flag, compat_teleport,			compatflags2, COMPATF2_TELEPORT);
 CVAR (Flag, compat_pushwindow,			compatflags2, COMPATF2_PUSHWINDOW);
 
+CVAR(Bool, vid_activeinbackground, false, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
+
 //==========================================================================
 //
 // D_Display
@@ -670,10 +652,16 @@ CVAR (Flag, compat_pushwindow,			compatflags2, COMPATF2_PUSHWINDOW);
 void D_Display ()
 {
 	bool wipe;
+	sector_t *viewsec;
 
 	if (nodrawers || screen == NULL)
 		return; 				// for comparative timing / profiling
 	
+	if (!AppActive && (screen->IsFullscreen() || !vid_activeinbackground))
+	{
+		return;
+	}
+
 	cycle_t cycles;
 	
 	cycles.Reset();
@@ -768,13 +756,15 @@ void D_Display ()
 		screen->FrameTime = I_msTimeFS();
 		TexMan.UpdateAnimations(screen->FrameTime);
 		R_UpdateSky(screen->FrameTime);
+		screen->BeginFrame();
+		screen->ClearClipRect();
 		switch (gamestate)
 		{
 		case GS_FULLCONSOLE:
-			screen->SetBlendingRect(0,0,0,0);
 			screen->Begin2D(false);
 			C_DrawConsole ();
 			M_Drawer ();
+			screen->End2D();
 			screen->Update ();
 			return;
 
@@ -789,7 +779,18 @@ void D_Display ()
 			// [ZZ] execute event hook that we just started the frame
 			//E_RenderFrame();
 			//
-			screen->RenderView(&players[consoleplayer]);
+
+			// Check for the presence of dynamic lights at the start of the frame once.
+			if (gl_lights)
+			{
+				TThinkerIterator<ADynamicLight> it(STAT_DLIGHT);
+				level.HasDynamicLights = !!it.Next();
+			}
+			else level.HasDynamicLights = false;	// lights are off so effectively we have none.
+
+			viewsec = screen->RenderView(&players[consoleplayer]);
+			screen->Begin2D(false);
+			screen->DrawBlend(viewsec);
 			// returns with 2S mode set.
 			if (automapactive)
 			{
@@ -835,21 +836,18 @@ void D_Display ()
 			break;
 
 		case GS_INTERMISSION:
-			screen->SetBlendingRect(0,0,0,0);
 			screen->Begin2D(false);
 			WI_Drawer ();
 			CT_Drawer ();
 			break;
 
 		case GS_FINALE:
-			screen->SetBlendingRect(0,0,0,0);
 			screen->Begin2D(false);
 			F_Drawer ();
 			CT_Drawer ();
 			break;
 
 		case GS_DEMOSCREEN:
-			screen->SetBlendingRect(0,0,0,0);
 			screen->Begin2D(false);
 			D_PageDrawer ();
 			CT_Drawer ();
@@ -1334,7 +1332,7 @@ void D_DoAdvanceDemo (void)
 		{
 			Page->Unload ();
 		}
-		Page = TexMan[pagename];
+		Page = TexMan(pagename);
 	}
 }
 
