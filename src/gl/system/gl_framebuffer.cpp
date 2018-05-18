@@ -26,12 +26,12 @@
 **
 */
 
-#include "gl/system/gl_system.h"
+#include "gl_load/gl_system.h"
 #include "v_video.h"
 #include "m_png.h"
 #include "templates.h"
 
-#include "gl/system/gl_interface.h"
+#include "gl_load/gl_interface.h"
 #include "gl/system/gl_framebuffer.h"
 #include "gl/renderer/gl_renderer.h"
 #include "gl/renderer/gl_renderbuffers.h"
@@ -380,6 +380,11 @@ void OpenGLFrameBuffer::ResetFixedColormap()
 	{
 		GLRenderer->mShaderManager->ResetFixedColormap();
 	}
+}
+
+void OpenGLFrameBuffer::BlurScene(float amount)
+{
+	GLRenderer->BlurScene(amount);
 }
 
 bool OpenGLFrameBuffer::RenderBuffersEnabled()
