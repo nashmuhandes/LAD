@@ -2131,6 +2131,7 @@ void OpenALSoundRenderer::UpdateListener(SoundListener *listener)
 				env = S_FindEnvironment(0x1600);
 				LoadReverb(env ? env : DefaultEnvironments[0]);
 
+				// [LAD] Almost remove completely the dry mix from underwater filter.
 				alFilterf(EnvFilters[0], AL_LOWPASS_GAIN, 0.1);
 				alFilterf(EnvFilters[0], AL_LOWPASS_GAINHF, 0.125f);
 				alFilterf(EnvFilters[1], AL_LOWPASS_GAIN, 1.f);

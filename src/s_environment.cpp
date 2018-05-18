@@ -202,6 +202,7 @@ static ReverbContainer Drugged =
 	false
 };
 
+// [LAD] Almost remove completely the dry mix from underwater filter.
 static ReverbContainer Underwater =
 {
 	&Drugged,
