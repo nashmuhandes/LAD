@@ -979,32 +979,18 @@ public:
 	double		CenterFloor() const { return floorplane.ZatPoint(centerspot); }
 	double		CenterCeiling() const { return ceilingplane.ZatPoint(centerspot); }
 
+	void CopyColors(sector_t *other)
+	{
+		memcpy(SpecialColors, other->SpecialColors, sizeof(SpecialColors));
+		Colormap = other->Colormap;
+	}
+
 	// [RH] store floor and ceiling planes instead of heights
 	secplane_t	floorplane, ceilingplane;
 
 	// [RH] give floor and ceiling even more properties
 	PalEntry SpecialColors[5];
 	FColormap Colormap;
-
-private:
-	FDynamicColormap *_ColorMap;	// [RH] Per-sector colormap
-
-public:
-	// just a helper for refactoring 
-	FDynamicColormap *GetColorMap()
-	{
-		return _ColorMap;
-	}
-
-	void CopyColors(sector_t *other)
-	{
-		memcpy(SpecialColors, other->SpecialColors, sizeof(SpecialColors));
-		Colormap = other->Colormap;
-
-		_ColorMap = other->_ColorMap;
-	}
-
-
 
 	TObjPtr<AActor*> SoundTarget;
 
@@ -1295,6 +1281,26 @@ struct side_t
 
 };
 
+enum AutomapLineStyle : int
+{
+	AMLS_Default,
+	AMLS_OneSided,
+	AMLS_TwoSided,
+	AMLS_FloorDiff,
+	AMLS_CeilingDiff,
+	AMLS_ExtraFloor,
+	AMLS_Special,
+	AMLS_Secret,
+	AMLS_NotSeen,
+	AMLS_Locked,
+	AMLS_IntraTeleport,
+	AMLS_InterTeleport,
+	AMLS_UnexploredSecret,
+	AMLS_Portal,
+
+	AMLS_COUNT
+};
+
 struct line_t
 {
 	vertex_t	*v1, *v2;	// vertices, from v1 to v2
@@ -1311,6 +1317,7 @@ struct line_t
 	int			locknumber;	// [Dusk] lock number for special
 	unsigned	portalindex;
 	unsigned	portaltransferred;
+	AutomapLineStyle automapstyle;
 
 	DVector2 Delta() const
 	{
