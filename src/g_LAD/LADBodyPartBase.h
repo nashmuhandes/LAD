@@ -24,20 +24,20 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef __G_LADMODULARCHARACTERPARTBASE_H__
-#define __G_LADMODULARCHARACTERPARTBASE_H__
+#ifndef __G_LADBODYPARTBASE_H__
+#define __G_LADBODYPARTBASE_H__
 
 class AActor;
 
 //===========================================================================
 //
 //===========================================================================
-class ALADModularCharacterPartBase : public AActor
+class ALADBodyPartBase : public AActor
 {
-	DECLARE_CLASS(ALADModularCharacterPartBase, AActor)
+	DECLARE_CLASS(ALADBodyPartBase, AActor)
 
 public:
 	void Tick();
 };
 
-#endif //__G_LADMODULARCHARACTERPARTBASE_H__
+#endif //__G_LADBODYPARTBASE_H__

@@ -28,14 +28,14 @@
 #include "p_local.h"
 #include "d_player.h"
 
-#include "LADModularCharacterPartBase.h"
+#include "LADBodyPartBase.h"
 
 //===========================================================================
 //
 //===========================================================================
-IMPLEMENT_CLASS(ALADModularCharacterPartBase, false, false)
+IMPLEMENT_CLASS(ALADBodyPartBase, false, false)
 
-void ALADModularCharacterPartBase::Tick()
+void ALADBodyPartBase::Tick()
 {
 	Super::Tick();
 }

@@ -54,7 +54,7 @@
 
 // [LAD]
 #include "dobject.h"
-#include "g_LAD/LADModularCharacterPartBase.h"
+#include "g_LAD/LADBodyPartBase.h"
 
 extern TArray<spritedef_t> sprites;
 extern TArray<spriteframe_t> SpriteFrames;
@@ -408,7 +408,7 @@ void GLSprite::Process(HWDrawInfo *di, AActor* thing, sector_t * sector, area_t 
 	}
 
 	// [LAD] don't draw self modular character parts in first person view
-	if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADModularCharacterPartBase)) && thing->tracer == di->mViewActor)
+	if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADBodyPartBase)) && thing->tracer == di->mViewActor)
 	{
 		return;
 	}

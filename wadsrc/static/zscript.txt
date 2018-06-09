@@ -261,4 +261,4 @@ version "3.4"
 #include "zscript/chex/chexdecorations.txt"
 #include "zscript/chex/chexplayer.txt"
 
-#include "zscript/LAD/LADModularCharacterPartBase.zc"
+#include "zscript/LAD/LADBodyPartBase.zc"
