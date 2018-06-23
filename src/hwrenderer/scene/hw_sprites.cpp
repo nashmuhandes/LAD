@@ -407,14 +407,15 @@ void GLSprite::Process(HWDrawInfo *di, AActor* thing, sector_t * sector, area_t 
 		return;
 	}
 
-	// [LAD] don't draw self modular character parts in first person view
-	if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADBodyPartBase)) && thing->tracer == di->mViewActor)
-	{
-		return;
-	}
 
     auto &vp = r_viewpoint;
 	AActor *camera = vp.camera;
+
+	// [LAD] don't draw self modular character parts in first person view
+	if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADBodyPartBase)) && thing->tracer == vp.ViewActor)
+	{
+		return;
+	}
 
 	if (thing->renderflags & RF_INVISIBLE || !thing->RenderStyle.IsVisible(thing->Alpha))
 	{
