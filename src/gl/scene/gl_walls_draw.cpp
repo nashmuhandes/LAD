@@ -418,7 +418,7 @@ void FDrawInfo::AddPortal(GLWall *wall, int ptype)
 		if (gl_mirror_envmap)
 		{
 			// draw a reflective layer over the mirror
-			AddMirrorSurface(wall);
+			//AddMirrorSurface(wall); [LAD] disabled due to messing up with modular character sprite draw order when decals and envmap existing in the same view
 		}
 		break;
 

@@ -71,6 +71,9 @@
 #include "r_data/colormaps.h"
 #include "g_levellocals.h"
 
+// [LAD]
+#include "g_LAD/LADBodyPartBase.h"
+
 EXTERN_CVAR(Bool, r_fullbrightignoresectorcolor);
 EXTERN_CVAR(Bool, r_drawvoxels);
 EXTERN_CVAR(Bool, r_debug_disable_vis_filter);
@@ -999,6 +1002,14 @@ namespace swrenderer
 		double distanceSquared = (thing->Pos() - Thread->Viewport->viewpoint.Pos).LengthSquared();
 		if (distanceSquared > sprite_distance_cull)
 			return false;
+
+		// [LAD] don't draw self modular character parts in first person view
+		if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADBodyPartBase)) && thing->tracer == Thread->Viewport->viewpoint.camera
+			&& !(!Thread->Viewport->viewpoint.showviewer && renderportal->CurrentPortal && !P_PointOnLineSidePrecise(thing->tracer->Pos(), renderportal->CurrentPortal->dst))
+			&& !Thread->Viewport->viewpoint.showviewer)
+		{
+			return false;
+		}
 
 		return true;
 	}

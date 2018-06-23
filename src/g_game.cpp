@@ -104,7 +104,7 @@ CVAR(Bool, save_formatted, false, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)	// use forma
 CVAR (Int, deathmatch, 0, CVAR_SERVERINFO|CVAR_LATCH);
 CVAR (Bool, chasedemo, false, 0);
 CVAR (Bool, storesavepic, true, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
-CVAR (Bool, longsavemessages, true, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
+CVAR (Bool, longsavemessages, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR (String, save_dir, "", CVAR_ARCHIVE|CVAR_GLOBALCONFIG);
 CVAR (Bool, cl_waitforsave, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 EXTERN_CVAR (Float, con_midtime);
@@ -193,9 +193,9 @@ int				lookspeed[2] = {450, 512};
 
 #define SLOWTURNTICS	6 
 
-CVAR (Bool,		cl_run,			false,	CVAR_GLOBALCONFIG|CVAR_ARCHIVE)		// Always run?
+CVAR (Bool,		cl_run,			true,	CVAR_GLOBALCONFIG|CVAR_ARCHIVE)		// Always run?
 CVAR (Bool,		invertmouse,	false,	CVAR_GLOBALCONFIG|CVAR_ARCHIVE)		// Invert mouse look down/up?
-CVAR (Bool,		freelook,		false,	CVAR_GLOBALCONFIG|CVAR_ARCHIVE)		// Always mlook?
+CVAR (Bool,		freelook,		true,	CVAR_GLOBALCONFIG|CVAR_ARCHIVE)		// Always mlook?
 CVAR (Bool,		lookstrafe,		false,	CVAR_GLOBALCONFIG|CVAR_ARCHIVE)		// Always strafe with mouse?
 CVAR (Float,	m_pitch,		1.f,	CVAR_GLOBALCONFIG|CVAR_ARCHIVE)		// Mouse speeds
 CVAR (Float,	m_yaw,			1.f,	CVAR_GLOBALCONFIG|CVAR_ARCHIVE)
@@ -219,6 +219,9 @@ int 			bodyqueslot;
 
 FString savename;
 FString BackupSaveName;
+
+// [LAD]
+int saveCount;
 
 bool SendLand;
 const AInventory *SendItemUse, *SendItemDrop;
@@ -2008,6 +2011,8 @@ void G_DoLoadGame ()
 		return;
 	}
 
+	// [LAD] restore savecount
+	arc("savecount", saveCount);
 
 	// Read intermission data for hubs
 	G_SerializeHub(arc);
@@ -2211,7 +2216,7 @@ static void PutSaveComment (FSerializer &arc)
 
 	// Append elapsed time
 	levelTime = level.time / TICRATE;
-	mysnprintf (comment + len + 1, countof(comment) - len - 1, "time: %02d:%02d:%02d",
+	mysnprintf (comment + len + 1, countof(comment) - len - 1, "Time: %02d:%02d:%02d",
 		levelTime/3600, (levelTime%3600)/60, levelTime%60);
 	comment[len+16] = 0;
 
@@ -2318,6 +2323,11 @@ void G_DoSaveGame (bool okForQuicksave, FString filename, const char *descriptio
 		int tic = TICRATE;
 		savegameglobals("ticrate", tic);
 		savegameglobals("leveltime", level.time);
+
+		// [LAD] increment save counter
+		// To do: only increment upon manual saves, not autosaves
+		saveCount++;
+		savegameglobals("savecount", saveCount);
 	}
 
 	STAT_Serialize(savegameglobals);
@@ -3015,3 +3025,6 @@ DEFINE_GLOBAL(gametic)
 DEFINE_GLOBAL(demoplayback)
 DEFINE_GLOBAL(automapactive);
 DEFINE_GLOBAL(Net_Arbitrator);
+
+// [LAD]
+DEFINE_GLOBAL(saveCount);

@@ -481,7 +481,7 @@ static bool DoSubstitution (FString &out, const char *in)
 
 CCMD (messagemode)
 {
-	if (menuactive == MENU_Off)
+	if (menuactive == MENU_Off && netgame)
 	{
 		chatmodeon = 1;
 		C_HideConsole ();

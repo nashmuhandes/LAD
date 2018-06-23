@@ -50,7 +50,7 @@
 #include "g_levellocals.h"
 #include "vm.h"
 
-CVAR(Float, underwater_fade_scalar, 1.0f, CVAR_ARCHIVE) // [Nash] user-settable underwater blend intensity
+CVAR(Float, underwater_fade_scalar, 0.5f, CVAR_ARCHIVE) // [Nash] user-settable underwater blend intensity [LAD] reduced the default value
 
 CUSTOM_CVAR(Int, uiscale, 0, CVAR_ARCHIVE | CVAR_NOINITCALL)
 {
