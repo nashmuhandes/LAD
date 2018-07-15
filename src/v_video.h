@@ -405,6 +405,7 @@ public:
 	virtual void CleanForRestart() {}
 	virtual void SetTextureFilterMode() {}
 	virtual IHardwareTexture *CreateHardwareTexture(FTexture *tex) { return nullptr; }
+	virtual void PrecacheMaterial(FMaterial *mat, int translation) {}
 	virtual FModelRenderer *CreateModelRenderer(int mli) { return nullptr; }
 	virtual void UnbindTexUnit(int no) {}
 	virtual void FlushTextures() {}
@@ -484,6 +485,8 @@ public:
 	bool SetTextureParms(DrawParms *parms, FTexture *img, double x, double y) const;
 	void DrawTexture(FTexture *img, double x, double y, int tags, ...);
 	void DrawTexture(FTexture *img, double x, double y, VMVa_List &);
+	void DrawShape(FTexture *img, DShape2D *shape, int tags, ...);
+	void DrawShape(FTexture *img, DShape2D *shape, VMVa_List &);
 	void FillBorder(FTexture *img);	// Fills the border around a 4:3 part of the screen on non-4:3 displays
 	void VirtualToRealCoords(double &x, double &y, double &w, double &h, double vwidth, double vheight, bool vbottom = false, bool handleaspect = true) const;
 
