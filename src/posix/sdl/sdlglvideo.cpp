@@ -70,7 +70,6 @@ EXTERN_CVAR (Int, vid_displaybits)
 EXTERN_CVAR (Int, vid_maxfps)
 EXTERN_CVAR (Int, vid_defwidth)
 EXTERN_CVAR (Int, vid_defheight)
-EXTERN_CVAR (Bool, fullscreen)
 EXTERN_CVAR (Bool, cl_capfps)
 
 // PUBLIC DATA DEFINITIONS -------------------------------------------------
@@ -83,12 +82,6 @@ CUSTOM_CVAR(Bool, gl_es, false, CVAR_ARCHIVE | CVAR_GLOBALCONFIG | CVAR_NOINITCA
 {
 	Printf("This won't take effect until " GAMENAME " is restarted.\n");
 }
-
-CVAR(Int, win_x, -1, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
-CVAR(Int, win_y, -1, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
-CVAR(Int, win_w, -1, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
-CVAR(Int, win_h, -1, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
-CVAR(Bool, win_maximized, false, CVAR_ARCHIVE | CVAR_GLOBALCONFIG | CVAR_NOINITCALL)
 
 CVAR(Bool, i_soundinbackground, false, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 
