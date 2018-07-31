@@ -2199,7 +2199,7 @@ static void PutSaveComment (FSerializer &arc)
 
 	// Append elapsed time
 	levelTime = level.time / TICRATE;
-	comment.AppendFormat("time: %02d:%02d:%02d",
+	comment.AppendFormat("Time: %02d:%02d:%02d",
 		levelTime/3600, (levelTime%3600)/60, levelTime%60);
 
 	// Write out the comment
