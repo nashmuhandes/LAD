@@ -2265,6 +2265,19 @@ VIDMNU_SCALEFACTOR		= "Scale Factor";
 VIDMNU_ENTERTEXT		= "Press ENTER to set mode";
 VIDMNU_TESTTEXT1		= "T to test mode for 5 seconds";
 VIDMNU_TESTTEXT2		= "Please wait 5 seconds...";
+VIDMNU_USELINEAR		= "Use Linear Scaling (Fullscreen)";
+VIDMNU_CUSTOMRES		= "Custom Resolution Mode";
+VIDMNU_CUSTOMX			= "Custom Width";
+VIDMNU_CUSTOMY			= "Custom Height";
+VIDMNU_APPLYW			= "Apply Changes (Windowed)";
+VIDMNU_APPLYFS			= "Apply Changes (Fullscreen)";
+VIDMNU_RESPRESET		= "Choose Resolution Preset";
+VIDMNU_RESPRESETTTL		= "Custom Resolution Presets";
+VIDMNU_RESPRESETHEAD	= "Preset Resolution Modes";
+VIDMNU_ASPECT43			= "4:3 Aspect";
+VIDMNU_ASPECT54			= "5:4 Aspect";
+VIDMNU_ASPECT169		= "16:9 Aspect";
+VIDMNU_ASPECT1610		= "16:10 Aspect";
 
 // Network Options
 NETMNU_TITLE					= "NETWORK OPTIONS";
@@ -2803,6 +2816,7 @@ GLPREFMNU_LENS					= "Lens distortion effect";
 GLPREFMNU_SSAO					= "Ambient occlusion quality";
 GLPREFMNU_SSAO_PORTALS			= "Portals with AO";
 GLPREFMNU_FXAA					= "FXAA Quality";
+GLPREFMNU_DITHER				= "Dither output";
 GLPREFMNU_PALTONEMAPORDER		= "Tonemap Palette Order";
 GLPREFMNU_PALTONEMAPPOWER		= "Tonemap Palette Exponent";
 GLPREFMNU_SWLMBANDED			= "Banded SW Lightmode";
@@ -2890,8 +2904,6 @@ OPTVAL_HIGH					= "High";
 OPTVAL_EXTREME				= "Extreme";
 OPTVAL_OBVERSEFIRST			= "Obverse";
 OPTVAL_REVERSEFIRST			= "Reverse";
-
-// QZDoom exclusive:
 
 DSPLYMNU_TCOPT		= "TrueColor Options";
 
