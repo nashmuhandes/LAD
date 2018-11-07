@@ -138,7 +138,7 @@ bool P_CheckMapData(const char * mapname);
 // [RH] The only parameter used is mapname, so I removed playermask and skill.
 //		On September 1, 1998, I added the position to indicate which set
 //		of single-player start spots should be spawned in the level.
-void P_SetupLevel (const char *mapname, int position);
+void P_SetupLevel (const char *mapname, int position, bool newGame);
 
 void P_FreeLevelData();
 void P_FreeExtraLevelData();
@@ -160,6 +160,9 @@ bool P_LoadGLNodes(MapData * map);
 bool P_CheckNodes(MapData * map, bool rebuilt, int buildtime);
 bool P_CheckForGLNodes();
 void P_SetRenderSector();
+void FixMinisegReferences();
+void FixHoles();
+void ReportUnpairedMinisegs();
 
 
 struct sidei_t	// [RH] Only keep BOOM sidedef init stuff around for init

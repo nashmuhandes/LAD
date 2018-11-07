@@ -529,11 +529,8 @@ void G_InitNew (const char *mapname, bool bTitleLevel)
 	{
 		gamestate = GS_LEVEL;
 	}
-	G_DoLoadLevel (0, false);
-	if(!savegamerestore)
-	{
-		E_NewGame();
-	}
+	
+	G_DoLoadLevel (0, false, !savegamerestore);
 }
 
 //
@@ -747,7 +744,7 @@ void G_DoCompleted (void)
 	if (gamestate == GS_TITLELEVEL)
 	{
 		level.MapName = nextlevel;
-		G_DoLoadLevel (startpos, false);
+		G_DoLoadLevel (startpos, false, false);
 		startpos = 0;
 		viewactive = true;
 		return;
@@ -922,7 +919,7 @@ void DAutosaver::Tick ()
 
 extern gamestate_t 	wipegamestate; 
  
-void G_DoLoadLevel (int position, bool autosave)
+void G_DoLoadLevel (int position, bool autosave, bool newGame)
 { 
 	static int lastposition = 0;
 	gamestate_t oldgs = gamestate;
@@ -1008,7 +1005,12 @@ void G_DoLoadLevel (int position, bool autosave)
 
 	level.maptime = 0;
 
-	P_SetupLevel (level.MapName, position);
+	if (newGame)
+	{
+		E_NewGame(EventHandlerType::Global);
+	}
+
+	P_SetupLevel (level.MapName, position, newGame);
 
 	AM_LevelInit();
 
@@ -1256,7 +1258,7 @@ void G_DoWorldDone (void)
 		level.MapName = nextlevel;
 	}
 	G_StartTravel ();
-	G_DoLoadLevel (startpos, true);
+	G_DoLoadLevel (startpos, true, false);
 	startpos = 0;
 	gameaction = ga_nothing;
 	viewactive = true; 
