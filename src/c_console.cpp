@@ -137,8 +137,9 @@ static bool ConsoleDrawing;
 static char *work = NULL;
 static int worklen = 0;
 
-CVAR(Float, con_notifytime, 3.f, CVAR_ARCHIVE)
-CVAR(Bool, con_centernotify, false, CVAR_ARCHIVE)
+// [LAD] increased notify time and default to center notifications
+CVAR(Float, con_notifytime, 10.f, CVAR_ARCHIVE)
+CVAR(Bool, con_centernotify, true, CVAR_ARCHIVE)
 CUSTOM_CVAR(Int, con_scaletext, 0, CVAR_ARCHIVE)		// Scale notify text at high resolutions?
 {
 	if (self < 0) self = 0;
