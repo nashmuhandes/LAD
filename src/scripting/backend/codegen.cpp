@@ -48,8 +48,6 @@
 #include "w_wad.h"
 #include "doomstat.h"
 
-inline PClass *PObjectPointer::PointedClass() const { return static_cast<PClassType*>(PointedType)->Descriptor; }
-
 extern FRandom pr_exrandom;
 FMemArena FxAlloc(65536);
 int utf8_decode(const char *src, int *size);
@@ -2060,10 +2058,12 @@ ExpEmit FxUnaryNotBitwise::Emit(VMFunctionBuilder *build)
 {
 	assert(Operand->ValueType->GetRegType() == REGT_INT);
 	ExpEmit from = Operand->Emit(build);
+	from.Free(build);
+	ExpEmit to(build, REGT_INT);
 	assert(!from.Konst);
-	// Do it in-place.
-	build->Emit(OP_NOT, from.RegNum, from.RegNum, 0);
-	return from;
+	
+	build->Emit(OP_NOT, to.RegNum, from.RegNum, 0);
+	return to;
 }
 
 //==========================================================================
@@ -4011,7 +4011,7 @@ FxExpression *FxShift::Resolve(FCompileContext& ctx)
 	if (left->IsNumeric() && right->IsNumeric())
 	{
 		if (!Promote(ctx, true)) return nullptr;
-		if (ValueType == TypeUInt32 && Operator == TK_RShift) Operator = TK_URShift;
+		if ((left->ValueType == TypeUInt32 && ctx.Version >= MakeVersion(3, 7)) && Operator == TK_RShift) Operator = TK_URShift;
 	}
 	else
 	{
@@ -4693,14 +4693,7 @@ FxExpression *FxDynamicCast::Resolve(FCompileContext& ctx)
 {
 	CHECKRESOLVED();
 	SAFE_RESOLVE(expr, ctx);
-	bool constflag = expr->ValueType->isPointer() && expr->ValueType->toPointer()->IsConst;
-	if (constflag)
-	{
-		// readonly pointers are normally only used for class defaults which lack type information to be cast properly, so we have to error out here.
-		ScriptPosition.Message(MSG_ERROR, "Cannot cast a readonly pointer");
-		delete this;
-		return nullptr;
-	}
+	bool constflag = expr->ValueType->isPointer() && expr->ValueType->toPointer()->IsConst;	
 	expr = new FxTypeCast(expr, NewPointer(RUNTIME_CLASS(DObject), constflag), true, true);
 	expr = expr->Resolve(ctx);
 	if (expr == nullptr)
@@ -8240,7 +8233,9 @@ FxExpression *FxMemberFunctionCall::Resolve(FCompileContext& ctx)
 		{
 			auto elementType = static_cast<PDynArray*>(Self->ValueType)->ElementType;
 			Self->ValueType = static_cast<PDynArray*>(Self->ValueType)->BackingType;
+			bool isDynArrayObj = elementType->isObjectPointer();
 			// this requires some added type checks for the passed types.
+			int idx = 0;
 			for (auto &a : ArgList)
 			{
 				a = a->Resolve(ctx);
@@ -8248,6 +8243,21 @@ FxExpression *FxMemberFunctionCall::Resolve(FCompileContext& ctx)
 				{
 					delete this;
 					return nullptr;
+				}
+				if (isDynArrayObj && ((MethodName == NAME_Push && idx == 0) || (MethodName == NAME_Insert && idx == 1)))
+				{
+					// Null pointers are always valid.
+					if (!a->isConstant() || static_cast<FxConstant*>(a)->GetValue().GetPointer() != nullptr)
+					{
+						// The DynArray_Obj declaration in dynarrays.txt doesn't support generics yet. Check the type here as if it did.
+						if (!a->ValueType->isObjectPointer() ||
+							!static_cast<PObjectPointer*>(elementType)->PointedClass()->IsAncestorOf(static_cast<PObjectPointer*>(a->ValueType)->PointedClass()))
+						{
+							ScriptPosition.Message(MSG_ERROR, "Type mismatch in function argument");
+							delete this;
+							return nullptr;
+						}
+					}
 				}
 				if (a->IsDynamicArray())
 				{
@@ -8288,6 +8298,7 @@ FxExpression *FxMemberFunctionCall::Resolve(FCompileContext& ctx)
 						return nullptr;
 					}
 				}
+				idx++;
 			}
 		}
 	}
@@ -10634,7 +10645,7 @@ FxExpression *FxReturnStatement::Resolve(FCompileContext &ctx)
 
 	PPrototype *retproto;
 
-	if (ctx.ReturnProto != nullptr && ctx.ReturnProto->ReturnTypes.Size() != Args.Size())
+	if (ctx.ReturnProto != nullptr && ctx.ReturnProto->ReturnTypes.Size() == 0 && ctx.ReturnProto->ReturnTypes.Size() != Args.Size())
 	{
 		int severity = ctx.Version >= MakeVersion(3, 7) ? MSG_ERROR : MSG_WARNING;
 		ScriptPosition.Message(severity, "Incorrect number of return values. Got %u, but expected %u", Args.Size(), ctx.ReturnProto->ReturnTypes.Size());
