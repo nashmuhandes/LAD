@@ -1903,6 +1903,26 @@ bool AActor::Grind(bool items)
 	return true;
 }
 
+DEFINE_ACTION_FUNCTION(AActor, Grind)
+{
+	PARAM_SELF_PROLOGUE(AActor);
+	PARAM_BOOL(items);
+	ACTION_RETURN_BOOL(self->Grind(items));
+}
+
+bool AActor::CallGrind(bool items)
+{
+	IFVIRTUAL(AActor, Grind)
+	{
+		VMValue params[] = { (DObject*)this, items };
+		int retv;
+		VMReturn ret(&retv);
+		VMCall(func, params, 2, &ret, 1);
+		return !!retv;
+	}
+	return Grind(items);
+}
+
 //============================================================================
 //
 // AActor :: Massacre
@@ -2158,15 +2178,27 @@ bool AActor::FloorBounceMissile (secplane_t &plane)
 		}
 	}
 
+	bool onsky;
+
 	if (plane.fC() < 0)
 	{ // on ceiling
 		if (!(BounceFlags & BOUNCE_Ceilings))
 			return true;
+
+		onsky = ceilingpic == skyflatnum;
 	}
 	else
 	{ // on floor
 		if (!(BounceFlags & BOUNCE_Floors))
 			return true;
+
+		onsky = floorpic == skyflatnum;
+	}
+
+	if (onsky && (BounceFlags & BOUNCE_NotOnSky))
+	{
+		Destroy();
+		return true;
 	}
 
 	// The amount of bounces is limited
@@ -2731,10 +2763,7 @@ double P_XYMovement (AActor *mo, DVector2 scroll)
 explode:
 				// explode a missile
 				bool onsky = false;
-				if (tm.ceilingline &&
-					tm.ceilingline->backsector &&
-					tm.ceilingline->backsector->GetTexture(sector_t::ceiling) == skyflatnum &&
-					mo->Z() >= tm.ceilingline->backsector->ceilingplane.ZatPoint(mo->PosRelative(tm.ceilingline)))
+				if (tm.ceilingline && tm.ceilingline->hitSkyWall(mo))
 				{
 					if (!(mo->flags3 & MF3_SKYEXPLODE))
 					{

@@ -3551,9 +3551,9 @@ bool FSlide::BounceWall(AActor *mo)
 	}
 	line = bestslideline;
 
-	if (line->special == Line_Horizon)
+	if (line->special == Line_Horizon || (mo->BounceFlags & BOUNCE_NotOnSky) && line->hitSkyWall(mo))
 	{
-		mo->SeeSound = 0;	// it might make a sound otherwise
+		mo->SeeSound = mo->BounceSound = 0;	// it might make a sound otherwise
 		mo->Destroy();
 		return true;
 	}
@@ -6485,7 +6485,7 @@ void P_FindBelowIntersectors(AActor *actor)
 
 void P_DoCrunch(AActor *thing, FChangePosition *cpos)
 {
-	if (!(thing && thing->Grind(true) && cpos)) return;
+	if (!(thing && thing->CallGrind(true) && cpos)) return;
 	cpos->nofit = true;
 
 	if ((cpos->crushchange > 0) && !(level.maptime & 3))
