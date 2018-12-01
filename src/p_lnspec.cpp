@@ -2434,7 +2434,7 @@ FUNC(LS_Sector_SetColor)
 	int secnum;
 	while ((secnum = itr.Next()) >= 0)
 	{
-		level.sectors[secnum].SetColor(arg1, arg2, arg3, arg4);
+		level.sectors[secnum].SetColor(PalEntry(255, arg1, arg2, arg3), arg4);
 	}
 
 	return true;
@@ -2447,7 +2447,7 @@ FUNC(LS_Sector_SetFade)
 	int secnum;
 	while ((secnum = itr.Next()) >= 0)
 	{
-		level.sectors[secnum].SetFade(arg1, arg2, arg3);
+		level.sectors[secnum].SetFade(PalEntry(255, arg1, arg2, arg3));
 	}
 	return true;
 }
@@ -3955,11 +3955,11 @@ DEFINE_ACTION_FUNCTION(FLevelLocals, ExecuteSpecial)
 	PARAM_OBJECT(activator, AActor);
 	PARAM_POINTER(linedef, line_t);
 	PARAM_BOOL(lineside);
-	PARAM_INT_DEF(arg1);
-	PARAM_INT_DEF(arg2);
-	PARAM_INT_DEF(arg3);
-	PARAM_INT_DEF(arg4);
-	PARAM_INT_DEF(arg5);
+	PARAM_INT(arg1);
+	PARAM_INT(arg2);
+	PARAM_INT(arg3);
+	PARAM_INT(arg4);
+	PARAM_INT(arg5);
 
 	bool res = !!P_ExecuteSpecial(special, linedef, activator, lineside, arg1, arg2, arg3, arg4, arg5);
 

@@ -52,6 +52,7 @@
 #include "teaminfo.h"
 #include "p_conversation.h"
 #include "d_event.h"
+#include "p_enemy.h"
 #include "m_argv.h"
 #include "p_lnspec.h"
 #include "p_spec.h"
@@ -2079,19 +2080,7 @@ uint8_t *FDynamicBuffer::GetData (int *len)
 
 static int KillAll(PClassActor *cls)
 {
-	AActor *actor;
-	int killcount = 0;
-	TThinkerIterator<AActor> iterator(cls);
-	while ( (actor = iterator.Next ()) )
-	{
-		if (actor->IsA(cls))
-		{
-			if (!(actor->flags2 & MF2_DORMANT) && (actor->flags3 & MF3_ISMONSTER))
-					killcount += actor->Massacre ();
-		}
-	}
-	return killcount;
-
+	return P_Massacre(false, cls);
 }
 
 static int RemoveClass(const PClass *cls)
@@ -2335,7 +2324,7 @@ void Net_DoCommand (int type, uint8_t **stream, int player)
 				{
 					if (GetDefaultByType (typeinfo)->flags & MF_MISSILE)
 					{
-						P_SpawnPlayerMissile (source, typeinfo);
+						P_SpawnPlayerMissile (source, 0, 0, 0, typeinfo, source->Angles.Yaw);
 					}
 					else
 					{
@@ -2536,10 +2525,10 @@ void Net_DoCommand (int type, uint8_t **stream, int player)
 	case DEM_MORPHEX:
 		{
 			s = ReadString (stream);
-			const char *msg = cht_Morph (players + player, PClass::FindActor (s), false);
+			FString msg = cht_Morph (players + player, PClass::FindActor (s), false);
 			if (player == consoleplayer)
 			{
-				Printf ("%s\n", *msg != '\0' ? msg : "Morph failed.");
+				Printf ("%s\n", msg[0] != '\0' ? msg.GetChars() : "Morph failed.");
 			}
 		}
 		break;
@@ -2631,7 +2620,7 @@ void Net_DoCommand (int type, uint8_t **stream, int player)
 			int count = ReadByte(stream);
 			if (slot < NUM_WEAPON_SLOTS)
 			{
-				players[pnum].weapons.Slots[slot].Clear();
+				players[pnum].weapons.ClearSlot(slot);
 			}
 			for(i = 0; i < count; ++i)
 			{

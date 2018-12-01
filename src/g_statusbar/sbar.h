@@ -52,8 +52,6 @@ enum EHudState
 	HUD_AltHud // Used for passing through popups to the alt hud
 };
 
-class AWeapon;
-
 bool ST_IsTimeVisible();
 bool ST_IsLatencyVisible();
 
@@ -323,6 +321,31 @@ enum
 	HUDMSGLayer_Default = HUDMSGLayer_OverHUD,
 };
 
+
+//============================================================================
+//
+// encapsulates all settings a HUD font may need
+//
+//============================================================================
+
+class DHUDFont : public DObject
+{
+	// this blocks CreateNew on this class which is the intent here.
+	DECLARE_ABSTRACT_CLASS(DHUDFont, DObject);
+
+public:
+	FFont *mFont;
+	int mSpacing;
+	bool mMonospaced;
+	int mShadowX;
+	int mShadowY;
+
+	DHUDFont(FFont *f, int sp, bool ms, int sx, int sy)
+		: mFont(f), mSpacing(sp), mMonospaced(ms), mShadowX(sx), mShadowY(sy)
+	{}
+};
+
+
 class DBaseStatusBar : public DObject
 {
 	friend class DSBarInfo;
@@ -401,7 +424,6 @@ public:
 	void CallDraw(EHudState state, double ticFrac);
     void DrawBottomStuff (EHudState state);
     void DrawTopStuff (EHudState state);
-	void FlashItem (const PClass *itemtype);
 	void AttachToPlayer(player_t *player);
 	DVector2 GetHUDScale() const;
 	virtual void FlashCrosshair ();
@@ -499,7 +521,7 @@ void ST_Clear();
 void ST_CreateStatusBar(bool bTitleLevel);
 extern FTexture *CrosshairImage;
 
-FTextureID GetInventoryIcon(AInventory *item, uint32_t flags, bool *applyscale);
+FTextureID GetInventoryIcon(AInventory *item, uint32_t flags, int *applyscale = nullptr);
 
 
 enum DI_Flags

@@ -70,27 +70,11 @@ class AInventory : public AActor
 	HAS_OBJECT_POINTERS
 public:
 	
-	virtual void Finalize(FStateDefinitions &statedef) override;
 	virtual void Serialize(FSerializer &arc) override;
-	virtual void MarkPrecacheSounds() const override;
-	virtual void OnDestroy() override;
 	virtual void Tick() override;
-	virtual bool Massacre() override;
-
-	bool CallTryPickup(AActor *toucher, AActor **toucher_return = NULL);	// Wrapper for script function.
 
 	void DepleteOrDestroy ();			// virtual on the script side. 
-	bool CallUse(bool pickup);			// virtual on the script side.
-	PalEntry CallGetBlend();			// virtual on the script side.
-	double GetSpeedFactor();			// virtual on the script side.
-	bool GetNoTeleportFreeze();			// virtual on the script side.
 
-	void BecomeItem ();
-	void BecomePickup ();
-
-	bool DoRespawn();
-
-	AInventory *PrevItem();		// Returns the item preceding this one in the list.
 	AInventory *PrevInv();		// Returns the previous item with IF_INVBAR set.
 	AInventory *NextInv();		// Returns the next item with IF_INVBAR set.
 
@@ -110,11 +94,6 @@ public:
 	FSoundIDNoInit PickupSound;
 };
 
-class AStateProvider : public AInventory
-{
-	DECLARE_CLASS (AStateProvider, AInventory)
-public:
-	bool CallStateChain(AActor *actor, FState *state);
-};
+bool CallTryPickup(AInventory *item, AActor *toucher, AActor **toucher_return = nullptr);
 
 #endif //__A_PICKUPS_H__

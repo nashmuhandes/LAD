@@ -148,6 +148,7 @@ void FState::CheckCallerType(AActor *self, AActor *stateowner)
 	}
 }
 
+TArray<VMValue> actionParams;
 
 bool FState::CallAction(AActor *self, AActor *stateowner, FStateParamInfo *info, FState **stateret)
 {
@@ -155,7 +156,6 @@ bool FState::CallAction(AActor *self, AActor *stateowner, FStateParamInfo *info,
 	{
 		ActionCycles.Clock();
 
-		VMValue params[3] = { self, stateowner, VMValue(info) };
 		// If the function returns a state, store it at *stateret.
 		// If it doesn't return a state but stateret is non-nullptr, we need
 		// to set *stateret to nullptr.
@@ -169,19 +169,42 @@ bool FState::CallAction(AActor *self, AActor *stateowner, FStateParamInfo *info,
 				stateret = nullptr;
 			}
 		}
+
+		VMReturn ret;
+		ret.PointerAt((void **)stateret);
 		try
 		{
 			CheckCallerType(self, stateowner);
-			
-			if (stateret == nullptr)
+
+			// Build the parameter array. Action functions have never any explicit parameters but need to pass the defaults
+			// and fill in the implicit arguments of the called function.
+
+			if (ActionFunc->DefaultArgs.Size() > 0)
 			{
-				VMCall(ActionFunc, params, ActionFunc->ImplicitArgs, nullptr, 0);
+				auto defs = ActionFunc->DefaultArgs;
+				auto index = actionParams.Reserve(defs.Size());
+				for (unsigned i = 0; i < defs.Size(); i++)
+				{
+					actionParams[i + index] = defs[i];
+				}
+
+				if (ActionFunc->ImplicitArgs >= 1)
+				{
+					actionParams[index] = self;
+				}
+				if (ActionFunc->ImplicitArgs == 3)
+				{
+					actionParams[index + 1] = stateowner;
+					actionParams[index + 2] = VMValue(info);
+				}
+
+				VMCallAction(ActionFunc, &actionParams[index], ActionFunc->DefaultArgs.Size(), &ret, stateret != nullptr);
+				actionParams.Clamp(index);
 			}
 			else
 			{
-				VMReturn ret;
-				ret.PointerAt((void **)stateret);
-				VMCall(ActionFunc, params, ActionFunc->ImplicitArgs, &ret, 1);
+				VMValue params[3] = { self, stateowner, VMValue(info) };
+				VMCallAction(ActionFunc, params, ActionFunc->ImplicitArgs, &ret, stateret != nullptr);
 			}
 		}
 		catch (CVMAbortException &err)
@@ -340,29 +363,6 @@ bool PClassActor::SetReplacement(FName replaceName)
 		}
 	}
 	return true;
-}
-
-//==========================================================================
-//
-// PClassActor :: Finalize
-//
-// Installs the parsed states and does some sanity checking
-//
-//==========================================================================
-
-void AActor::Finalize(FStateDefinitions &statedef)
-{
-	try
-	{
-		statedef.FinishStates(GetClass());
-	}
-	catch (CRecoverableError &)
-	{
-		statedef.MakeStateDefines(nullptr);
-		throw;
-	}
-	statedef.InstallStates(GetClass(), this);
-	statedef.MakeStateDefines(nullptr);
 }
 
 //==========================================================================

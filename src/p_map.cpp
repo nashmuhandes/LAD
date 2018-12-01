@@ -156,6 +156,25 @@ DEFINE_FIELD_X(FCheckPosition, FCheckPosition, portalstep);
 DEFINE_FIELD_X(FCheckPosition, FCheckPosition, portalgroup);
 DEFINE_FIELD_X(FCheckPosition, FCheckPosition, PushTime);
 
+DEFINE_FIELD_X(FRailParams, FRailParams, source);
+DEFINE_FIELD_X(FRailParams, FRailParams, damage);
+DEFINE_FIELD_X(FRailParams, FRailParams, offset_xy);
+DEFINE_FIELD_X(FRailParams, FRailParams, offset_z);
+DEFINE_FIELD_X(FRailParams, FRailParams, color1);
+DEFINE_FIELD_X(FRailParams, FRailParams, color2);
+DEFINE_FIELD_X(FRailParams, FRailParams, maxdiff);
+DEFINE_FIELD_X(FRailParams, FRailParams, flags);
+DEFINE_FIELD_X(FRailParams, FRailParams, puff);
+DEFINE_FIELD_X(FRailParams, FRailParams, angleoffset);
+DEFINE_FIELD_X(FRailParams, FRailParams, pitchoffset);
+DEFINE_FIELD_X(FRailParams, FRailParams, distance);
+DEFINE_FIELD_X(FRailParams, FRailParams, duration);
+DEFINE_FIELD_X(FRailParams, FRailParams, sparsity);
+DEFINE_FIELD_X(FRailParams, FRailParams, drift);
+DEFINE_FIELD_X(FRailParams, FRailParams, spawnclass);
+DEFINE_FIELD_X(FRailParams, FRailParams, SpiralOffset);
+DEFINE_FIELD_X(FRailParams, FRailParams, limit);
+
 //==========================================================================
 //
 // CanCollideWith
@@ -322,8 +341,8 @@ void P_GetFloorCeilingZ(FCheckPosition &tmf, int flags)
 	sector_t *sec = (!(flags & FFCF_SAMESECTOR) || tmf.thing->Sector == NULL)? P_PointInSector(tmf.pos) : tmf.sector;
 	F3DFloor *ffc, *fff;
 
-	tmf.ceilingz = sec->NextHighestCeilingAt(tmf.pos.X, tmf.pos.Y, tmf.pos.Z, tmf.pos.Z + tmf.thing->Height, flags, &tmf.ceilingsector, &ffc);
-	tmf.floorz = tmf.dropoffz = sec->NextLowestFloorAt(tmf.pos.X, tmf.pos.Y, tmf.pos.Z, flags, tmf.thing->MaxStepHeight, &tmf.floorsector, &fff);
+	tmf.ceilingz = NextHighestCeilingAt(sec, tmf.pos.X, tmf.pos.Y, tmf.pos.Z, tmf.pos.Z + tmf.thing->Height, flags, &tmf.ceilingsector, &ffc);
+	tmf.floorz = tmf.dropoffz = NextLowestFloorAt(sec, tmf.pos.X, tmf.pos.Y, tmf.pos.Z, flags, tmf.thing->MaxStepHeight, &tmf.floorsector, &fff);
 
 	if (fff)
 	{
@@ -417,7 +436,7 @@ void P_FindFloorCeiling(AActor *actor, int flags)
 DEFINE_ACTION_FUNCTION(AActor, FindFloorCeiling)
 {
 	PARAM_SELF_PROLOGUE(AActor);
-	PARAM_INT_DEF(flags); 
+	PARAM_INT(flags); 
 	P_FindFloorCeiling(self, flags);
 	return 0;
 }
@@ -583,7 +602,7 @@ DEFINE_ACTION_FUNCTION(AActor, TeleportMove)
 	PARAM_FLOAT(y);
 	PARAM_FLOAT(z);
 	PARAM_BOOL(telefrag);
-	PARAM_BOOL_DEF(modify);
+	PARAM_BOOL(modify);
 	ACTION_RETURN_BOOL(P_TeleportMove(self, DVector3(x, y, z), telefrag, modify));
 }
 	
@@ -1798,8 +1817,8 @@ bool P_CheckPosition(AActor *thing, const DVector2 &pos, FCheckPosition &tm, boo
 	else
 	{
 		// With noclip2, we must ignore 3D floors and go right to the uppermost ceiling and lowermost floor.
-		tm.floorz = tm.dropoffz = newsec->LowestFloorAt(pos, &tm.floorsector);
-		tm.ceilingz = newsec->HighestCeilingAt(pos, &tm.ceilingsector);
+		tm.floorz = tm.dropoffz = LowestFloorAt(newsec, pos.X, pos.Y, &tm.floorsector);
+		tm.ceilingz = HighestCeilingAt(newsec, pos.X, pos.Y, &tm.ceilingsector);
 		tm.floorpic = tm.floorsector->GetTexture(sector_t::floor);
 		tm.floorterrain = tm.floorsector->GetTerrain(sector_t::floor);
 		tm.ceilingpic = tm.ceilingsector->GetTexture(sector_t::ceiling);
@@ -1959,8 +1978,8 @@ DEFINE_ACTION_FUNCTION(AActor, CheckPosition)
 	PARAM_SELF_PROLOGUE(AActor);
 	PARAM_FLOAT(x);
 	PARAM_FLOAT(y);
-	PARAM_BOOL_DEF(actorsonly);
-	PARAM_POINTER_DEF(tm, FCheckPosition);
+	PARAM_BOOL(actorsonly);
+	PARAM_POINTER(tm, FCheckPosition);
 	if (tm)
 	{
 		ACTION_RETURN_BOOL(P_CheckPosition(self, DVector2(x, y), *tm, actorsonly));
@@ -2117,7 +2136,7 @@ bool P_TestMobjZ(AActor *actor, bool quick, AActor **pOnmobj)
 DEFINE_ACTION_FUNCTION(AActor, TestMobjZ)
 {
 	PARAM_SELF_PROLOGUE(AActor);
-	PARAM_BOOL_DEF(quick);
+	PARAM_BOOL(quick);
 	
 	AActor *on = nullptr;;
 	bool retv = P_TestMobjZ(self, quick, &on);
@@ -2773,8 +2792,8 @@ DEFINE_ACTION_FUNCTION(AActor, TryMove)
 	PARAM_FLOAT(x);
 	PARAM_FLOAT(y);
 	PARAM_INT(dropoff);
-	PARAM_BOOL_DEF(missilecheck);
-	PARAM_POINTER_DEF(tm, FCheckPosition);
+	PARAM_BOOL(missilecheck);
+	PARAM_POINTER(tm, FCheckPosition);
 	if (tm == nullptr)
 	{
 		ACTION_RETURN_BOOL(P_TryMove(self, DVector2(x, y), dropoff, nullptr, missilecheck));
@@ -2898,8 +2917,8 @@ DEFINE_ACTION_FUNCTION(AActor, CheckMove)
 	PARAM_SELF_PROLOGUE(AActor);
 	PARAM_FLOAT(x);
 	PARAM_FLOAT(y);
-	PARAM_INT_DEF(flags);
-	PARAM_POINTER_DEF(tm, FCheckPosition);
+	PARAM_INT(flags);
+	PARAM_POINTER(tm, FCheckPosition);
 	if (tm == nullptr)
 	{
 		ACTION_RETURN_BOOL(P_CheckMove(self, DVector2(x, y), flags));
@@ -4439,8 +4458,8 @@ DAngle P_AimLineAttack(AActor *t1, DAngle angle, double distance, FTranslatedLin
 		else
 		{
 			// [BB] Disable autoaim on weapons with WIF_NOAUTOAIM.
-			AWeapon *weapon = t1->player->ReadyWeapon;
-			if (weapon && (weapon->WeaponFlags & WIF_NOAUTOAIM))
+			auto weapon = t1->player->ReadyWeapon;
+			if ((weapon && (weapon->IntVar(NAME_WeaponFlags) & WIF_NOAUTOAIM)) && !(flags & ALF_NOWEAPONCHECK))
 			{
 				vrange = 0.5;
 			}
@@ -4489,11 +4508,11 @@ DEFINE_ACTION_FUNCTION(AActor, AimLineAttack)
 	PARAM_SELF_PROLOGUE(AActor);
 	PARAM_ANGLE(angle);
 	PARAM_FLOAT(distance);
-	PARAM_POINTER_DEF(pLineTarget, FTranslatedLineTarget);
-	PARAM_ANGLE_DEF(vrange);
-	PARAM_INT_DEF(flags);
-	PARAM_OBJECT_DEF(target, AActor);
-	PARAM_OBJECT_DEF(friender, AActor);
+	PARAM_OUTPOINTER(pLineTarget, FTranslatedLineTarget);
+	PARAM_ANGLE(vrange);
+	PARAM_INT(flags);
+	PARAM_OBJECT(target, AActor);
+	PARAM_OBJECT(friender, AActor);
 	ACTION_RETURN_FLOAT(P_AimLineAttack(self, angle, distance, pLineTarget, vrange, flags, target, friender).Degrees);
 }
 
@@ -4840,38 +4859,13 @@ AActor *P_LineAttack(AActor *t1, DAngle angle, double distance,
 			}
 			if (!(puffDefaults != NULL && puffDefaults->flags3&MF3_BLOODLESSIMPACT))
 			{
-				bool bloodsplatter = (t1->flags5 & MF5_BLOODSPLATTER) ||
-					(t1->player != nullptr &&	t1->player->ReadyWeapon != nullptr &&
-						(t1->player->ReadyWeapon->WeaponFlags & WIF_AXEBLOOD));
-
-				bool axeBlood = (t1->player != nullptr &&
-					t1->player->ReadyWeapon != nullptr &&
-					(t1->player->ReadyWeapon->WeaponFlags & WIF_AXEBLOOD));
-
-				if (!bloodsplatter && !axeBlood &&
-					!(trace.Actor->flags & MF_NOBLOOD) &&
-					!(trace.Actor->flags2 & (MF2_INVULNERABLE | MF2_DORMANT)))
+				IFVIRTUALPTR(trace.Actor, AActor, SpawnLineAttackBlood)
 				{
-					P_SpawnBlood(bleedpos, trace.SrcAngleFromTarget, newdam > 0 ? newdam : damage, trace.Actor);
+					VMValue params[] = { trace.Actor, t1, bleedpos.X, bleedpos.Y, bleedpos.Z, trace.SrcAngleFromTarget.Degrees, damage, newdam };
+					VMCall(func, params, countof(params), nullptr, 0);
 				}
-
 				if (damage)
 				{
-					if (bloodsplatter || axeBlood)
-					{
-						if (!(trace.Actor->flags&MF_NOBLOOD) &&
-							!(trace.Actor->flags2&(MF2_INVULNERABLE | MF2_DORMANT)))
-						{
-							if (axeBlood)
-							{
-								P_BloodSplatter2(bleedpos, trace.Actor, trace.SrcAngleFromTarget);
-							}
-							if (pr_lineattack() < 192)
-							{
-								P_BloodSplatter(bleedpos, trace.Actor, trace.SrcAngleFromTarget);
-							}
-						}
-					}
 					// [RH] Stick blood to walls
 					P_TraceBleed(newdam > 0 ? newdam : damage, trace.HitPos, trace.Actor, trace.SrcAngleFromTarget, pitch);
 				}
@@ -4925,11 +4919,11 @@ DEFINE_ACTION_FUNCTION(AActor, LineAttack)
 	PARAM_INT(damage);
 	PARAM_NAME(damageType);
 	PARAM_CLASS(puffType, AActor);
-	PARAM_INT_DEF(flags);
-	PARAM_POINTER_DEF(victim, FTranslatedLineTarget);
-	PARAM_FLOAT_DEF(offsetz);
-	PARAM_FLOAT_DEF(offsetforward);
-	PARAM_FLOAT_DEF(offsetside);
+	PARAM_INT(flags);
+	PARAM_OUTPOINTER(victim, FTranslatedLineTarget);
+	PARAM_FLOAT(offsetz);
+	PARAM_FLOAT(offsetforward);
+	PARAM_FLOAT(offsetside);
 
 	int acdmg;
 	if (puffType == nullptr) puffType = PClass::FindActor("BulletPuff");	// P_LineAttack does not work without a puff to take info from.
@@ -5088,11 +5082,11 @@ DEFINE_ACTION_FUNCTION(AActor, LineTrace)
 	PARAM_ANGLE(angle);
 	PARAM_FLOAT(distance);
 	PARAM_ANGLE(pitch);
-	PARAM_INT_DEF(flags);
-	PARAM_FLOAT_DEF(offsetz);
-	PARAM_FLOAT_DEF(offsetforward);
-	PARAM_FLOAT_DEF(offsetside);
-	PARAM_POINTER_DEF(data, FLineTraceData);
+	PARAM_INT(flags);
+	PARAM_FLOAT(offsetz);
+	PARAM_FLOAT(offsetforward);
+	PARAM_FLOAT(offsetside);
+	PARAM_OUTPOINTER(data, FLineTraceData);
 	ACTION_RETURN_BOOL(P_LineTrace(self,angle,distance,pitch,flags,offsetz,offsetforward,offsetside,data));
 }
 
@@ -5601,6 +5595,15 @@ void P_RailAttack(FRailParams *p)
 
 	// Draw the slug's trail.
 	P_DrawRailTrail(source, rail_data.PortalHits, p->color1, p->color2, p->maxdiff, p->flags, p->spawnclass, angle, p->duration, p->sparsity, p->drift, p->SpiralOffset, pitch);
+}
+
+DEFINE_ACTION_FUNCTION(AActor, RailAttack)
+{
+	PARAM_SELF_PROLOGUE(AActor);
+	PARAM_POINTER(p, FRailParams);
+	p->source = self;
+	P_RailAttack(p);
+	return 0;
 }
 
 //==========================================================================
@@ -6117,8 +6120,8 @@ DEFINE_ACTION_FUNCTION(AActor, GetRadiusDamage)
 	PARAM_OBJECT(thing, AActor);
 	PARAM_INT(damage);
 	PARAM_INT(distance);
-	PARAM_INT_DEF(fulldmgdistance);
-	PARAM_BOOL_DEF(oldradiusdmg);
+	PARAM_INT(fulldmgdistance);
+	PARAM_BOOL(oldradiusdmg);
 
 	if (!thing)
 	{
@@ -6201,7 +6204,7 @@ int P_RadiusAttack(AActor *bombspot, AActor *bombsource, int bombdamage, int bom
 		// them far too "active." BossBrains also use the old code
 		// because some user levels require they have a height of 16,
 		// which can make them near impossible to hit with the new code.
-		if ((flags & RADF_NODAMAGE) || !((bombspot->flags5 | thing->flags5) & MF5_OLDRADIUSDMG))
+		if (((flags & RADF_NODAMAGE) || !((bombspot->flags5 | thing->flags5) & MF5_OLDRADIUSDMG)) && !(flags & RADF_OLDRADIUSDAMAGE))
 		{
 			double points = P_GetRadiusDamage(false, bombspot, thing, bombdamage, bombdistance, fulldamagedistance, bombsource == thing);
 			double check = int(points) * bombdamage;
@@ -6276,6 +6279,18 @@ int P_RadiusAttack(AActor *bombspot, AActor *bombsource, int bombdamage, int bom
 		}
 	}
 	return count;
+}
+
+DEFINE_ACTION_FUNCTION(AActor, RadiusAttack)
+{
+	PARAM_SELF_PROLOGUE(AActor);
+	PARAM_OBJECT(bombsource, AActor);
+	PARAM_INT(bombdamage);
+	PARAM_INT(bombdistance);
+	PARAM_NAME(damagetype);
+	PARAM_INT(flags);
+	PARAM_INT(fulldamagedistance);
+	ACTION_RETURN_INT(P_RadiusAttack(self, bombsource, bombdamage, bombdistance, damagetype, flags, fulldamagedistance));
 }
 
 //==========================================================================

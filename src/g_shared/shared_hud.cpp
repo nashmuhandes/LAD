@@ -116,6 +116,7 @@ static FTexture * healthpic;				// Health icon
 static FTexture * berserkpic;				// Berserk icon (Doom only)
 static FTexture * fragpic;					// Frags icon
 static FTexture * invgems[2];				// Inventory arrows
+static FTextureID tnt1a0;					// We need this to check for empty sprites.
 
 static int hudwidth, hudheight;				// current width/height for HUD display
 static int statspace;
@@ -163,6 +164,7 @@ static void DrawImageToBox(FTexture * tex, int x, int y, int w, int h, double tr
 // Draws a text but uses a fixed width for all characters
 //
 //---------------------------------------------------------------------------
+double GetBottomAlignOffset(FFont *font, int c);
 
 static void DrawHudText(FFont *font, int color, char * text, int x, int y, double trans = 0.75)
 {
@@ -172,20 +174,15 @@ static void DrawHudText(FFont *font, int color, char * text, int x, int y, doubl
 	x+=zerowidth/2;
 	for(int i=0;text[i];i++)
 	{
-		int width;
-		FTexture *texc = font->GetChar(text[i], &width);
-		if (texc != NULL)
-		{
-			double offset = texc->GetScaledTopOffsetDouble(0) 
-				- tex_zero->GetScaledTopOffsetDouble(0) 
-				+ tex_zero->GetScaledHeightDouble();
+		int width = font->GetCharWidth(text[i]);
+		double offset = GetBottomAlignOffset(font, text[i]);
 
-			screen->DrawChar(font, color, x, y, text[i],
-				DTA_KeepRatio, true,
-				DTA_VirtualWidth, hudwidth, DTA_VirtualHeight, hudheight, DTA_Alpha, trans, 
-				DTA_LeftOffset, width/2, DTA_TopOffsetF, offset,
-				/*DTA_CenterBottomOffset, 1,*/ TAG_DONE);
-		}
+		screen->DrawChar(font, color, x, y, text[i],
+			DTA_KeepRatio, true,
+			DTA_VirtualWidth, hudwidth, DTA_VirtualHeight, hudheight, DTA_Alpha, trans, 
+			DTA_LeftOffset, width/2, DTA_TopOffsetF, offset,
+			/*DTA_CenterBottomOffset, 1,*/ TAG_DONE);
+
 		x += zerowidth;
 	}
 }
@@ -367,53 +364,6 @@ static void DrawArmor(AInventory * barmor, AInventory * harmor, int x, int y)
 
 //---------------------------------------------------------------------------
 //
-// create a sorted list of the defined keys so 
-// this doesn't have to be done each frame
-//
-//---------------------------------------------------------------------------
-static TArray<PClassActor *> KeyTypes, UnassignedKeyTypes;
-
-static int ktcmp(const void * a, const void * b)
-{
-	auto key1 = GetDefaultByType ( *(PClassActor **)a );
-	auto key2 = GetDefaultByType ( *(PClassActor **)b );
-	return key1->special1 - key2->special1;
-}
-
-static void SetKeyTypes()
-{
-	for(unsigned int i = 0; i < PClassActor::AllActorClasses.Size(); i++)
-	{
-		PClassActor *ti = PClassActor::AllActorClasses[i];
-		auto kt = PClass::FindActor(NAME_Key);
-
-		if (ti->IsDescendantOf(kt))
-		{
-			AInventory *key = (AInventory*)(GetDefaultByType(ti));
-
-			if (key->Icon.isValid() && key->special1 > 0)
-			{
-				KeyTypes.Push(ti);
-			}
-			else 
-			{
-				UnassignedKeyTypes.Push(ti);
-			}
-		}
-	}
-	if (KeyTypes.Size())
-	{
-		qsort(&KeyTypes[0], KeyTypes.Size(), sizeof(KeyTypes[0]), ktcmp);
-	}
-	else
-	{
-		// Don't leave the list empty
-		KeyTypes.Push(PClass::FindActor(NAME_Key));
-	}
-}
-
-//---------------------------------------------------------------------------
-//
 // Draw one key
 //
 // Regarding key icons, Doom's are too small, Heretic doesn't have any,
@@ -441,7 +391,8 @@ static void DrawOneKey(int xo, int & x, int & y, int & c, AInventory * inv)
 		{
 			spritedef_t * sprdef = &sprites[state->sprite];
 			spriteframe_t * sprframe = &SpriteFrames[sprdef->spriteframes + state->GetFrame()];
-			icon = sprframe->Texture[0];
+			if (sprframe->Texture[0] != tnt1a0)
+				icon = sprframe->Texture[0];
 		}
 	}
 	if (icon.isNull()) icon = inv->Icon;
@@ -470,26 +421,15 @@ static int DrawKeys(player_t * CPlayer, int x, int y)
 {
 	int yo=y;
 	int xo=x;
-	int i;
 	int c=0;
 	AInventory *inv;
 
 	if (!deathmatch)
 	{
-		if (KeyTypes.Size() == 0) SetKeyTypes();
-
-		// First all keys that are assigned to locks (in reverse order of definition)
-		for (i = KeyTypes.Size()-1; i >= 0; i--)
+		int i = P_GetKeyTypeCount();
+		for(i--; i >= 0; i--)
 		{
-			if ((inv = CPlayer->mo->FindInventory(KeyTypes[i])))
-			{
-				DrawOneKey(xo, x, y, c, inv);
-			}
-		}
-		// And now the rest
-		for (i = UnassignedKeyTypes.Size()-1; i >= 0; i--)
-		{
-			if ((inv = CPlayer->mo->FindInventory(UnassignedKeyTypes[i])))
+			if ((inv = CPlayer->mo->FindInventory(P_GetKeyType(i))))
 			{
 				DrawOneKey(xo, x, y, c, inv);
 			}
@@ -507,12 +447,12 @@ static int DrawKeys(player_t * CPlayer, int x, int y)
 //---------------------------------------------------------------------------
 static TArray<PClassActor *> orderedammos;
 
-static void AddAmmoToList(AWeapon * weapdef)
+static void AddAmmoToList(AInventory * weapdef)
 {
 
 	for (int i = 0; i < 2; i++)
 	{
-		auto ti = i == 0 ? weapdef->AmmoType1 : weapdef->AmmoType2;
+		auto ti = weapdef->PointerVar<PClassActor>(i == 0 ? NAME_AmmoType1 : NAME_AmmoType2);
 		if (ti)
 		{
 			auto ammodef = (AInventory*)GetDefaultByType(ti);
@@ -570,7 +510,7 @@ static int DrawAmmo(player_t *CPlayer, int x, int y)
 	char buf[256];
 	AInventory *inv;
 
-	AWeapon *wi=CPlayer->ReadyWeapon;
+	auto wi=CPlayer->ReadyWeapon;
 
 	orderedammos.Clear();
 
@@ -582,9 +522,9 @@ static int DrawAmmo(player_t *CPlayer, int x, int y)
 	else
 	{
 		// Order ammo by use of weapons in the weapon slots
-		for (k = 0; k < NUM_WEAPON_SLOTS; k++) for(j = 0; j < CPlayer->weapons.Slots[k].Size(); j++)
+		for (k = 0; k < NUM_WEAPON_SLOTS; k++) for(j = 0; j < CPlayer->weapons.SlotSize(k); j++)
 		{
-			PClassActor *weap = CPlayer->weapons.Slots[k].GetWeapon(j);
+			PClassActor *weap = CPlayer->weapons.GetWeapon(k, j);
 
 			if (weap)
 			{
@@ -593,7 +533,7 @@ static int DrawAmmo(player_t *CPlayer, int x, int y)
 				
 				if (hud_showammo > 1 || CPlayer->mo->FindInventory(weap))
 				{
-					AddAmmoToList((AWeapon*)GetDefaultByType(weap));
+					AddAmmoToList((AInventory*)GetDefaultByType(weap));
 				}
 			}
 		}
@@ -603,7 +543,7 @@ static int DrawAmmo(player_t *CPlayer, int x, int y)
 		{
 			if (inv->IsKindOf(NAME_Weapon))
 			{
-				AddAmmoToList((AWeapon*)inv);
+				AddAmmoToList(inv);
 			}
 		}
 	}
@@ -643,7 +583,7 @@ static int DrawAmmo(player_t *CPlayer, int x, int y)
 		FTextureID icon = !AltIcon.isNull()? AltIcon : inv->Icon;
 		if (!icon.isValid()) continue;
 
-		double trans= (wi && (type==wi->AmmoType1 || type==wi->AmmoType2)) ? 0.75 : 0.375;
+		double trans= (wi && (type==wi->PointerVar<PClassActor>(NAME_AmmoType1) || type==wi->PointerVar<PClassActor>(NAME_AmmoType2))) ? 0.75 : 0.375;
 
 		int maxammo = inv->MaxAmount;
 		int ammo = ammoitem? ammoitem->Amount : 0;
@@ -664,90 +604,19 @@ static int DrawAmmo(player_t *CPlayer, int x, int y)
 }
 
 
-//---------------------------------------------------------------------------
-//
-// Weapons List
-//
-//---------------------------------------------------------------------------
-FTextureID GetInventoryIcon(AInventory *item, uint32_t flags, bool *applyscale=NULL)	// This function is also used by SBARINFO
-{
-	if (applyscale != NULL)
-	{
-		*applyscale = false;
-	}
-
-	if (item == nullptr) return FNullTextureID();
-
-	FTextureID picnum, AltIcon = item->AltHUDIcon;
-	FState * state=NULL, *ReadyState;
-	
-	picnum.SetNull();
-	if (flags & DI_ALTICONFIRST)
-	{
-		if (!(flags & DI_SKIPALTICON) && AltIcon.isValid())
-			picnum = AltIcon;
-		else if (!(flags & DI_SKIPICON))
-			picnum = item->Icon;
-	}
-	else
-	{
-		if (!(flags & DI_SKIPICON) && item->Icon.isValid())
-			picnum = item->Icon;
-		else if (!(flags & DI_SKIPALTICON))
-			picnum = AltIcon;
-	}
-	
-	if (!picnum.isValid()) //isNull() is bad for checking, because picnum could be also invalid (-1)
-	{
-		if (!(flags & DI_SKIPSPAWN) && item->SpawnState && item->SpawnState->sprite!=0)
-		{
-			state = item->SpawnState;
-			
-			if (applyscale != NULL && !(flags & DI_FORCESCALE))
-			{
-				*applyscale = true;
-			}
-		}
-		// no spawn state - now try the ready state if it's weapon
-		else if (!(flags & DI_SKIPREADY) && item->GetClass()->IsDescendantOf(NAME_Weapon) && (ReadyState = item->FindState(NAME_Ready)) && ReadyState->sprite!=0)
-		{
-			state = ReadyState;
-		}
-		if (state && (unsigned)state->sprite < (unsigned)sprites.Size ())
-		{
-			spritedef_t * sprdef = &sprites[state->sprite];
-			spriteframe_t * sprframe = &SpriteFrames[sprdef->spriteframes + state->GetFrame()];
-
-			picnum = sprframe->Texture[0];
-		}
-	}
-	return picnum;
-}
-
-DEFINE_ACTION_FUNCTION(DBaseStatusBar, GetInventoryIcon)
-{
-	PARAM_PROLOGUE;
-	PARAM_OBJECT(item, AInventory);
-	PARAM_INT(flags);
-	bool applyscale;
-	FTextureID icon = GetInventoryIcon(item, flags, &applyscale);
-	if (numret >= 1) ret[0].SetInt(icon.GetIndex());
-	if (numret >= 2) ret[1].SetInt(applyscale);
-	return MIN(numret, 2);
-}
-
-static void DrawOneWeapon(player_t * CPlayer, int x, int & y, AWeapon * weapon)
+static void DrawOneWeapon(player_t * CPlayer, int x, int & y, AInventory * weapon)
 {
 	double trans;
 
 	// Powered up weapons and inherited sister weapons are not displayed.
-	if (weapon->WeaponFlags & WIF_POWERED_UP) return;
-	if (weapon->SisterWeapon && weapon->IsKindOf(weapon->SisterWeapon->GetClass())) return;
+	if (weapon->IntVar(NAME_WeaponFlags) & WIF_POWERED_UP) return;
+	auto SisterWeapon = weapon->PointerVar<AInventory>(NAME_SisterWeapon);
+	if (SisterWeapon && weapon->IsKindOf(SisterWeapon->GetClass())) return;
 
 	trans=0.4;
 	if (CPlayer->ReadyWeapon)
 	{
-		if (weapon==CPlayer->ReadyWeapon || weapon==CPlayer->ReadyWeapon->SisterWeapon) trans = 0.85;
+		if (weapon==CPlayer->ReadyWeapon || SisterWeapon == CPlayer->ReadyWeapon) trans = 0.85;
 	}
 
 	FTextureID picnum = GetInventoryIcon(weapon, DI_ALTICONFIRST);
@@ -775,22 +644,22 @@ static void DrawWeapons(player_t *CPlayer, int x, int y)
 	for(inv = CPlayer->mo->Inventory; inv; inv = inv->Inventory)
 	{
 		if (inv->IsKindOf(NAME_Weapon) && 
-			!CPlayer->weapons.LocateWeapon(static_cast<AWeapon*>(inv)->GetClass(), NULL, NULL))
+			!CPlayer->weapons.LocateWeapon(inv->GetClass(), NULL, NULL))
 		{
-			DrawOneWeapon(CPlayer, x, y, static_cast<AWeapon*>(inv));
+			DrawOneWeapon(CPlayer, x, y, inv);
 		}
 	}
 
 	// And now everything in the weapon slots back to front
-	for (k = NUM_WEAPON_SLOTS - 1; k >= 0; k--) for(j = CPlayer->weapons.Slots[k].Size() - 1; j >= 0; j--)
+	for (k = NUM_WEAPON_SLOTS - 1; k >= 0; k--) for(j = CPlayer->weapons.SlotSize(k) - 1; j >= 0; j--)
 	{
-		PClassActor *weap = CPlayer->weapons.Slots[k].GetWeapon(j);
+		PClassActor *weap = CPlayer->weapons.GetWeapon(k, j);
 		if (weap) 
 		{
 			inv=CPlayer->mo->FindInventory(weap);
 			if (inv) 
 			{
-				DrawOneWeapon(CPlayer, x, y, static_cast<AWeapon*>(inv));
+				DrawOneWeapon(CPlayer, x, y, inv);
 			}
 		}
 	}
@@ -1262,11 +1131,9 @@ void HUD_InitHud()
 
 	invgems[0] = TexMan.FindTexture("INVGEML1");
 	invgems[1] = TexMan.FindTexture("INVGEMR1");
+	tnt1a0 = TexMan.CheckForTexture("TNT1A0", ETextureType::Sprite);
 
 	fragpic = TexMan.FindTexture("HU_FRAGS");	// Sadly, I don't have anything usable for this. :(
-
-	KeyTypes.Clear();
-	UnassignedKeyTypes.Clear();
 
 	statspace = SmallFont->StringWidth("Ac:");
 

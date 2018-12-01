@@ -641,7 +641,11 @@ static void TakeStrifeItem (player_t *player, PClassActor *itemtype, int amount)
 	if (itemtype->TypeName == NAME_Sigil)
 		return;
 
-	player->mo->TakeInventory(itemtype, amount);
+	IFVM(Actor, TakeInventory)
+	{
+		VMValue params[] = { player->mo, itemtype, amount, false, false };
+		VMCall(func, params, 5, nullptr, 0);
+	}
 }
 
 CUSTOM_CVAR(Float, dlg_musicvolume, 1.0f, CVAR_ARCHIVE)
@@ -965,10 +969,10 @@ static void HandleReply(player_t *player, bool isconsole, int nodenum, int reply
 				if (item->GetClass()->TypeName == NAME_FlameThrower)
 				{
 					// The flame thrower gives less ammo when given in a dialog
-					static_cast<AWeapon*>(item)->AmmoGive1 = 40;
+					item->IntVar(NAME_AmmoGive1) = 40;
 				}
 				item->flags |= MF_DROPPED;
-				if (!item->CallTryPickup(player->mo))
+				if (!CallTryPickup(item, player->mo))
 				{
 					item->Destroy();
 					takestuff = false;

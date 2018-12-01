@@ -641,7 +641,6 @@ public:
 	AActor &operator= (const AActor &other);
 	~AActor ();
 
-	virtual void Finalize(FStateDefinitions &statedef);
 	virtual void OnDestroy() override;
 	virtual void Serialize(FSerializer &arc) override;
 	virtual void PostSerialize() override;
@@ -685,8 +684,6 @@ public:
 
 	void LevelSpawned();				// Called after BeginPlay if this actor was spawned by the world
 	void HandleSpawnFlags();	// Translates SpawnFlags into in-game flags.
-
-	virtual void MarkPrecacheSounds() const;	// Marks sounds used by this actor for precaching.
 
 	virtual void Activate (AActor *activator);
 	void CallActivate(AActor *activator);
@@ -749,25 +746,8 @@ public:
 	// APlayerPawn for some specific handling for players. None of this
 	// should ever be overridden by custom classes.
 
-	// Adds the item to this actor's inventory and sets its Owner.
-	virtual void AddInventory (AInventory *item);
-
-	// Give an item to the actor and pick it up.
-	// Returns true if the item pickup succeeded.
-	bool GiveInventory (PClassActor *type, int amount, bool givecheat = false);
-
-	// Removes the item from the inventory list.
-	virtual void RemoveInventory (AInventory *item);
-
-	// Take the amount value of an item from the inventory list.
-	// If nothing is left, the item may be destroyed.
-	// Returns true if the initial item count is positive.
-	virtual bool TakeInventory (PClassActor *itemclass, int amount, bool fromdecorate = false, bool notakeinfinite = false);
-
-	bool SetInventory(PClassActor *itemclass, int amount, bool beyondMax);
-
 	// Uses an item and removes it from the inventory.
-	virtual bool UseInventory (AInventory *item);
+	bool UseInventory (AInventory *item);
 
 	// Tosses an item out of the inventory.
 	AInventory *DropInventory (AInventory *item, int amt = -1);
@@ -789,12 +769,6 @@ public:
 	// Adds one item of a particular type. Returns NULL if it could not be added.
 	AInventory *GiveInventoryType (PClassActor *type);
 
-	// Returns the first item held with IF_INVBAR set.
-	AInventory *FirstInv ();
-
-	// Tries to give the actor some ammo.
-	bool GiveAmmo (PClassActor *type, int amount);
-
 	// Destroys all the inventory the actor is holding.
 	void DestroyAllInventory ();
 
@@ -812,7 +786,7 @@ public:
 	void ObtainInventory (AActor *other);
 
 	// Die. Now.
-	virtual bool Massacre ();
+	bool Massacre ();
 
 	// Transforms the actor into a finely-ground paste
 	bool Grind(bool items);

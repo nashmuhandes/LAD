@@ -494,13 +494,8 @@ void S_PrecacheLevel ()
 		{
 			IFVIRTUALPTR(actor, AActor, MarkPrecacheSounds)
 			{
-				// Without the type cast this picks the 'void *' assignment...
 				VMValue params[1] = { actor };
 				VMCall(func, params, 1, nullptr, 0);
-			}
-			else
-			{
-				actor->MarkPrecacheSounds();
 			}
 		}
 		for (auto snd : gameinfo.PrecachedSounds)
@@ -1332,8 +1327,8 @@ DEFINE_ACTION_FUNCTION(DObject, S_Sound)
 	PARAM_PROLOGUE;
 	PARAM_SOUND(id);
 	PARAM_INT(channel);
-	PARAM_FLOAT_DEF(volume);
-	PARAM_FLOAT_DEF(attn);
+	PARAM_FLOAT(volume);
+	PARAM_FLOAT(attn);
 	S_Sound(channel, id, static_cast<float>(volume), static_cast<float>(attn));
 	return 0;
 }
@@ -1429,6 +1424,24 @@ void S_PlaySound(AActor *a, int chan, FSoundID sid, float vol, float atten, bool
 		if (a->CheckLocalView(consoleplayer))
 		{
 			S_Sound(chan, sid, vol, ATTN_NONE);
+		}
+	}
+}
+
+void A_PlaySound(AActor *self, int soundid, int channel, double volume, int looping, double attenuation, int local)
+{
+	if (!looping)
+	{
+		if (!(channel & CHAN_NOSTOP) || !S_IsActorPlayingSomething(self, channel & 7, soundid))
+		{
+			S_PlaySound(self, channel, soundid, (float)volume, (float)attenuation, local);
+		}
+	}
+	else
+	{
+		if (!S_IsActorPlayingSomething(self, channel & 7, soundid))
+		{
+			S_PlaySound(self, channel | CHAN_LOOP, soundid, (float)volume, (float)attenuation, local);
 		}
 	}
 }
@@ -2722,9 +2735,9 @@ DEFINE_ACTION_FUNCTION(DObject, S_ChangeMusic)
 {
 	PARAM_PROLOGUE;
 	PARAM_STRING(music);
-	PARAM_INT_DEF(order);
-	PARAM_BOOL_DEF(looping);
-	PARAM_BOOL_DEF(force);
+	PARAM_INT(order);
+	PARAM_BOOL(looping);
+	PARAM_BOOL(force);
 	ACTION_RETURN_BOOL(S_ChangeMusic(music, order, looping, force));
 }
 

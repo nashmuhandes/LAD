@@ -74,6 +74,7 @@
 #include "g_levellocals.h"
 #include "actorinlines.h"
 #include "types.h"
+#include "scriptutil.h"
 
 	// P-codes for ACS scripts
 	enum
@@ -1743,92 +1744,6 @@ static void ClearInventory (AActor *activator)
 	else
 	{
 		activator->ClearInventory();
-	}
-}
-
-//============================================================================
-//
-// GiveInventory
-//
-// Gives an item to one or more actors.
-//
-//============================================================================
-
-static void GiveInventory (AActor *activator, const char *type, int amount)
-{
-	PClassActor *info;
-
-	if (amount <= 0 || type == NULL)
-	{
-		return;
-	}
-	if (stricmp (type, "Armor") == 0)
-	{
-		type = "BasicArmorPickup";
-	}
-	info = PClass::FindActor(type);
-	if (info == NULL)
-	{
-		Printf ("ACS: I don't know what %s is.\n", type);
-	}
-	else if (!info->IsDescendantOf (RUNTIME_CLASS(AInventory)))
-	{
-		Printf ("ACS: %s is not an inventory item.\n", type);
-	}
-	else if (activator == NULL)
-	{
-		for (int i = 0; i < MAXPLAYERS; ++i)
-		{
-			if (playeringame[i])
-				players[i].mo->GiveInventory(info, amount);
-		}
-	}
-	else
-	{
-		activator->GiveInventory(info, amount);
-	}
-}
-
-//============================================================================
-//
-// TakeInventory
-//
-// Takes an item from one or more actors.
-//
-//============================================================================
-
-static void TakeInventory (AActor *activator, const char *type, int amount)
-{
-	PClassActor *info;
-
-	if (type == NULL)
-	{
-		return;
-	}
-	if (strcmp (type, "Armor") == 0)
-	{
-		type = "BasicArmor";
-	}
-	if (amount <= 0)
-	{
-		return;
-	}
-	info = PClass::FindActor (type);
-	if (info == NULL)
-	{
-		return;
-	}
-	if (activator == NULL)
-	{
-		for (int i = 0; i < MAXPLAYERS; ++i)
-		{
-			if (playeringame[i])
-				players[i].mo->TakeInventory(info, amount);
-		}
-	}
-	else
-	{
-		activator->TakeInventory(info, amount);
 	}
 }
 
@@ -4699,12 +4614,12 @@ bool DLevelScript::DoCheckActorTexture(int tid, AActor *activator, int string, b
 
 	if (floor)
 	{
-		actor->Sector->NextLowestFloorAt(actor->X(), actor->Y(), actor->Z(), 0, actor->MaxStepHeight, &resultsec, &resffloor);
+		NextLowestFloorAt(actor->Sector, actor->X(), actor->Y(), actor->Z(), 0, actor->MaxStepHeight, &resultsec, &resffloor);
 		secpic = resffloor ? *resffloor->top.texture : resultsec->planes[sector_t::floor].Texture;
 	}
 	else
 	{
-		actor->Sector->NextHighestCeilingAt(actor->X(), actor->Y(), actor->Z(), actor->Top(), 0, &resultsec, &resffloor);
+		NextHighestCeilingAt(actor->Sector, actor->X(), actor->Y(), actor->Z(), actor->Top(), 0, &resultsec, &resffloor);
 		secpic = resffloor ? *resffloor->bottom.texture : resultsec->planes[sector_t::ceiling].Texture;
 	}
 	return tex == TexMan[secpic];
@@ -5448,7 +5363,7 @@ static int ScriptCall(AActor *activator, unsigned argc, int32_t *args)
 		// The return value can be the same types as the parameter types, plus void
 		if (func->Proto->ReturnTypes.Size() == 0)
 		{
-			VMCall(func, &params[0], params.Size(), nullptr, 0);
+			VMCallWithDefaults(func, params, nullptr, 0);
 		}
 		else
 		{
@@ -5470,20 +5385,20 @@ static int ScriptCall(AActor *activator, unsigned argc, int32_t *args)
 			{
 				double d;
 				VMReturn ret(&d);
-				VMCall(func, &params[0], params.Size(), &ret, 1);
+				VMCallWithDefaults(func, params, &ret, 1);
 				retval = DoubleToACS(d);
 			}
 			else if (rettype == TypeString)
 			{
 				FString d;
 				VMReturn ret(&d);
-				VMCall(func, &params[0], params.Size(), &ret, 1);
+				VMCallWithDefaults(func, params, &ret, 1);
 				retval = GlobalACSStrings.AddString(d);
 			}
 			else
 			{
 				// All other return values can not be handled so ignore them.
-				VMCall(func, &params[0], params.Size(), nullptr, 0);
+				VMCallWithDefaults(func, params, nullptr, 0);
 			}
 		}
 	}
@@ -6961,28 +6876,6 @@ static bool CharArrayParms(int &capacity, int &offset, int &a, FACSStackMemory& 
 	offset += STACK(2);
 	sp -= 2;
 	return true;
-}
-
-static void SetMarineWeapon(AActor *marine, int weapon)
-{
-	static VMFunction *smw = nullptr;
-	if (smw == nullptr) PClass::FindFunction(&smw, NAME_ScriptedMarine, NAME_SetWeapon);
-	if (smw)
-	{
-		VMValue params[2] = { marine, weapon };
-		VMCall(smw, params, 2, nullptr, 0);
-	}
-}
-
-static void SetMarineSprite(AActor *marine, PClassActor *source)
-{
-	static VMFunction *sms = nullptr;
-	if (sms == nullptr) PClass::FindFunction(&sms, NAME_ScriptedMarine, NAME_SetSprite);
-	if (sms)
-	{
-		VMValue params[2] = { marine, source };
-		VMCall(sms, params, 2, nullptr, 0);
-	}
 }
 
 int DLevelScript::RunScript ()
@@ -9346,64 +9239,78 @@ scriptwait:
 			break;
 
 		case PCD_GIVEINVENTORY:
-			GiveInventory (activator, FBehavior::StaticLookupString (STACK(2)), STACK(1));
+		{
+			int typeindex = FName(FBehavior::StaticLookupString(STACK(2))).GetIndex();
+			ScriptUtil::Exec(NAME_GiveInventory, ScriptUtil::Pointer, activator, ScriptUtil::Int, typeindex, ScriptUtil::Int, STACK(1), ScriptUtil::End);
 			sp -= 2;
 			break;
+		}
 
 		case PCD_GIVEACTORINVENTORY:
+		{
+			int typeindex = FName(FBehavior::StaticLookupString(STACK(2))).GetIndex();
+			FName type = FName(FBehavior::StaticLookupString(STACK(2)));
+			if (STACK(3) == 0)
 			{
-				const char *type = FBehavior::StaticLookupString(STACK(2));
-				if (STACK(3) == 0)
-				{
-					GiveInventory(NULL, FBehavior::StaticLookupString(STACK(2)), STACK(1));
-				}
-				else
-				{
-					FActorIterator it(STACK(3));
-					AActor *actor;
-					for (actor = it.Next(); actor != NULL; actor = it.Next())
-					{
-						GiveInventory(actor, type, STACK(1));
-					}
-				}
-				sp -= 3;
+				ScriptUtil::Exec(NAME_GiveInventory, ScriptUtil::Pointer, nullptr, ScriptUtil::Int, typeindex, ScriptUtil::Int, STACK(1), ScriptUtil::End);
 			}
+			else
+			{
+				FActorIterator it(STACK(3));
+				AActor *actor;
+				for (actor = it.Next(); actor != NULL; actor = it.Next())
+				{
+					ScriptUtil::Exec(NAME_GiveInventory, ScriptUtil::Pointer, actor, ScriptUtil::Int, typeindex, ScriptUtil::Int, STACK(1), ScriptUtil::End);
+				}
+			}
+			sp -= 3;
 			break;
+		}
 
 		case PCD_GIVEINVENTORYDIRECT:
-			GiveInventory (activator, FBehavior::StaticLookupString (TAGSTR(uallong(pc[0]))), uallong(pc[1]));
+		{
+			int typeindex = FName(FBehavior::StaticLookupString(TAGSTR(uallong(pc[0])))).GetIndex();
+			ScriptUtil::Exec(NAME_GiveInventory, ScriptUtil::Pointer, activator, ScriptUtil::Int, typeindex, ScriptUtil::Int, uallong(pc[1]), ScriptUtil::End);
 			pc += 2;
 			break;
+		}
 
 		case PCD_TAKEINVENTORY:
-			TakeInventory (activator, FBehavior::StaticLookupString (STACK(2)), STACK(1));
+		{
+			int typeindex = FName(FBehavior::StaticLookupString(STACK(2))).GetIndex();
+			ScriptUtil::Exec(NAME_TakeInventory, ScriptUtil::Pointer, activator, ScriptUtil::Int, typeindex, ScriptUtil::Int, STACK(1), ScriptUtil::End);
 			sp -= 2;
 			break;
+		}
 
 		case PCD_TAKEACTORINVENTORY:
+		{
+			int typeindex = FName(FBehavior::StaticLookupString(STACK(2))).GetIndex();
+			FName type = FName(FBehavior::StaticLookupString(STACK(2)));
+			if (STACK(3) == 0)
 			{
-				const char *type = FBehavior::StaticLookupString(STACK(2));
-				if (STACK(3) == 0)
-				{
-					TakeInventory(NULL, type, STACK(1));
-				}
-				else
-				{
-					FActorIterator it(STACK(3));
-					AActor *actor;
-					for (actor = it.Next(); actor != NULL; actor = it.Next())
-					{
-						TakeInventory(actor, type, STACK(1));
-					}
-				}
-				sp -= 3;
+				ScriptUtil::Exec(NAME_TakeInventory, ScriptUtil::Pointer, nullptr, ScriptUtil::Int, typeindex, ScriptUtil::Int, STACK(1), ScriptUtil::End);
 			}
+			else
+			{
+				FActorIterator it(STACK(3));
+				AActor *actor;
+				for (actor = it.Next(); actor != NULL; actor = it.Next())
+				{
+					ScriptUtil::Exec(NAME_TakeInventory, ScriptUtil::Pointer, actor, ScriptUtil::Int, typeindex, ScriptUtil::Int, STACK(1), ScriptUtil::End);
+				}
+			}
+			sp -= 3;
 			break;
+		}
 
 		case PCD_TAKEINVENTORYDIRECT:
-			TakeInventory (activator, FBehavior::StaticLookupString (TAGSTR(uallong(pc[0]))), uallong(pc[1]));
+		{
+			int typeindex = FName(FBehavior::StaticLookupString(TAGSTR(uallong(pc[0])))).GetIndex();
+			ScriptUtil::Exec(NAME_TakeInventory, ScriptUtil::Pointer, activator, ScriptUtil::Int, typeindex, ScriptUtil::Int, uallong(pc[1]), ScriptUtil::End);
 			pc += 2;
 			break;
+		}
 
 		case PCD_CHECKINVENTORY:
 			STACK(1) = CheckInventory (activator, FBehavior::StaticLookupString (STACK(1)), false);
@@ -9832,93 +9739,16 @@ scriptwait:
             break;
 
 		case PCD_SETWEAPON:
-			if (activator == NULL || activator->player == NULL)
-			{
-				STACK(1) = 0;
-			}
-			else
-			{
-				AInventory *item = activator->FindInventory (PClass::FindActor (FBehavior::StaticLookupString (STACK(1))));
-
-				if (item == NULL || !item->IsKindOf(NAME_Weapon))
-				{
-					STACK(1) = 0;
-				}
-				else if (activator->player->ReadyWeapon == item)
-				{
-					// The weapon is already selected, so setweapon succeeds by default,
-					// but make sure the player isn't switching away from it.
-					activator->player->PendingWeapon = WP_NOCHANGE;
-					STACK(1) = 1;
-				}
-				else
-				{
-					AWeapon *weap = static_cast<AWeapon *> (item);
-
-					if (weap->CheckAmmo (AWeapon::EitherFire, false))
-					{
-						// There's enough ammo, so switch to it.
-						STACK(1) = 1;
-						activator->player->PendingWeapon = weap;
-					}
-					else
-					{
-						STACK(1) = 0;
-					}
-				}
-			}
+			STACK(1) = ScriptUtil::Exec(NAME_SetWeapon, ScriptUtil::Pointer, activator, ScriptUtil::ACSClass, STACK(1), ScriptUtil::End);
 			break;
 
 		case PCD_SETMARINEWEAPON:
-			if (STACK(2) != 0)
-			{
-				AActor *marine;
-				NActorIterator iterator(NAME_ScriptedMarine, STACK(2));
-
-				while ((marine = iterator.Next()) != NULL)
-				{
-					SetMarineWeapon(marine, STACK(1));
-				}
-			}
-			else
-			{
-				if (activator != nullptr && activator->IsKindOf (NAME_ScriptedMarine))
-				{
-					SetMarineWeapon(activator, STACK(1));
-				}
-			}
+			ScriptUtil::Exec(NAME_SetMarineWeapon, ScriptUtil::Pointer, activator, ScriptUtil::Int, STACK(2), ScriptUtil::Int, STACK(1), ScriptUtil::End);
 			sp -= 2;
 			break;
 
 		case PCD_SETMARINESPRITE:
-			{
-				PClassActor *type = PClass::FindActor(FBehavior::StaticLookupString (STACK(1)));
-
-				if (type != NULL)
-				{
-					if (STACK(2) != 0)
-					{
-						AActor *marine;
-						NActorIterator iterator(NAME_ScriptedMarine, STACK(2));
-
-						while ((marine = iterator.Next()) != NULL)
-						{
-							SetMarineSprite(marine, type);
-						}
-					}
-					else
-					{
-						if (activator != nullptr && activator->IsKindOf(NAME_ScriptedMarine))
-						{
-							SetMarineSprite(activator, type);
-						}
-					}
-				}
-				else
-				{
-					Printf ("Unknown actor type: %s\n", FBehavior::StaticLookupString (STACK(1)));
-				}
-			}
+			ScriptUtil::Exec(NAME_SetMarineSprite, ScriptUtil::Pointer, activator, ScriptUtil::Int, STACK(2), ScriptUtil::ACSClass, STACK(1), ScriptUtil::End);
 			sp -= 2;
 			break;
 
@@ -10305,14 +10135,7 @@ scriptwait:
 
 				if (tag == 0)
 				{
-					if (activator != NULL && activator->player)
-					{
-						changes += P_MorphPlayer(activator->player, activator->player, playerclass, duration, style, morphflash, unmorphflash);
-					}
-					else
-					{
-						changes += P_MorphMonster(activator, monsterclass, duration, style, morphflash, unmorphflash);
-					}
+					changes = P_MorphActor(activator, activator, playerclass, monsterclass, duration, style, morphflash, unmorphflash);
 				}
 				else
 				{
@@ -10321,15 +10144,7 @@ scriptwait:
 
 					while ( (actor = iterator.Next ()) )
 					{
-						if (actor->player)
-						{
-							changes += P_MorphPlayer(activator == NULL ? NULL : activator->player,
-								actor->player, playerclass, duration, style, morphflash, unmorphflash);
-						}
-						else
-						{
-							changes += P_MorphMonster(actor, monsterclass, duration, style, morphflash, unmorphflash);
-						}
+						changes += P_MorphActor(activator, actor, playerclass, monsterclass, duration, style, morphflash, unmorphflash);
 					}
 				}
 
@@ -10346,24 +10161,7 @@ scriptwait:
 
 				if (tag == 0)
 				{
-					if (activator->player)
-					{
-						if (P_UndoPlayerMorph(activator->player, activator->player, 0, force))
-						{
-							changes++;
-						}
-					}
-					else
-					{
-						if (activator->GetClass()->IsDescendantOf(RUNTIME_CLASS(AMorphedMonster)))
-						{
-							AMorphedMonster *morphed_actor = barrier_cast<AMorphedMonster *>(activator);
-							if (P_UndoMonsterMorph(morphed_actor, force))
-							{
-								changes++;
-							}
-						}
-					}
+					changes += P_UnmorphActor(activator, activator, 0, force);
 				}
 				else
 				{
@@ -10372,24 +10170,7 @@ scriptwait:
 
 					while ( (actor = iterator.Next ()) )
 					{
-						if (actor->player)
-						{
-							if (P_UndoPlayerMorph(activator->player, actor->player, 0, force))
-							{
-								changes++;
-							}
-						}
-						else
-						{
-							if (actor->GetClass()->IsDescendantOf(RUNTIME_CLASS(AMorphedMonster)))
-							{
-								AMorphedMonster *morphed_actor = static_cast<AMorphedMonster *>(actor);
-								if (P_UndoMonsterMorph(morphed_actor, force))
-								{
-									changes++;
-								}
-							}
-						}
+						changes += P_UnmorphActor(activator, actor, 0, force);
 					}
 				}
 

@@ -49,10 +49,6 @@ class Inventory : Actor native
 		Inventory.PickupMessage "$TXT_DEFAULTPICKUPMSG";
 	}
 	
-	native bool DoRespawn();
-	native void BecomeItem();
-	native void BecomePickup();
-	native void ModifyDropAmount(int dropamount);
 	native static void PrintPickupMessage (bool localview, String str);
 
 	States(Actor)
@@ -77,6 +73,17 @@ class Inventory : Actor native
 		Stop;
 	}
 	
+	//===========================================================================
+	//
+	// AInventory :: MarkPrecacheSounds
+	//
+	//===========================================================================
+
+	override void MarkPrecacheSounds()
+	{
+		Super.MarkPrecacheSounds();
+		MarkSound(PickupSound);
+	}
 
 	//===========================================================================
 	//
@@ -90,6 +97,22 @@ class Inventory : Actor native
 		bDropped = true;	// [RH] Items are dropped by default
 	}
 
+	//===========================================================================
+	//
+	// AInventory :: Destroy
+	//
+	//===========================================================================
+
+	override void OnDestroy ()
+	{
+		if (Owner != NULL)
+		{
+			Owner.RemoveInventory (self);
+		}
+		Inv = NULL;
+		Super.OnDestroy();
+	}
+	
 	//---------------------------------------------------------------------------
 	//
 	// PROC A_RestoreSpecialThing1
@@ -147,6 +170,29 @@ class Inventory : Actor native
 
 	//===========================================================================
 	//
+	// AInventory :: DoRespawn
+	//
+	//===========================================================================
+
+	bool DoRespawn ()
+	{
+		if (SpawnPointClass != NULL)
+		{
+			Actor spot = NULL;
+			let state = SpotState.GetSpotState();
+
+			if (state != NULL) spot = state.GetRandomSpot(SpawnPointClass, false);
+			if (spot != NULL) 
+			{
+				SetOrigin (spot.Pos, false);
+				SetZ(floorz);
+			}
+		}
+		return true;
+	}
+	
+	//===========================================================================
+	//
 	// AInventory :: Grind
 	//
 	//===========================================================================
@@ -171,6 +217,58 @@ class Inventory : Actor native
 		// Non-dropped items call the super method for compatibility.
 		return Super.Grind(items);
 	}		
+
+	//===========================================================================
+	//
+	// AInventory :: BecomeItem
+	//
+	// Lets this actor know that it's about to be placed in an inventory.
+	//
+	//===========================================================================
+
+	void BecomeItem ()
+	{
+		if (!bNoBlockmap || !bNoSector)
+		{
+			A_ChangeLinkFlags(1, 1);
+		}
+		ChangeTid(0);
+		bSpecial = false;
+		// if the item was turned into a monster through Dehacked, undo that here.
+		bCountkill = false;
+		bIsMonster = false;
+		ChangeStatNum(STAT_INVENTORY);
+		// stop all sounds this item is playing.
+		for(int i = 1;i<=7;i++) A_StopSound(i);
+		SetState (FindState("Held"));
+	}
+
+	//===========================================================================
+	//
+	// AInventory :: BecomePickup
+	//
+	// Lets this actor know it should wait to be picked up.
+	//
+	//===========================================================================
+
+	void BecomePickup ()
+	{
+		if (Owner != NULL)
+		{
+			Owner.RemoveInventory (self);
+		}
+		if (bNoBlockmap || bNoSector)
+		{
+			A_ChangeLinkFlags(0, 0);
+			FindFloorCeiling();
+		}
+		bSpecial = true;
+		bDropped = true;
+		bCountItem = false;
+		bInvisible = false;
+		ChangeStatNum(STAT_DEFAULT);
+		SetState (SpawnState);
+	}
 
 	//===========================================================================
 	//
@@ -935,6 +1033,30 @@ class Inventory : Actor native
 
 	//===========================================================================
 	//
+	// AInventory :: PrevInv
+	//
+	// Returns the previous item with IF_INVBAR set.
+	//
+	//===========================================================================
+
+	clearscope Inventory PrevInv ()
+	{
+		Inventory lastgood = NULL;
+		Inventory item = Owner.Inv;
+
+		while (item != NULL && item != self)
+		{
+			if (item.bInvBar)
+			{
+				lastgood = item;
+			}
+			item = item.Inv;
+		}
+		return lastgood;
+	}
+	
+	//===========================================================================
+	//
 	// AInventory :: OnDrop
 	//
 	// Called by AActor::DropInventory. Allows items to modify how they behave
@@ -943,6 +1065,43 @@ class Inventory : Actor native
 	//===========================================================================
 
 	virtual void OnDrop (Actor dropper) {}
+	
+	//---------------------------------------------------------------------------
+	//
+	// Modifies the drop amount of this item according to the current skill's
+	// settings (also called by ADehackedPickup::TryPickup)
+	//
+	//---------------------------------------------------------------------------
+	
+	virtual void ModifyDropAmount(int dropamount)
+	{
+		if (dropamount > 0)
+		{
+			Amount = dropamount;
+		}
+	}
+	
+	//---------------------------------------------------------------------------
+	//
+	// Modifies the amount based on what an item should contain if given
+	//
+	//---------------------------------------------------------------------------
+	
+	virtual void SetGiveAmount(Actor receiver, int amount, bool givecheat)
+	{
+		if (givecheat)
+		{
+			let haveitem = receiver.FindInventory(GetClass());
+			self.Amount = MIN(amount, haveitem == null? self.Default.MaxAmount : haveitem.MaxAmount);
+		}
+		else
+		{
+			self.Amount = amount;
+		}
+	}
+
+	
+	
 }
 
 //===========================================================================
@@ -1040,6 +1199,14 @@ class DehackedPickup : Inventory
 		}
 		Super.OnDestroy();
 	}
+	
+	override void ModifyDropAmount(int dropamount)
+	{
+		// Must forward the adjustment to the real item.
+		// dropamount is not relevant here because Dehacked cannot change it.
+		droppedbymonster = true;
+	}
+	
 }
 
 //===========================================================================

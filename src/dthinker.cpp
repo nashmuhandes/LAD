@@ -392,7 +392,12 @@ void DThinker::ChangeStatNum (int statnum)
 	list->AddTail(this);
 }
 
-DEFINE_ACTION_FUNCTION(DThinker, ChangeStatNum)
+static void ChangeStatNum(DThinker *thinker, int statnum)
+{
+	thinker->ChangeStatNum(statnum);
+}
+
+DEFINE_ACTION_FUNCTION_NATIVE(DThinker, ChangeStatNum, ChangeStatNum)
 {
 	PARAM_SELF_PROLOGUE(DThinker);
 	PARAM_INT(stat);
@@ -979,8 +984,8 @@ IMPLEMENT_CLASS(DThinkerIterator, true, false);
 DEFINE_ACTION_FUNCTION(DThinkerIterator, Create)
 {
 	PARAM_PROLOGUE;
-	PARAM_CLASS_DEF(type, DThinker);
-	PARAM_INT_DEF(statnum);
+	PARAM_CLASS(type, DThinker);
+	PARAM_INT(statnum);
 	ACTION_RETURN_OBJECT(Create<DThinkerIterator>(type, statnum));
 }
 
