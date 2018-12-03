@@ -3134,16 +3134,7 @@ void FParser::SF_MapThingNumExist()
 		}
 		else
 		{
-			// Inventory items in the player's inventory have to be considered non-present.
-			if (SpawnedThings[intval]->IsKindOf(RUNTIME_CLASS(AInventory)) && 
-				barrier_cast<AInventory*>(SpawnedThings[intval])->Owner != NULL)
-			{
-				t_return.value.i = 0;
-			}
-			else
-			{
-				t_return.value.i = 1;
-			}
+			t_return.value.i = SpawnedThings[intval]->IsMapActor();
 			t_return.type = svt_int;
 		}
 	}
@@ -3667,14 +3658,13 @@ void FParser::SF_ThingCount(void)
 again:
 		TThinkerIterator<AActor> it;
 
-		if (t_argc<2 || intvalue(t_argv[1])==0 || pClass->IsDescendantOf(RUNTIME_CLASS(AInventory)))
+		if (t_argc<2 || intvalue(t_argv[1])==0 || pClass->IsDescendantOf(NAME_Inventory))
 		{
 			while ((mo=it.Next()))
 			{
 				if (mo->IsA(pClass))
 				{
-					if (!mo->IsKindOf (RUNTIME_CLASS(AInventory)) ||
-						static_cast<AInventory *>(mo)->Owner == NULL)
+					if (mo->IsMapActor())
 					{
 						count++;
 					}

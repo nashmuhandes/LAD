@@ -4047,7 +4047,7 @@ static bool DoRadiusGive(AActor *self, AActor *thing, PClassActor *item, int amo
 			return false;
 		doPass = true;
 	}
-	else if (((flags & RGF_ITEMS) && thing->IsKindOf(RUNTIME_CLASS(AInventory))) ||
+	else if (((flags & RGF_ITEMS) && thing->IsKindOf(NAME_Inventory)) ||
 			((flags & RGF_CORPSES) && thing->flags & MF_CORPSE) ||
 			((flags & RGF_KILLED) && thing->flags6 & MF6_KILLED))
 	{
@@ -4238,22 +4238,6 @@ DEFINE_ACTION_FUNCTION(AActor, A_SetTics)
 	}
 	// for inventory state chains this needs to be ignored.
 	return 0;
-}
-
-//==========================================================================
-//
-// A_DropItem
-//
-//==========================================================================
-
-DEFINE_ACTION_FUNCTION(AActor, A_DropItem)
-{
-	PARAM_SELF_PROLOGUE(AActor);
-	PARAM_CLASS   (spawntype, AActor);
-	PARAM_INT(amount);
-	PARAM_INT(chance);
-
-	ACTION_RETURN_OBJECT(P_DropItem(self, spawntype, amount, chance));
 }
 
 //===========================================================================

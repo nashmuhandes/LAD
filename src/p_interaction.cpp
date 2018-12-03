@@ -757,89 +757,14 @@ void AActor::CallDie(AActor *source, AActor *inflictor, int dmgflags, FName Mean
 // PROC P_AutoUseHealth
 //
 //---------------------------------------------------------------------------
-static int CountHealth(TArray<AInventory *> &Items)
-{
-	int counted = 0;
-	for(unsigned i = 0; i < Items.Size(); i++)
-	{
-		counted += Items[i]->Amount * Items[i]->health;
-	}
-	return counted;
-}
-
-static int UseHealthItems(TArray<AInventory *> &Items, int &saveHealth)
-{
-	int saved = 0;
-
-	while (Items.Size() > 0 && saveHealth > 0)
-	{
-		int maxhealth = 0;
-		int index = -1;
-
-		// Find the largest item in the list
-		for(unsigned i = 0; i < Items.Size(); i++)
-		{
-			if (Items[i]->health > maxhealth)
-			{
-				index = i;
-				maxhealth = Items[i]->health;
-			}
-		}
-
-		// Now apply the health items, using the same logic as Heretic and Hexen.
-		int count = (saveHealth + maxhealth-1) / maxhealth;
-		for(int i = 0; i < count; i++)
-		{
-			saved += maxhealth;
-			saveHealth -= maxhealth;
-			if (--Items[index]->Amount == 0)
-			{
-				Items[index]->DepleteOrDestroy ();
-				Items.Delete(index);
-				break;
-			}
-		}
-	}
-	return saved;
-}
 
 void P_AutoUseHealth(player_t *player, int saveHealth)
 {
-	TArray<AInventory *> NormalHealthItems;
-	TArray<AInventory *> LargeHealthItems;
-
-	auto hptype = PClass::FindActor(NAME_HealthPickup);
-	for(AInventory *inv = player->mo->Inventory; inv != NULL; inv = inv->Inventory)
+	IFVM(PlayerPawn, AutoUseHealth)
 	{
-		if (inv->Amount > 0 && inv->IsKindOf(hptype))
-		{
-			int mode = inv->IntVar(NAME_autousemode);
-
-			if (mode == 1) NormalHealthItems.Push(inv);
-			else if (mode == 2) LargeHealthItems.Push(inv);
-		}
+		VMValue params[] = { player->mo, saveHealth };
+		VMCall(func, params, 2, nullptr, 0);
 	}
-
-	int normalhealth = CountHealth(NormalHealthItems);
-	int largehealth = CountHealth(LargeHealthItems);
-
-	bool skilluse = !!G_SkillProperty(SKILLP_AutoUseHealth);
-
-	if (skilluse && normalhealth >= saveHealth)
-	{ // Use quartz flasks
-		player->health += UseHealthItems(NormalHealthItems, saveHealth);
-	}
-	else if (largehealth >= saveHealth)
-	{ 
-		// Use mystic urns
-		player->health += UseHealthItems(LargeHealthItems, saveHealth);
-	}
-	else if (skilluse && normalhealth + largehealth >= saveHealth)
-	{ // Use mystic urns and quartz flasks
-		player->health += UseHealthItems(NormalHealthItems, saveHealth);
-		if (saveHealth > 0) player->health += UseHealthItems(LargeHealthItems, saveHealth);
-	}
-	player->mo->health = player->health;
 }
 
 //============================================================================
@@ -851,44 +776,10 @@ CVAR(Bool, sv_disableautohealth, false, CVAR_ARCHIVE|CVAR_SERVERINFO)
 
 void P_AutoUseStrifeHealth (player_t *player)
 {
-	TArray<AInventory *> Items;
-
-	auto hptype = PClass::FindActor(NAME_HealthPickup);
-	for(AInventory *inv = player->mo->Inventory; inv != NULL; inv = inv->Inventory)
+	IFVM(PlayerPawn, AutoUseStrifeHealth)
 	{
-		if (inv->Amount > 0 && inv->IsKindOf(hptype))
-		{
-			int mode = inv->IntVar(NAME_autousemode);
-			if (mode == 3) Items.Push(inv);
-		}
-	}
-
-	if (!sv_disableautohealth)
-	{
-		while (Items.Size() > 0)
-		{
-			int maxhealth = 0;
-			int index = -1;
-
-			// Find the largest item in the list
-			for(unsigned i = 0; i < Items.Size(); i++)
-			{
-				if (Items[i]->health > maxhealth)
-				{
-					index = i;
-					maxhealth = Items[i]->Amount;
-				}
-			}
-
-			while (player->health < 50)
-			{
-				if (!player->mo->UseInventory (Items[index]))
-					break;
-			}
-			if (player->health >= 50) return;
-			// Using all of this item was not enough so delete it and restart with the next best one
-			Items.Delete(index);
-		}
+		VMValue params[] = { player->mo };
+		VMCall(func, params, 1, nullptr, 0);
 	}
 }
 
@@ -1772,7 +1663,8 @@ bool AActor::CallOkayToSwitchTarget(AActor *other)
 
 bool P_PoisonPlayer (player_t *player, AActor *poisoner, AActor *source, int poison)
 {
-	if((player->cheats&CF_GODMODE) || (player->mo->flags2 & MF2_INVULNERABLE) || (player->cheats & CF_GODMODE2))
+	if ((player->cheats & CF_GODMODE) || (player->mo->flags2 & MF2_INVULNERABLE) || (player->cheats & CF_GODMODE2) ||
+		(player->mo->flags5 & MF5_NODAMAGE))
 	{
 		return false;
 	}
@@ -1829,8 +1721,15 @@ void P_PoisonDamage (player_t *player, AActor *source, int damage, bool playPain
 	{
 		return;
 	}
-	if ((damage < TELEFRAG_DAMAGE && ((target->flags2 & MF2_INVULNERABLE) ||
-		(player->cheats & CF_GODMODE))) || (player->cheats & CF_GODMODE2))
+
+	// [MC] This must be checked before any modifications. Otherwise, power amplifiers
+	// may result in doing too much damage that cannot be negated by regular buddha,
+	// which is inconsistent. The raw damage must be the only determining factor for
+	// determining if telefrag is actually desired.
+	const bool telefragDamage = (damage >= TELEFRAG_DAMAGE && !(target->flags7 & MF7_LAXTELEFRAGDMG));
+
+	if ((player->cheats & CF_GODMODE2) || (target->flags5 & MF5_NODAMAGE) || //These two are never subjected to telefrag thresholds.
+		(!telefragDamage && ((target->flags2 & MF2_INVULNERABLE) ||	(player->cheats & CF_GODMODE))))
 	{ // target is invulnerable
 		return;
 	}
@@ -1868,9 +1767,9 @@ void P_PoisonDamage (player_t *player, AActor *source, int damage, bool playPain
 	target->health -= damage;
 	if (target->health <= 0)
 	{ // Death
-		if ((((player->cheats & CF_BUDDHA) || (player->cheats & CF_BUDDHA2) ||
-			(player->mo->flags7 & MF7_BUDDHA)) && damage < TELEFRAG_DAMAGE) ||
-			(player->mo->FindInventory (PClass::FindActor(NAME_PowerBuddha),true) != nullptr))
+		if ((player->cheats & CF_BUDDHA2) || //Buddha2 is never subjected to telefrag damage thresholds.
+			((player->cheats & CF_BUDDHA) || (player->mo->flags7 & MF7_BUDDHA) ||
+			(player->mo->FindInventory(PClass::FindActor(NAME_PowerBuddha), true) != nullptr) && !telefragDamage))
 		{ // [SP] Save the player... 
 			player->health = target->health = 1;
 		}

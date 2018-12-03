@@ -994,6 +994,7 @@ xx(SetMarineWeapon)
 xx(SetMarineSprite)
 xx(GiveInventory)
 xx(TakeInventory)
+xx(ClearInventory)
 
 // Weapon member fields that need direct access
 xx(Ammo1)
@@ -1012,6 +1013,7 @@ xx(FOVScale)
 xx(YAdjust)
 xx(Crosshair)
 xx(WeaponFlags)
+xx(DropTime)
 
 xx(BlueCard)
 xx(YellowCard)

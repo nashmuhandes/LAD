@@ -1725,30 +1725,6 @@ void P_WriteACSVars(FSerializer &arc)
 
 //============================================================================
 //
-// ClearInventory
-//
-// Clears the inventory for one or more actors.
-//
-//============================================================================
-
-static void ClearInventory (AActor *activator)
-{
-	if (activator == NULL)
-	{
-		for (int i = 0; i < MAXPLAYERS; ++i)
-		{
-			if (playeringame[i])
-				players[i].mo->ClearInventory();
-		}
-	}
-	else
-	{
-		activator->ClearInventory();
-	}
-}
-
-//============================================================================
-//
 // DoUseInv
 //
 // Makes a single actor use an inventory item
@@ -1855,7 +1831,7 @@ static int CheckInventory (AActor *activator, const char *type, bool max)
 		DPrintf (DMSG_ERROR, "ACS: '%s': Unknown actor class.\n", type);
 		return 0;
 	}
-	else if (!info->IsDescendantOf(RUNTIME_CLASS(AInventory)))
+	else if (!info->IsDescendantOf(NAME_Inventory))
 	{
 		DPrintf(DMSG_ERROR, "ACS: '%s' is not an inventory item.\n", type);
 		return 0;
@@ -1869,7 +1845,7 @@ static int CheckInventory (AActor *activator, const char *type, bool max)
 		{
 			return item->MaxAmount;
 		}
-		else if (info != nullptr && info->IsDescendantOf(RUNTIME_CLASS(AInventory)))
+		else if (info != nullptr && info->IsDescendantOf(NAME_Inventory))
 		{
 			return ((AInventory *)GetDefaultByType(info))->MaxAmount;
 		}
@@ -3721,8 +3697,7 @@ do_count:
 				if (tag == -1 || tagManager.SectorHasTag(actor->Sector, tag))
 				{
 					// Don't count items in somebody's inventory
-					if (!actor->IsKindOf (RUNTIME_CLASS(AInventory)) ||
-						static_cast<AInventory *>(actor)->Owner == NULL)
+					if (actor->IsMapActor())
 					{
 						count++;
 					}
@@ -3741,8 +3716,7 @@ do_count:
 				if (tag == -1 || tagManager.SectorHasTag(actor->Sector, tag))
 				{
 					// Don't count items in somebody's inventory
-					if (!actor->IsKindOf (RUNTIME_CLASS(AInventory)) ||
-						static_cast<AInventory *>(actor)->Owner == NULL)
+					if (actor->IsMapActor())
 					{
 						count++;
 					}
@@ -9218,13 +9192,13 @@ scriptwait:
 			break;
 
 		case PCD_CLEARINVENTORY:
-			ClearInventory (activator);
+			ScriptUtil::Exec(NAME_ClearInventory, ScriptUtil::Pointer, activator, ScriptUtil::End);
 			break;
 
 		case PCD_CLEARACTORINVENTORY:
 			if (STACK(1) == 0)
 			{
-				ClearInventory(NULL);
+				ScriptUtil::Exec(NAME_ClearInventory, ScriptUtil::Pointer, nullptr, ScriptUtil::End);
 			}
 			else
 			{
@@ -9232,7 +9206,7 @@ scriptwait:
 				AActor *actor;
 				for (actor = it.Next(); actor != NULL; actor = it.Next())
 				{
-					ClearInventory(actor);
+					ScriptUtil::Exec(NAME_ClearInventory, ScriptUtil::Pointer, actor , ScriptUtil::End);
 				}
 			}
 			sp--;

@@ -63,6 +63,7 @@
 #include "g_levellocals.h"
 #include "events.h"
 #include "i_time.h"
+#include "vm.h"
 
 EXTERN_CVAR (Int, disableautosave)
 EXTERN_CVAR (Int, autosavecount)
@@ -2100,7 +2101,7 @@ static int RemoveClass(const PClass *cls)
 				continue;
 			}
 			// [SP] Don't remove owned inventory objects.
-			if (actor->IsKindOf(RUNTIME_CLASS(AInventory)) && static_cast<AInventory *>(actor)->Owner != NULL)
+			if (!actor->IsMapActor())
 			{
 				continue;
 			}
@@ -2253,9 +2254,10 @@ void Net_DoCommand (int type, uint8_t **stream, int player)
 			while (item != NULL)
 			{
 				AInventory *next = item->Inventory;
-				if (item->ItemFlags & IF_INVBAR && !(item->IsKindOf(pitype)))
+				IFVIRTUALPTR(item, AInventory, UseAll)
 				{
-					players[player].mo->UseInventory (item);
+					VMValue param[] = { item, players[player].mo };
+					VMCall(func, param, 2, nullptr, 0);
 				}
 				item = next;
 			}
@@ -2849,6 +2851,34 @@ void Net_SkipCommand (int type, uint8_t **stream)
 	}
 
 	*stream += skip;
+}
+
+// This was taken out of shared_hud, because UI code shouldn't do low level calculations that may change if the backing implementation changes.
+int Net_GetLatency(int *ld, int *ad)
+{
+	int i, localdelay = 0, arbitratordelay = 0;
+
+	for (i = 0; i < BACKUPTICS; i++) localdelay += netdelay[0][i];
+	for (i = 0; i < BACKUPTICS; i++) arbitratordelay += netdelay[nodeforplayer[Net_Arbitrator]][i];
+	arbitratordelay = ((arbitratordelay / BACKUPTICS) * ticdup) * (1000 / TICRATE);
+	localdelay = ((localdelay / BACKUPTICS) * ticdup) * (1000 / TICRATE);
+	int severity = 0;
+
+	if (MAX(localdelay, arbitratordelay) > 200)
+	{
+		severity = 1;
+	}
+	if (MAX(localdelay, arbitratordelay) > 400)
+	{
+		severity = 2;
+	}
+	if (MAX(localdelay, arbitratordelay) >= ((BACKUPTICS / 2 - 1) * ticdup) * (1000 / TICRATE))
+	{
+		severity = 3;
+	}
+	*ld = localdelay;
+	*ad = arbitratordelay;
+	return severity;
 }
 
 // [RH] List "ping" times

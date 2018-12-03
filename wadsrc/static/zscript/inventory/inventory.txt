@@ -49,6 +49,45 @@ class Inventory : Actor native
 		Inventory.PickupMessage "$TXT_DEFAULTPICKUPMSG";
 	}
 	
+	//native override void Tick();
+	
+	override void Tick()
+	{
+		if (Owner == null)
+		{
+			// AActor::Tick is only handling interaction with the world
+			// and we don't want that for owned inventory items.
+			Super.Tick();
+		}
+		else if (tics != -1)	// ... but at least we have to advance the states
+		{
+			tics--;
+					
+			// you can cycle through multiple states in a tic
+			// [RH] Use <= 0 instead of == 0 so that spawnstates
+			// of 0 tics work as expected.
+			if (tics <= 0)
+			{
+				if (curstate == null)
+				{
+					Destroy();
+					return;
+				}
+				if (!SetState (curstate.NextState))
+					return; 		// freed itself
+			}
+		}
+		if (DropTime)
+		{
+			if (--DropTime == 0)
+			{
+				bSpecial = default.bSpecial;
+				bSolid = default.bSolid;
+			}
+		}
+	}
+	
+	
 	native static void PrintPickupMessage (bool localview, String str);
 
 	States(Actor)
@@ -111,6 +150,23 @@ class Inventory : Actor native
 		}
 		Inv = NULL;
 		Super.OnDestroy();
+	}
+	
+	//===========================================================================
+	//
+	// AInventory :: ShouldSpawn
+	//
+	//===========================================================================
+
+	override bool ShouldSpawn()
+	{
+		// [RH] Other things that shouldn't be spawned depending on dmflags
+		if (deathmatch || alwaysapplydmflags)
+		{
+			if (sv_nohealth && bIsHealth) return false;
+			if (sv_noarmor && bIsArmor) return false;
+		}
+		return true;
 	}
 	
 	//---------------------------------------------------------------------------
@@ -917,6 +973,11 @@ class Inventory : Actor native
 	virtual version("2.4") ui void AlterWeaponSprite(VisStyle vis, in out int changed) {}
 	virtual void OwnerDied() {}
 	virtual Color GetBlend () { return 0; }
+	
+	virtual void UseAll(Actor user)
+	{
+		if (bInvBar) user.UseInventory(self);
+	}
 
 	//===========================================================================
 	//

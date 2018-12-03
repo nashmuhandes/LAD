@@ -14,6 +14,7 @@ struct _ native	// These are the global variables, the struct is only here to av
 	native readonly @GameInfoStruct gameinfo;
 	native play @PlayerInfo players[MAXPLAYERS];
 	native readonly bool playeringame[MAXPLAYERS];
+	native readonly ui bool netgame;
 
 	native readonly bool automapactive;
 	native play uint gameaction;
@@ -291,7 +292,7 @@ struct Font native
 	native String GetCursor();
 
 	native static int FindFontColor(Name color);
-	native static double GetBottomAlignOffset(int code);
+	native double GetBottomAlignOffset(int code);
 	native static Font FindFont(Name fontname);
 	native static Font GetFont(Name fontname);
 	native BrokenLines BreakLines(String text, int maxlen);
@@ -373,6 +374,9 @@ struct GameInfoStruct native
 	native Color defaultbloodcolor;
 	native double telefogheight;
 	native int defKickback;
+	native int defaultdropstyle;
+	native TextureID healthpic;
+	native TextureID berserkpic;
 }
 
 class Object native
@@ -615,6 +619,9 @@ struct LevelLocals native
 		UDMF_Sector,
 		//UDMF_Thing // not implemented
 	};
+	
+	const CLUSTER_HUB = 0x00000001;	// Cluster uses hub behavior
+
 
 	native Array<@Sector> Sectors;
 	native Array<@Line> Lines;
@@ -668,6 +675,8 @@ struct LevelLocals native
 	native bool frozen;
 	native readonly bool infinite_flight;
 	native readonly bool no_dlg_freeze;
+	native readonly bool keepfullinventory;
+	native readonly bool removeitems;
 	native readonly int fogdensity;
 	native readonly int outsidefogdensity;
 	native readonly int skyfog;
@@ -683,6 +692,7 @@ struct LevelLocals native
 	native static void StartSlideshow(Name whichone = 'none');
 	native static void WorldDone();
 	native static void RemoveAllBots(bool fromlist);
+	native static Vector2 GetAutomapPosition();
 	native void SetInterMusic(String nextmap);
 	native String FormatMapName(int mapnamecolor);
 	native bool IsJumpingAllowed() const;
