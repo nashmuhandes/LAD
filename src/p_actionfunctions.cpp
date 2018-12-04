@@ -245,21 +245,6 @@ DEFINE_ACTION_FUNCTION(ACustomInventory, CallStateChain)
 
 //==========================================================================
 //
-// GetPointer
-//
-// resolve AAPTR_*
-//
-//==========================================================================
-
-DEFINE_ACTION_FUNCTION(AActor, GetPointer)
-{
-	PARAM_SELF_PROLOGUE(AActor);
-	PARAM_INT(ptr);
-	ACTION_RETURN_OBJECT(COPY_AAPTR(self, ptr));
-}
-
-//==========================================================================
-//
 // CheckClass
 //
 // NON-ACTION function to check a pointer's class.
@@ -1529,54 +1514,7 @@ DEFINE_ACTION_FUNCTION(AActor, A_Recoil)
 }
 
 
-//===========================================================================
-//
-// A_SelectWeapon
-//
-//===========================================================================
-enum SW_Flags
-{
-	SWF_SELECTPRIORITY = 1,
-};
-DEFINE_ACTION_FUNCTION(AActor, A_SelectWeapon)
-{
-	PARAM_SELF_PROLOGUE(AActor);
-	PARAM_CLASS(cls, AInventory);
-	PARAM_INT(flags);
-
-	bool selectPriority = !!(flags & SWF_SELECTPRIORITY);
-
-	if ((!selectPriority && cls == NULL) || self->player == NULL)
-	{
-		ACTION_RETURN_BOOL(false);
-	}
-
-	auto weaponitem = self->FindInventory(cls);
-
-	if (weaponitem != NULL && weaponitem->IsKindOf(NAME_Weapon))
-	{
-		if (self->player->ReadyWeapon != weaponitem)
-		{
-			self->player->PendingWeapon = weaponitem;
-		}
-		ACTION_RETURN_BOOL(true);
-	}
-	else if (selectPriority)
-	{
-		// [XA] if the named weapon cannot be found (or is a dummy like 'None'),
-		//      select the next highest priority weapon. This is basically
-		//      the same as A_CheckReload minus the ammo check. Handy.
-		self->player->mo->PickNewWeapon(NULL);
-		ACTION_RETURN_BOOL(true);
-	}
-	else
-	{
-		ACTION_RETURN_BOOL(false);
-	}
-}
-
-
-//===========================================================================
+///===========================================================================
 //
 // A_Print
 //
@@ -2109,12 +2047,12 @@ DEFINE_ACTION_FUNCTION(AActor, CheckRange)
 DEFINE_ACTION_FUNCTION(AActor, A_DropInventory)
 {
 	PARAM_SELF_PROLOGUE(AActor);
-	PARAM_CLASS(drop, AInventory);
+	PARAM_CLASS(drop, AActor);
 	PARAM_INT(amount);
 
 	if (drop)
 	{
-		AInventory *inv = self->FindInventory(drop);
+		auto inv = self->FindInventory(drop);
 		if (inv)
 		{
 			self->DropInventory(inv, amount);
@@ -3411,7 +3349,7 @@ DEFINE_ACTION_FUNCTION(AActor, A_Teleport)
 {
 	PARAM_ACTION_PROLOGUE(AActor);
 	PARAM_STATE_ACTION	(teleport_state)			
-	PARAM_CLASS		(target_type, ASpecialSpot)	
+	PARAM_CLASS		(target_type, AActor)	
 	PARAM_CLASS		(fog_type, AActor)			
 	PARAM_INT		(flags)						
 	PARAM_FLOAT		(mindist)					
@@ -4065,7 +4003,7 @@ static bool DoRadiusGive(AActor *self, AActor *thing, PClassActor *item, int amo
 
 		if ((flags & RGF_NOSIGHT) || P_CheckSight(thing, self, SF_IGNOREVISIBILITY | SF_IGNOREWATERBOUNDARY))
 		{ // OK to give; target is in direct path, or the monster doesn't care about it being in line of sight.
-			AInventory *gift = static_cast<AInventory *>(Spawn(item));
+			auto gift = Spawn(item);
 			if (gift->IsKindOf(NAME_Health))
 			{
 				gift->IntVar(NAME_Amount) *= amount;
@@ -4093,7 +4031,7 @@ static bool DoRadiusGive(AActor *self, AActor *thing, PClassActor *item, int amo
 DEFINE_ACTION_FUNCTION(AActor, A_RadiusGive)
 {
 	PARAM_SELF_PROLOGUE(AActor);
-	PARAM_CLASS		(item, AInventory);
+	PARAM_CLASS		(item, AActor);
 	PARAM_FLOAT		(distance);
 	PARAM_INT		(flags);
 	PARAM_INT	(amount);
@@ -4103,7 +4041,7 @@ DEFINE_ACTION_FUNCTION(AActor, A_RadiusGive)
 	PARAM_INT	(limit);
 
 	// We need a valid item, valid targets, and a valid range
-	if (item == nullptr || (flags & RGF_MASK) == 0 || !flags || distance <= 0 || mindist >= distance)
+	if (item == nullptr || (flags & RGF_MASK) == 0 || !flags || distance <= 0 || mindist >= distance || !item->IsDescendantOf(NAME_Inventory))
 	{
 		ACTION_RETURN_INT(0);
 	}

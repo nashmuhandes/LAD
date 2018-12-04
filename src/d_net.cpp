@@ -2249,12 +2249,12 @@ void Net_DoCommand (int type, uint8_t **stream, int player)
 	case DEM_INVUSEALL:
 		if (gamestate == GS_LEVEL && !paused)
 		{
-			AInventory *item = players[player].mo->Inventory;
+			AActor *item = players[player].mo->Inventory;
 			auto pitype = PClass::FindActor(NAME_PuzzleItem);
-			while (item != NULL)
+			while (item != nullptr)
 			{
-				AInventory *next = item->Inventory;
-				IFVIRTUALPTR(item, AInventory, UseAll)
+				AActor *next = item->Inventory;
+				IFVIRTUALPTRNAME(item, NAME_Inventory, UseAll)
 				{
 					VMValue param[] = { item, players[player].mo };
 					VMCall(func, param, 2, nullptr, 0);
@@ -2275,7 +2275,7 @@ void Net_DoCommand (int type, uint8_t **stream, int player)
 			if (gamestate == GS_LEVEL && !paused
 				&& players[player].playerstate != PST_DEAD)
 			{
-				AInventory *item = players[player].mo->Inventory;
+				auto item = players[player].mo->Inventory;
 				while (item != NULL && item->InventoryID != which)
 				{
 					item = item->Inventory;

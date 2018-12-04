@@ -54,74 +54,27 @@
 
 EXTERN_CVAR(Bool, sv_unlimited_pickup)
 
-IMPLEMENT_CLASS(AInventory, false, true)
-
-IMPLEMENT_POINTERS_START(AInventory)
-IMPLEMENT_POINTER(Owner)
-IMPLEMENT_POINTERS_END
-
-DEFINE_FIELD_BIT(AInventory, ItemFlags, bPickupGood, IF_PICKUPGOOD)
-DEFINE_FIELD_BIT(AInventory, ItemFlags, bCreateCopyMoved, IF_CREATECOPYMOVED)
-DEFINE_FIELD_BIT(AInventory, ItemFlags, bInitEffectFailed, IF_INITEFFECTFAILED)
-DEFINE_FIELD(AInventory, Owner)
-DEFINE_FIELD(AInventory, Amount)
-DEFINE_FIELD(AInventory, MaxAmount)
-DEFINE_FIELD(AInventory, InterHubAmount)
-DEFINE_FIELD(AInventory, RespawnTics)
-DEFINE_FIELD(AInventory, Icon)
-DEFINE_FIELD(AInventory, AltHUDIcon)
-DEFINE_FIELD(AInventory, DropTime)
-DEFINE_FIELD(AInventory, SpawnPointClass)
-DEFINE_FIELD(AInventory, PickupFlash)
-DEFINE_FIELD(AInventory, PickupSound)
 
 //===========================================================================
 //
-// AInventory :: Serialize
-//
-//===========================================================================
-
-void AInventory::Serialize(FSerializer &arc)
-{
-	Super::Serialize (arc);
-
-	auto def = (AInventory*)GetDefault();
-	arc("owner", Owner)
-		("amount", Amount, def->Amount)
-		("maxamount", MaxAmount, def->MaxAmount)
-		("interhubamount", InterHubAmount, def->InterHubAmount)
-		("respawntics", RespawnTics, def->RespawnTics)
-		("itemflags", ItemFlags, def->ItemFlags)
-		("icon", Icon, def->Icon)
-		("althudicon", AltHUDIcon, def->AltHUDIcon)
-		("pickupsound", PickupSound, def->PickupSound)
-		("spawnpointclass", SpawnPointClass, def->SpawnPointClass)
-		("droptime", DropTime, def->DropTime);
-}
-
-//===========================================================================
-//
+// This is only native so it can have some static storage for comparison.
 //
 //===========================================================================
 static int StaticLastMessageTic;
 static FString StaticLastMessage;
 
-DEFINE_ACTION_FUNCTION(AInventory, PrintPickupMessage)
+void PrintPickupMessage(bool localview, const FString &str)
 {
-	PARAM_PROLOGUE;
-	PARAM_BOOL(localview);
-	PARAM_STRING(str);
 	if (str.IsNotEmpty() && localview && (StaticLastMessageTic != gametic || StaticLastMessage.Compare(str)))
 	{
 		StaticLastMessageTic = gametic;
 		StaticLastMessage = str;
 		const char *pstr = str.GetChars();
-
+		
 		if (pstr[0] == '$')	pstr = GStrings(pstr + 1);
 		if (pstr[0] != 0) Printf(PRINT_LOW, "%s\n", pstr);
 		StatusBar->FlashCrosshair();
 	}
-	return 0;
 }
 
 //===========================================================================
@@ -132,9 +85,9 @@ DEFINE_ACTION_FUNCTION(AInventory, PrintPickupMessage)
 //
 //===========================================================================
 
-void DepleteOrDestroy (AInventory *item)
+void DepleteOrDestroy (AActor *item)
 {
-	IFVIRTUALPTR(item, AInventory, DepleteOrDestroy)
+	IFVIRTUALPTRNAME(item, NAME_Inventory, DepleteOrDestroy)
 	{
 		VMValue params[1] = { item };
 		VMCall(func, params, 1, nullptr, 0);
@@ -147,7 +100,7 @@ void DepleteOrDestroy (AInventory *item)
 //
 //===========================================================================
 
-bool CallTryPickup(AInventory *item, AActor *toucher, AActor **toucher_return)
+bool CallTryPickup(AActor *item, AActor *toucher, AActor **toucher_return)
 {
 	static VMFunction *func = nullptr;
 	if (func == nullptr) PClass::FindFunction(&func, NAME_Inventory, NAME_CallTryPickup);

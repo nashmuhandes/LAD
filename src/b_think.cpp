@@ -289,8 +289,8 @@ void DBot::ThinkForMove (ticcmd_t *cmd)
 				r = pr_botmove();
 				if (r < 128)
 				{
-					TThinkerIterator<AInventory> it (MAX_STATNUM+1, bglobal.firstthing);
-					AInventory *item = it.Next();
+					TThinkerIterator<AActor> it (NAME_Inventory, MAX_STATNUM+1, bglobal.firstthing);
+					auto item = it.Next();
 
 					if (item != NULL || (item = it.Next()) != NULL)
 					{
@@ -362,17 +362,15 @@ void DBot::WhatToGet (AActor *item)
 	if (item->IsKindOf(NAME_Weapon))
 	{
 		// FIXME
-		AInventory *heldWeapon;
-
-		heldWeapon = player->mo->FindInventory(item->GetClass());
+		auto heldWeapon = player->mo->FindInventory(item->GetClass());
 		if (heldWeapon != NULL)
 		{
 			if (!weapgiveammo)
 				return;
-			auto ammo1 = heldWeapon->PointerVar<AInventory>(NAME_Ammo1);
-			auto ammo2 = heldWeapon->PointerVar<AInventory>(NAME_Ammo2);
-			if ((ammo1 == NULL || ammo1->IntVar(NAME_Amount) >= ammo1->MaxAmount) &&
-				(ammo2 == NULL || ammo2->IntVar(NAME_Amount) >= ammo2->MaxAmount))
+			auto ammo1 = heldWeapon->PointerVar<AActor>(NAME_Ammo1);
+			auto ammo2 = heldWeapon->PointerVar<AActor>(NAME_Ammo2);
+			if ((ammo1 == NULL || ammo1->IntVar(NAME_Amount) >= ammo1->IntVar(NAME_MaxAmount)) &&
+				(ammo2 == NULL || ammo2->IntVar(NAME_Amount) >= ammo2->IntVar(NAME_MaxAmount)))
 			{
 				return;
 			}
@@ -383,8 +381,8 @@ void DBot::WhatToGet (AActor *item)
 		auto ac = PClass::FindActor(NAME_Ammo);
 		auto parent = item->GetClass();
 		while (parent->ParentClass != ac) parent = static_cast<PClassActor*>(parent->ParentClass);
-		AInventory *holdingammo = player->mo->FindInventory(parent);
-		if (holdingammo != NULL && holdingammo->IntVar(NAME_Amount) >= holdingammo->MaxAmount)
+		AActor *holdingammo = player->mo->FindInventory(parent);
+		if (holdingammo != NULL && holdingammo->IntVar(NAME_Amount) >= holdingammo->IntVar(NAME_MaxAmount))
 		{
 			return;
 		}

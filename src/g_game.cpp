@@ -219,7 +219,7 @@ FString BackupSaveName;
 int saveCount;
 
 bool SendLand;
-const AInventory *SendItemUse, *SendItemDrop;
+const AActor *SendItemUse, *SendItemDrop;
 int SendItemDropAmount;
 
 EXTERN_CVAR (Int, team)
@@ -417,7 +417,7 @@ CCMD(invprev)
 
 CCMD (invuseall)
 {
-	SendItemUse = (const AInventory *)1;
+	SendItemUse = (const AActor *)1;
 }
 
 CCMD (invuse)
@@ -431,7 +431,7 @@ CCMD (invuse)
 
 CCMD(invquery)
 {
-	AInventory *inv = players[consoleplayer].mo->InvSel;
+	AActor *inv = players[consoleplayer].mo->InvSel;
 	if (inv != NULL)
 	{
 		Printf(PRINT_HIGH, "%s (%dx)\n", inv->GetTag(), inv->IntVar(NAME_Amount));
@@ -487,7 +487,7 @@ CCMD (useflechette)
 	PClassActor *type = who->FlechetteType;
 	if (type != NULL)
 	{
-		AInventory *item;
+		AActor *item;
 		if ( (item = who->FindInventory (type) ))
 		{
 			SendItemUse = item;
@@ -498,7 +498,7 @@ CCMD (useflechette)
 	// The default flechette could not be found, or the player had no default. Try all 3 types then.
 	for (int j = 0; j < 3; ++j)
 	{
-		AInventory *item;
+		AActor *item;
 		if ( (item = who->FindInventory (bagnames[j])) )
 		{
 			SendItemUse = item;
@@ -511,7 +511,7 @@ CCMD (select)
 {
 	if (argv.argc() > 1)
 	{
-		AInventory *item = who->FindInventory(argv[1]);
+		auto item = who->FindInventory(argv[1]);
 		if (item != NULL)
 		{
 			who->InvSel = item;
@@ -738,7 +738,7 @@ void G_BuildTiccmd (ticcmd_t *cmd)
 		Net_WriteString (savedescription);
 		savegamefile = "";
 	}
-	if (SendItemUse == (const AInventory *)1)
+	if (SendItemUse == (const AActor *)1)
 	{
 		Net_WriteByte (DEM_INVUSEALL);
 		SendItemUse = NULL;

@@ -940,29 +940,6 @@ void APlayerPawn::PostBeginPlay()
 
 //===========================================================================
 //
-// APlayerPawn :: PickNewWeapon
-//
-// Picks a new weapon for this player. Used mostly for running out of ammo,
-// but it also works when an ACS script explicitly takes the ready weapon
-// away or the player picks up some ammo they had previously run out of.
-//
-//===========================================================================
-
-AInventory *APlayerPawn::PickNewWeapon(PClassActor *ammotype)
-{
-	AInventory *best = nullptr;
-	IFVM(PlayerPawn, PickNewWeapon)
-	{
-		VMValue param[] = { player->mo, ammotype };
-		VMReturn ret((void**)&best);
-		VMCall(func, param, 2, &ret, 1);
-	}
-
-	return best;
-}
-
-//===========================================================================
-//
 // APlayerPawn :: GiveDeathmatchInventory
 //
 // Gives players items they should have in addition to their default
@@ -976,10 +953,10 @@ void APlayerPawn::GiveDeathmatchInventory()
 	{
 		if (PClassActor::AllActorClasses[i]->IsDescendantOf (PClass::FindActor(NAME_Key)))
 		{
-			AInventory *key = (AInventory*)GetDefaultByType (PClassActor::AllActorClasses[i]);
+			auto key = GetDefaultByType (PClassActor::AllActorClasses[i]);
 			if (key->special1 != 0)
 			{
-				key = (AInventory*)Spawn(PClassActor::AllActorClasses[i]);
+				key = Spawn(PClassActor::AllActorClasses[i]);
 				if (!CallTryPickup (key, this))
 				{
 					key->Destroy ();
@@ -1118,15 +1095,6 @@ DEFINE_ACTION_FUNCTION(APlayerPawn, ResetAirSupply)
 void APlayerPawn::PlayIdle ()
 {
 	IFVIRTUAL(APlayerPawn, PlayIdle)
-	{
-		VMValue params[1] = { (DObject*)this };
-		VMCall(func, params, 1, nullptr, 0);
-	}
-}
-
-void APlayerPawn::PlayAttacking2 ()
-{
-	IFVIRTUAL(APlayerPawn, PlayAttacking2)
 	{
 		VMValue params[1] = { (DObject*)this };
 		VMCall(func, params, 1, nullptr, 0);
@@ -1981,7 +1949,7 @@ void P_UnPredictPlayer ()
 		APlayerPawn *act = player->mo;
 		AActor *savedcamera = player->camera;
 
-		TObjPtr<AInventory*> InvSel = act->InvSel;
+		TObjPtr<AActor*> InvSel = act->InvSel;
 		int inventorytics = player->inventorytics;
 
 		*player = PredictionPlayerBackup;

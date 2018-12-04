@@ -603,12 +603,10 @@ static int FindNode (const FStrifeDialogueNode *node)
 
 static bool CheckStrifeItem (player_t *player, PClassActor *itemtype, int amount=-1)
 {
-	AInventory *item;
-
 	if (itemtype == NULL || amount == 0)
 		return true;
 
-	item = player->ConversationPC->FindInventory (itemtype);
+	auto item = player->ConversationPC->FindInventory (itemtype);
 	if (item == NULL)
 		return false;
 
@@ -963,7 +961,7 @@ static void HandleReply(player_t *player, bool isconsole, int nodenum, int reply
 	
 			if (takestuff)
 			{
-				AInventory *item = static_cast<AInventory *>(Spawn(reply->GiveType));
+				auto item = Spawn(reply->GiveType);
 				// Items given here should not count as items!
 				item->ClearCounters();
 				if (item->GetClass()->TypeName == NAME_FlameThrower)

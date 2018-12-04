@@ -409,40 +409,6 @@ static FFlagDef MoreFlagDefs[] =
 	DEFINE_DUMMY_FLAG(SERVERSIDEONLY, false),
 };
 
-static FFlagDef InventoryFlagDefs[] =
-{
-	// Inventory flags
-	DEFINE_FLAG(IF, QUIET, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, AUTOACTIVATE, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, UNDROPPABLE, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, INVBAR, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, HUBPOWER, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, UNTOSSABLE, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, ADDITIVETIME, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, ALWAYSPICKUP, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, FANCYPICKUPSOUND, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, BIGPOWERUP, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, KEEPDEPLETED, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, IGNORESKILL, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, NOATTENPICKUPSOUND, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, PERSISTENTPOWER, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, RESTRICTABSOLUTELY, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, NEVERRESPAWN, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, NOSCREENFLASH, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, TOSSED, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, ALWAYSRESPAWN, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, TRANSFER, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, NOTELEPORTFREEZE, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, NOSCREENBLINK, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, ISARMOR, AInventory, ItemFlags),
-	DEFINE_FLAG(IF, ISHEALTH, AInventory, ItemFlags),
-
-	DEFINE_DUMMY_FLAG(FORCERESPAWNINSURVIVAL, false),
-
-	DEFINE_DEPRECATED_FLAG(PICKUPFLASH),
-	DEFINE_DEPRECATED_FLAG(INTERHUBSTRIP),
-};
-
 static FFlagDef PlayerPawnFlagDefs[] =
 {
 	// PlayerPawn flags
@@ -463,18 +429,11 @@ static FFlagDef DynLightFlagDefs[] =
 	DEFINE_FLAG(LF, SPOT, ADynamicLight, lightflags),
 };
 
-static FFlagDef PowerSpeedFlagDefs[] =
-{
-	// PowerSpeed flags
-	DEFINE_DEPRECATED_FLAG(NOTRAIL),
-};
-
 static const struct FFlagList { const PClass * const *Type; FFlagDef *Defs; int NumDefs; int Use; } FlagLists[] =
 {
 	{ &RUNTIME_CLASS_CASTLESS(AActor), 		ActorFlagDefs,		countof(ActorFlagDefs), 3 },	// -1 to account for the terminator
 	{ &RUNTIME_CLASS_CASTLESS(AActor), 		MoreFlagDefs,		countof(MoreFlagDefs), 1 },
 	{ &RUNTIME_CLASS_CASTLESS(AActor), 	InternalActorFlagDefs,	countof(InternalActorFlagDefs), 2 },
-	{ &RUNTIME_CLASS_CASTLESS(AInventory), 	InventoryFlagDefs,	countof(InventoryFlagDefs), 3 },
 	{ &RUNTIME_CLASS_CASTLESS(APlayerPawn),	PlayerPawnFlagDefs,	countof(PlayerPawnFlagDefs), 3 },
 	{ &RUNTIME_CLASS_CASTLESS(ADynamicLight),DynLightFlagDefs,	countof(DynLightFlagDefs), 3 },
 };
@@ -531,9 +490,9 @@ FFlagDef *FindFlag (const PClass *type, const char *part1, const char *part2, bo
 			{
 				forInternalFlags.fieldsize = 4;
 				forInternalFlags.name = "";
-				forInternalFlags.flagbit = field->Offset? 1 << field->bitval : DEPF_UNUSED;
+				forInternalFlags.flagbit = field->Offset? 1 << field->bitval : field->bitval;
 				forInternalFlags.structoffset = field->Offset? (int)field->Offset->Offset : -1;
-				forInternalFlags.varflags = 0;
+				forInternalFlags.varflags = field->Offset == nullptr && field->bitval > 0? VARF_Deprecated : 0;
 				return &forInternalFlags;
 			}
 		}
@@ -549,9 +508,9 @@ FFlagDef *FindFlag (const PClass *type, const char *part1, const char *part2, bo
 			{
 				forInternalFlags.fieldsize = 4;
 				forInternalFlags.name = "";
-				forInternalFlags.flagbit = field->Offset ? 1 << field->bitval : DEPF_UNUSED;
+				forInternalFlags.flagbit = field->Offset ? 1 << field->bitval : field->bitval;
 				forInternalFlags.structoffset = field->Offset ? (int)field->Offset->Offset : -1;
-				forInternalFlags.varflags = 0;
+				forInternalFlags.varflags = field->Offset == nullptr && field->bitval > 0? VARF_Deprecated : 0;
 				return &forInternalFlags;
 			}
 		}
@@ -595,11 +554,6 @@ FFlagDef *FindFlag (const PClass *type, const char *part1, const char *part2, bo
 		}
 	}
 
-	// Handle that lone PowerSpeed flag - this should be more generalized but it's just this one flag and unlikely to become more so an explicit check will do.
-	if ((!stricmp(part1, "NOTRAIL") && !strict) || (!stricmp(part1, "POWERSPEED") && !stricmp(part2, "NOTRAIL")))
-	{
-		return &PowerSpeedFlagDefs[0];
-	}
 	return NULL;
 }
 
@@ -1008,25 +962,6 @@ DEFINE_ACTION_FUNCTION(DObject, BAM)
 	ACTION_RETURN_INT(DAngle(ang).BAMs());
 }
 
-DEFINE_ACTION_FUNCTION(FStringTable, Localize)
-{
-	PARAM_PROLOGUE;
-	PARAM_STRING(label);
-	PARAM_BOOL(prefixed);
-	if (!prefixed) ACTION_RETURN_STRING(GStrings(label));
-	if (label[0] != '$') ACTION_RETURN_STRING(label);
-	ACTION_RETURN_STRING(GStrings(&label[1]));
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, Replace)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	PARAM_STRING(s1);
-	PARAM_STRING(s2);
-	self->Substitute(s1, s2);
-	return 0;
-}
-
 FString FStringFormat(VM_ARGS, int offset)
 {
 	PARAM_VA_POINTER(va_reginfo)	// Get the hidden type information array
@@ -1242,124 +1177,3 @@ DEFINE_ACTION_FUNCTION(FStringStruct, AppendFormat)
 	return 0;
 }
 
-DEFINE_ACTION_FUNCTION(FStringStruct, Mid)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	PARAM_UINT(pos);
-	PARAM_UINT(len);
-	FString s = self->Mid(pos, len);
-	ACTION_RETURN_STRING(s);
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, Left)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	PARAM_UINT(len);
-	FString s = self->Left(len);
-	ACTION_RETURN_STRING(s);
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, Truncate)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	PARAM_UINT(len);
-	self->Truncate(len);
-	return 0;
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, Remove)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	PARAM_UINT(index);
-	PARAM_UINT(remlen);
-	self->Remove(index, remlen);
-	return 0;
-}
-
-// CharAt and CharCodeAt is how JS does it, and JS is similar here in that it doesn't have char type as int.
-DEFINE_ACTION_FUNCTION(FStringStruct, CharAt)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	PARAM_INT(pos);
-	int slen = (int)self->Len();
-	if (pos < 0 || pos >= slen)
-		ACTION_RETURN_STRING("");
-	ACTION_RETURN_STRING(FString((*self)[pos]));
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, CharCodeAt)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	PARAM_INT(pos);
-	int slen = (int)self->Len();
-	if (pos < 0 || pos >= slen)
-		ACTION_RETURN_INT(0);
-	ACTION_RETURN_INT((*self)[pos]);
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, Filter)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	ACTION_RETURN_STRING(strbin1(*self));
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, IndexOf)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	PARAM_STRING(substr);
-	PARAM_INT(startIndex);
-	ACTION_RETURN_INT(self->IndexOf(substr, startIndex));
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, LastIndexOf)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	PARAM_STRING(substr);
-	PARAM_INT(endIndex);
-	ACTION_RETURN_INT(self->LastIndexOfBroken(substr, endIndex));
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, RightIndexOf)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	PARAM_STRING(substr);
-	PARAM_INT(endIndex);
-	ACTION_RETURN_INT(self->LastIndexOf(substr, endIndex));
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, ToUpper)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	self->ToUpper();
-	return 0;
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, ToLower)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	self->ToLower();
-	return 0;
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, ToInt)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	PARAM_INT(base);
-	ACTION_RETURN_INT(self->ToLong(base));
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, ToDouble)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	ACTION_RETURN_FLOAT(self->ToDouble());
-}
-
-DEFINE_ACTION_FUNCTION(FStringStruct, Split)
-{
-	PARAM_SELF_STRUCT_PROLOGUE(FString);
-	PARAM_POINTER(tokens, TArray<FString>);
-	PARAM_STRING(delimiter);
-	PARAM_INT(keepEmpty);
-	self->Split(*tokens, delimiter, static_cast<FString::EmptyTokenType>(keepEmpty));
-	return 0;
-}

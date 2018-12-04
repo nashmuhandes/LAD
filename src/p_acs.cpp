@@ -1733,7 +1733,7 @@ void P_WriteACSVars(FSerializer &arc)
 
 static bool DoUseInv (AActor *actor, PClassActor *info)
 {
-	AInventory *item = actor->FindInventory (info);
+	auto item = actor->FindInventory (info);
 	if (item != NULL)
 	{
 		player_t* const player = actor->player;
@@ -1837,17 +1837,17 @@ int CheckInventory (AActor *activator, const char *type, bool max)
 		return 0;
 	}
 
-	AInventory *item = activator->FindInventory (info);
+	auto item = activator->FindInventory (info);
 
 	if (max)
 	{
 		if (item)
 		{
-			return item->MaxAmount;
+			return item->IntVar(NAME_MaxAmount);
 		}
 		else if (info != nullptr && info->IsDescendantOf(NAME_Inventory))
 		{
-			return ((AInventory *)GetDefaultByType(info))->MaxAmount;
+			return GetDefaultByType(info)->IntVar(NAME_MaxAmount);
 		}
 	}
 	return item ? item->IntVar(NAME_Amount) : 0;
@@ -6218,7 +6218,7 @@ doplaysound:			if (funcIndex == ACSF_PlayActorSound)
 		case ACSF_DropInventory:
 		{
 			const char *type = FBehavior::StaticLookupString(args[1]);
-			AInventory *inv;
+			AActor *inv;
 			
 			if (type != NULL)
 			{
@@ -9329,7 +9329,7 @@ scriptwait:
 
 		case PCD_GETSIGILPIECES:
 			{
-				AInventory *sigil;
+				AActor *sigil;
 
 				if (activator == NULL || (sigil = activator->FindInventory(NAME_Sigil)) == NULL)
 				{
@@ -9346,18 +9346,17 @@ scriptwait:
 			if (activator != NULL)
 			{
 				PClass *type = PClass::FindClass (FBehavior::StaticLookupString (STACK(1)));
-				AInventory *item;
 
 				if (type != NULL && type->ParentClass == PClass::FindActor(NAME_Ammo))
 				{
-					item = activator->FindInventory (static_cast<PClassActor *>(type));
+					auto item = activator->FindInventory (static_cast<PClassActor *>(type));
 					if (item != NULL)
 					{
-						STACK(1) = item->MaxAmount;
+						STACK(1) = item->IntVar(NAME_MaxAmount);
 					}
 					else
 					{
-						STACK(1) = ((AInventory *)GetDefaultByType (type))->MaxAmount;
+						STACK(1) = GetDefaultByType (type)->IntVar(NAME_MaxAmount);
 					}
 				}
 				else
@@ -9375,21 +9374,20 @@ scriptwait:
 			if (activator != NULL)
 			{
 				PClassActor *type = PClass::FindActor (FBehavior::StaticLookupString (STACK(2)));
-				AInventory *item;
 
 				if (type != NULL && type->ParentClass == PClass::FindActor(NAME_Ammo))
 				{
-					item = activator->FindInventory (type);
+					auto item = activator->FindInventory (type);
 					if (item != NULL)
 					{
-						item->MaxAmount = STACK(1);
+						item->IntVar(NAME_MaxAmount) = STACK(1);
 					}
 					else
 					{
 						item = activator->GiveInventoryType (type);
 						if (item != NULL)
 						{
-							item->MaxAmount = STACK(1);
+							item->IntVar(NAME_MaxAmount) = STACK(1);
 							item->IntVar(NAME_Amount) = 0;
 						}
 					}

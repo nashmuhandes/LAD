@@ -1285,7 +1285,7 @@ void G_StartTravel ()
 		if (playeringame[i])
 		{
 			AActor *pawn = players[i].mo;
-			AInventory *inv;
+			AActor *inv;
 			players[i].camera = NULL;
 
 			// Only living players travel. Dead ones get a new body on the new level.
@@ -1324,7 +1324,7 @@ int G_FinishTravel ()
 {
 	TThinkerIterator<APlayerPawn> it (STAT_TRAVELLING);
 	APlayerPawn *pawn, *pawndup, *oldpawn, *next;
-	AInventory *inv;
+	AActor *inv;
 	FPlayerStart *start;
 	int pnum;
 	int failnum = 0;
@@ -1412,7 +1412,7 @@ int G_FinishTravel ()
 			inv->ChangeStatNum (STAT_INVENTORY);
 			inv->LinkToWorld (nullptr);
 
-			IFVIRTUALPTR(inv, AInventory, Travelled)
+			IFVIRTUALPTRNAME(inv, NAME_Inventory, Travelled)
 			{
 				VMValue params[1] = { inv };
 				VMCall(func, params, 1, nullptr, 0);

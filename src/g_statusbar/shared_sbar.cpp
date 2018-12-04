@@ -1266,12 +1266,12 @@ void DBaseStatusBar::CallScreenSizeChanged()
 //
 //---------------------------------------------------------------------------
 
-AInventory *DBaseStatusBar::ValidateInvFirst (int numVisible) const
+AActor *DBaseStatusBar::ValidateInvFirst (int numVisible) const
 {
 	IFVM(BaseStatusBar, ValidateInvFirst)
 	{
-		VMValue params[] = { (AInventory*)this, numVisible };
-		AInventory *item;
+		VMValue params[] = { const_cast<DBaseStatusBar*>(this), numVisible };
+		AActor *item;
 		VMReturn ret((void**)&item);
 		VMCall(func, params, 2, &ret, 1);
 		return item;
@@ -1757,16 +1757,16 @@ void FormatNumber(int number, int minsize, int maxsize, int flags, const FString
 //
 //---------------------------------------------------------------------------
 
-FTextureID GetInventoryIcon(AInventory *item, uint32_t flags, int *applyscale)
+int GetInventoryIcon(AActor *item, uint32_t flags, int *applyscale)
 {
 	if (applyscale != NULL)
 	{
 		*applyscale = false;
 	}
 
-	if (item == nullptr) return FNullTextureID();
+	if (item == nullptr) return 0;
 
-	FTextureID picnum, Icon = item->Icon, AltIcon = item->AltHUDIcon;
+	FTextureID picnum, Icon = item->TextureIDVar(NAME_Icon), AltIcon = item->TextureIDVar(NAME_AltHUDIcon);
 	FState * state = NULL, *ReadyState;
 
 	picnum.SetNull();
@@ -1779,7 +1779,7 @@ FTextureID GetInventoryIcon(AInventory *item, uint32_t flags, int *applyscale)
 	}
 	else
 	{
-		if (!(flags & DI_SKIPICON) && item->Icon.isValid())
+		if (!(flags & DI_SKIPICON) && Icon.isValid())
 			picnum = Icon;
 		else if (!(flags & DI_SKIPALTICON))
 			picnum = AltIcon;
@@ -1809,6 +1809,6 @@ FTextureID GetInventoryIcon(AInventory *item, uint32_t flags, int *applyscale)
 			picnum = sprframe->Texture[0];
 		}
 	}
-	return picnum;
+	return picnum.GetIndex();
 }
 
