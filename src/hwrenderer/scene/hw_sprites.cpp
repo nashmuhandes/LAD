@@ -56,10 +56,6 @@
 #include "hwrenderer/dynlights/hw_lightbuffer.h"
 #include "hw_renderstate.h"
 
-// [LAD]
-#include "dobject.h"
-#include "g_LAD/LADBodyPartBase.h"
-
 extern TArray<spritedef_t> sprites;
 extern TArray<spriteframe_t> SpriteFrames;
 extern uint32_t r_renderercaps;
@@ -677,7 +673,7 @@ void GLSprite::Process(HWDrawInfo *di, AActor* thing, sector_t * sector, area_t 
 	AActor *camera = vp.camera;
 
 	// [LAD] don't draw self modular character parts in first person view
-	if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADBodyPartBase)) && thing->tracer == vp.ViewActor)
+	if (thing && thing->IsKindOf(NAME_LADBodyPart) && thing->tracer == vp.ViewActor)
 	{
 		return;
 	}

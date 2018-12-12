@@ -1025,3 +1025,6 @@ xx(RedCard)
 xx(BlueSkull)
 xx(YellowSkull)
 xx(RedSkull)
+
+// [LAD]
+xx(LADBodyPart)

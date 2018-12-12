@@ -33,9 +33,6 @@
 #include "r_data/r_vanillatrans.h"
 #include "actorinlines.h"
 
-// [LAD]
-#include "g_LAD/LADBodyPartBase.h"
-
 EXTERN_CVAR(Float, transsouls)
 EXTERN_CVAR(Int, r_drawfuzz)
 EXTERN_CVAR (Bool, r_debug_disable_vis_filter)
@@ -303,7 +300,7 @@ bool RenderPolySprite::IsThingCulled(AActor *thing)
 		return true;
 
 	// [LAD] don't draw self modular character parts in first person view
-	if (thing && thing->IsKindOf(RUNTIME_CLASS(ALADBodyPartBase)) && thing->tracer == PolyRenderer::Instance()->Viewpoint.camera
+	if (thing && thing->IsKindOf(NAME_LADBodyPart) && thing->tracer == PolyRenderer::Instance()->Viewpoint.camera
 		&& !PolyRenderer::Instance()->Viewpoint.showviewer)
 	{
 		return true;

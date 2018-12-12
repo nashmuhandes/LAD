@@ -1246,9 +1246,6 @@ set (PCH_SOURCES
 	sound/wildmidi/wildmidi_lib.cpp
 	sound/wildmidi/wm_error.cpp
 	events.cpp
-
-	# LAD
-	g_LAD/LADBodyPartBase.cpp
 )
 
 enable_precompiled_headers( g_pch.h PCH_SOURCES )
