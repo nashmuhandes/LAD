@@ -551,13 +551,16 @@ namespace swrenderer
 	void DrawSingleSky1PalCommand::Execute(DrawerThread *thread)
 	{
 		uint8_t *dest = args.Dest();
-		int count = args.Count();
 		int pitch = args.Viewport()->RenderTarget->GetPitch();
 		const uint8_t *source0 = args.FrontTexturePixels();
 		int textureheight0 = args.FrontTextureHeight();
 
 		int32_t frac = args.TextureVPos();
 		int32_t fracstep = args.TextureVStep();
+
+		int num_cores = thread->num_cores;
+		int skipped = thread->skipped_by_thread(args.DestY());
+		int count = skipped + thread->count_for_thread(args.DestY(), args.Count()) * num_cores;
 
 		// Find bands for top solid color, top fade, center textured, bottom fade, bottom solid color:
 		int start_fade = 2; // How fast it should fade out
@@ -571,8 +574,6 @@ namespace swrenderer
 		start_fadebottom_y = clamp(start_fadebottom_y, 0, count);
 		end_fadebottom_y = clamp(end_fadebottom_y, 0, count);
 
-		int num_cores = thread->num_cores;
-		int skipped = thread->skipped_by_thread(args.DestY());
 		dest = thread->dest_for_thread(args.DestY(), pitch, dest);
 		frac += fracstep * skipped;
 		fracstep *= num_cores;
@@ -580,7 +581,7 @@ namespace swrenderer
 
 		if (!args.FadeSky())
 		{
-			count = thread->count_for_thread(args.DestY(), count);
+			count = thread->count_for_thread(args.DestY(), args.Count());
 
 			for (int index = 0; index < count; index++)
 			{
@@ -685,7 +686,6 @@ namespace swrenderer
 	void DrawDoubleSky1PalCommand::Execute(DrawerThread *thread)
 	{
 		uint8_t *dest = args.Dest();
-		int count = args.Count();
 		int pitch = args.Viewport()->RenderTarget->GetPitch();
 		const uint8_t *source0 = args.FrontTexturePixels();
 		const uint8_t *source1 = args.BackTexturePixels();
@@ -694,6 +694,10 @@ namespace swrenderer
 
 		int32_t frac = args.TextureVPos();
 		int32_t fracstep = args.TextureVStep();
+
+		int num_cores = thread->num_cores;
+		int skipped = thread->skipped_by_thread(args.DestY());
+		int count = skipped + thread->count_for_thread(args.DestY(), args.Count()) * num_cores;
 
 		// Find bands for top solid color, top fade, center textured, bottom fade, bottom solid color:
 		int start_fade = 2; // How fast it should fade out
@@ -707,8 +711,6 @@ namespace swrenderer
 		start_fadebottom_y = clamp(start_fadebottom_y, 0, count);
 		end_fadebottom_y = clamp(end_fadebottom_y, 0, count);
 
-		int num_cores = thread->num_cores;
-		int skipped = thread->skipped_by_thread(args.DestY());
 		dest = thread->dest_for_thread(args.DestY(), pitch, dest);
 		frac += fracstep * skipped;
 		fracstep *= num_cores;

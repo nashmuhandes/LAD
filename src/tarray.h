@@ -272,6 +272,18 @@ public:
         return i;
     }
 
+	template<class Func> 
+	unsigned int FindEx(Func compare) const
+	{
+		unsigned int i;
+		for (i = 0; i < Count; ++i)
+		{
+			if (compare(Array[i]))
+				break;
+		}
+		return i;
+	}
+
 	unsigned int Push (const T &item)
 	{
 		Grow (1);
@@ -485,6 +497,14 @@ public:
 			Array = nullptr;
 		}
 	}
+
+	void Swap(TArray<T, TT> &other)
+	{
+		std::swap(Array, other.Array);
+		std::swap(Count, other.Count);
+		std::swap(Most, other.Most);
+	}
+
 private:
 	T *Array;
 	unsigned int Count;
@@ -748,6 +768,7 @@ struct FMap
 	hash_t NumUsed;
 };
 
+
 template<class KT, class VT, class MapType> class TMapIterator;
 template<class KT, class VT, class MapType> class TMapConstIterator;
 
@@ -935,6 +956,14 @@ public:
 		DelKey(key);
 	}
 
+	void Swap(MyType &other)
+	{
+		std::swap(Nodes, other.Nodes);
+		std::swap(LastFree, other.LastFree);
+		std::swap(Size, other.Size);
+		std::swap(NumUsed, other.NumUsed);
+	}
+
 protected:
 	struct IPair	// This must be the same as Pair above, but with a
 	{				// non-const Key.
@@ -1019,7 +1048,7 @@ protected:
 			if (!nold[i].IsNil())
 			{
 				Node *n = NewKey(nold[i].Pair.Key);
-				::new(&n->Pair.Value) VT(nold[i].Pair.Value);
+				::new(&n->Pair.Value) VT(std::move(nold[i].Pair.Value));
 				nold[i].~Node();
 			}
 		}
@@ -1506,4 +1535,3 @@ private:
 	T *Array;
 	unsigned int Count;
 };
-

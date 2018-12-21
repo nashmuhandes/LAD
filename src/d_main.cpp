@@ -184,18 +184,19 @@ CVAR (Int, snd_drawoutput, 0, 0);
 CUSTOM_CVAR (String, vid_cursor, "None", CVAR_ARCHIVE | CVAR_NOINITCALL)
 {
 	bool res = false;
+	
 
 	if (!stricmp(self, "None" ) && gameinfo.CursorPic.IsNotEmpty())
 	{
-		res = I_SetCursor(TexMan[gameinfo.CursorPic]);
+		res = I_SetCursor(TexMan.GetTextureByName(gameinfo.CursorPic));
 	}
 	else
 	{
-		res = I_SetCursor(TexMan[self]);
+		res = I_SetCursor(TexMan.GetTextureByName(self));
 	}
 	if (!res)
 	{
-		I_SetCursor(TexMan["cursor"]);
+		I_SetCursor(TexMan.GetTextureByName("cursor"));
 	}
 }
 
@@ -834,16 +835,16 @@ void D_Display ()
 		int x;
 		FString pstring = "By ";
 
-		tex = TexMan(gameinfo.PauseSign);
-		x = (SCREENWIDTH - tex->GetScaledWidth() * CleanXfac)/2 +
-			tex->GetScaledLeftOffset(0) * CleanXfac;
+		tex = TexMan.GetTextureByName(gameinfo.PauseSign, true);
+		x = (SCREENWIDTH - tex->GetDisplayWidth() * CleanXfac)/2 +
+			tex->GetDisplayLeftOffset() * CleanXfac;
 		screen->DrawTexture (tex, x, 4, DTA_CleanNoMove, true, TAG_DONE);
 		if (paused && multiplayer)
 		{
 			pstring += players[paused - 1].userinfo.GetName();
 			screen->DrawText(SmallFont, CR_RED,
 				(screen->GetWidth() - SmallFont->StringWidth(pstring)*CleanXfac) / 2,
-				(tex->GetScaledHeight() * CleanYfac) + 4, pstring, DTA_CleanNoMove, true, TAG_DONE);
+				(tex->GetDisplayHeight() * CleanYfac) + 4, pstring, DTA_CleanNoMove, true, TAG_DONE);
 		}
 	}
 
@@ -855,8 +856,8 @@ void D_Display ()
 		D_DrawIcon = NULL;
 		if (picnum.isValid())
 		{
-			FTexture *tex = TexMan[picnum];
-			screen->DrawTexture (tex, 160 - tex->GetScaledWidth()/2, 100 - tex->GetScaledHeight()/2,
+			FTexture *tex = TexMan.GetTexture(picnum);
+			screen->DrawTexture (tex, 160 - tex->GetDisplayWidth()/2, 100 - tex->GetDisplayHeight()/2,
 				DTA_320x200, true, TAG_DONE);
 		}
 		NoWipe = 10;
@@ -1051,7 +1052,7 @@ void D_PageDrawer (void)
 	screen->Clear(0, 0, SCREENWIDTH, SCREENHEIGHT, 0, 0);
 	if (Page.Exists())
 	{
-		screen->DrawTexture (TexMan(Page), 0, 0,
+		screen->DrawTexture (TexMan.GetTexture(Page, true), 0, 0,
 			DTA_Fullscreen, true,
 			DTA_Masked, false,
 			DTA_BilinearFilter, true,
@@ -1241,7 +1242,7 @@ void D_DoAdvanceDemo (void)
 	case 3:
 		if (gameinfo.advisoryTime)
 		{
-			Advisory = TexMan["ADVISOR"];
+			Advisory = TexMan.GetTextureByName("ADVISOR");
 			demosequence = 1;
 			pagetic = (int)(gameinfo.advisoryTime * TICRATE);
 			break;
@@ -1852,6 +1853,16 @@ static FString ParseGameInfo(TArray<FString> &pwads, const char *fn, const char 
 			sc.MustGetString();
 			DoomStartupInfo.Song = sc.String;
 		}
+		else if (!nextKey.CompareNoCase("LOADLIGHTS"))
+		{
+			sc.MustGetNumber();
+			DoomStartupInfo.LoadLights = !!sc.Number;
+		}
+		else if (!nextKey.CompareNoCase("LOADBRIGHTMAPS"))
+		{
+			sc.MustGetNumber();
+			DoomStartupInfo.LoadBrightmaps = !!sc.Number;
+		}
 		else
 		{
 			// Silently ignore unknown properties
@@ -2021,13 +2032,13 @@ static void AddAutoloadFiles(const char *autoname)
 	// [SP] Dialog reaction - load lights.pk3 and brightmaps.pk3 based on user choices
 	if (!(gameinfo.flags & GI_SHAREWARE))
 	{
-		if (autoloadlights)
+		if (DoomStartupInfo.LoadLights == 1 || (DoomStartupInfo.LoadLights != 0 && autoloadlights))
 		{
 			const char *lightswad = BaseFileSearch ("lights.pk3", NULL);
 			if (lightswad)
 				D_AddFile (allwads, lightswad);
 		}
-		if (autoloadbrightmaps)
+		if (DoomStartupInfo.LoadBrightmaps == 1 || (DoomStartupInfo.LoadBrightmaps != 0 && autoloadbrightmaps))
 		{
 			const char *bmwad = BaseFileSearch ("brightmaps.pk3", NULL);
 			if (bmwad)
@@ -2708,11 +2719,12 @@ void D_DoomMain (void)
 		DestroyCVarsFlagged(CVAR_MOD);	// Delete any cvar left by mods
 		FS_Close();						// destroy the global FraggleScript.
 		DeinitMenus();
-		LightDefaults.Clear();			// this can leak heap memory if it isn't cleared.
+		LightDefaults.DeleteAndClear();			// this can leak heap memory if it isn't cleared.
 
 		// delete DoomStartupInfo data
-		DoomStartupInfo.Name = (const char*)0;
+		DoomStartupInfo.Name = "";
 		DoomStartupInfo.BkColor = DoomStartupInfo.FgColor = DoomStartupInfo.Type = 0;
+		DoomStartupInfo.LoadLights = DoomStartupInfo.LoadBrightmaps = -1;
 
 		GC::FullGC();					// clean up before taking down the object list.
 

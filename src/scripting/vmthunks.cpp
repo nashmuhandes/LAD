@@ -1584,6 +1584,19 @@ DEFINE_ACTION_FUNCTION_NATIVE(_TexMan, ReplaceTextures, ReplaceTextures)
 	return 0;
 }
 
+void SetCameraToTexture(AActor *viewpoint, const FString &texturename, double fov);
+
+DEFINE_ACTION_FUNCTION_NATIVE(_TexMan, SetCameraToTexture, SetCameraToTexture)
+{
+	PARAM_PROLOGUE;
+	PARAM_OBJECT(viewpoint, AActor);
+	PARAM_STRING(texturename); // [ZZ] there is no point in having this as FTextureID because it's easier to refer to a cameratexture by name and it isn't executed too often to cache it.
+	PARAM_FLOAT(fov);
+	SetCameraToTexture(viewpoint, texturename, fov);
+	return 0;
+}
+
+
 //=====================================================================================
 //
 // secplane_t exports
@@ -2372,7 +2385,7 @@ DEFINE_ACTION_FUNCTION_NATIVE(DBaseStatusBar, ReceivedWeapon, ReceivedWeapon)
 static int GetMugshot(DBaseStatusBar *self, int accuracy, int stateflags, const FString &def_face)
 {
 	auto tex = self->mugshot.GetFace(self->CPlayer, def_face, accuracy, (FMugShot::StateFlags)stateflags);
-	return (tex ? tex->id.GetIndex() : -1);
+	return (tex ? tex->GetID().GetIndex() : -1);
 }
 
 DEFINE_ACTION_FUNCTION_NATIVE(DBaseStatusBar, GetMugshot, GetMugshot)
@@ -2491,6 +2504,19 @@ DEFINE_ACTION_FUNCTION_NATIVE(FLevelLocals, GetUDMFString, ZGetUDMFString)
 	PARAM_INT(index);
 	PARAM_NAME(key);
 	ACTION_RETURN_STRING(GetUDMFString(type, index, key));
+}
+
+DEFINE_ACTION_FUNCTION(FLevelLocals, GetChecksum)
+{
+	PARAM_SELF_STRUCT_PROLOGUE(FLevelLocals);
+	char md5string[33];
+
+	for (int j = 0; j < 16; ++j)
+	{
+		sprintf(md5string + j * 2, "%02x", level.md5[j]);
+	}
+
+	ACTION_RETURN_STRING((const char*)md5string);
 }
 
 //=====================================================================================

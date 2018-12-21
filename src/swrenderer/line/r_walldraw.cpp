@@ -54,15 +54,16 @@
 
 namespace swrenderer
 {
-	WallSampler::WallSampler(RenderViewport *viewport, int y1, double texturemid, float swal, double yrepeat, fixed_t xoffset, double xmagnitude, FTexture *texture)
+	WallSampler::WallSampler(RenderViewport *viewport, int y1, double texturemid, float swal, double yrepeat, fixed_t xoffset, double xmagnitude, FSoftwareTexture *texture)
 	{
 		xoffset += FLOAT2FIXED(xmagnitude * 0.5);
+		xoffset *= texture->GetPhysicalScale();
 
 		if (!viewport->RenderTarget->IsBgra())
 		{
-			height = texture->GetHeight();
+			height = texture->GetPhysicalHeight();
 
-			int uv_fracbits = 32 - texture->HeightBits;
+			int uv_fracbits = 32 - texture->GetHeightBits();
 			if (uv_fracbits != 32)
 			{
 				uv_max = height << uv_fracbits;
@@ -70,13 +71,13 @@ namespace swrenderer
 				// Find start uv in [0-base_height[ range.
 				// Not using xs_ToFixed because it rounds the result and we need something that always rounds down to stay within the range.
 				double uv_stepd = swal * yrepeat;
-				double v = (texturemid + uv_stepd * (y1 - viewport->CenterY + 0.5)) / height;
+				double v = (texturemid + uv_stepd * (y1 - viewport->CenterY + 0.5)) / texture->GetHeight();
 				v = v - floor(v);
 				v *= height;
 				v *= (1 << uv_fracbits);
 
 				uv_pos = (uint32_t)(int64_t)v;
-				uv_step = xs_ToFixed(uv_fracbits, uv_stepd);
+				uv_step = xs_ToFixed(uv_fracbits, uv_stepd * texture->GetPhysicalScale());
 				if (uv_step == 0) // To prevent divide by zero elsewhere
 					uv_step = 1;
 			}
@@ -92,7 +93,7 @@ namespace swrenderer
 			// If the texture's width isn't a power of 2, then we need to make it a
 			// positive offset for proper clamping.
 			int width;
-			if (col < 0 && (width = texture->GetWidth()) != (1 << texture->WidthBits))
+			if (col < 0 && (width = texture->GetPhysicalWidth()) != (1 << texture->GetWidthBits()))
 			{
 				col = width + (col % width);
 			}
@@ -129,8 +130,8 @@ namespace swrenderer
 			bool magnifying = lod < 0.0f;
 
 			int mipmap_offset = 0;
-			int mip_width = texture->GetWidth();
-			int mip_height = texture->GetHeight();
+			int mip_width = texture->GetPhysicalWidth();
+			int mip_height = texture->GetPhysicalHeight();
 			if (r_mipmap && texture->Mipmapped() && mip_width > 1 && mip_height > 1)
 			{
 				uint32_t xpos = (uint32_t)((((uint64_t)xoffset) << FRACBITS) / mip_width);
@@ -332,10 +333,10 @@ namespace swrenderer
 
 	void RenderWallPart::ProcessWallWorker(const short *uwal, const short *dwal, double texturemid, float *swal, fixed_t *lwal)
 	{
-		if (rw_pic->UseType == ETextureType::Null)
+		if (rw_pic == nullptr)
 			return;
 
-		int fracbits = 32 - rw_pic->HeightBits;
+		int fracbits = 32 - rw_pic->GetHeightBits();
 		if (fracbits == 32)
 		{ // Hack for one pixel tall textures
 			fracbits = 0;
@@ -345,13 +346,18 @@ namespace swrenderer
 
 		drawerargs.SetTextureFracBits(Thread->Viewport->RenderTarget->IsBgra() ? FRACBITS : fracbits);
 
+		// Textures that aren't masked can use the faster opaque drawer
+		if (!rw_pic->GetTexture()->isMasked() && mask && alpha >= OPAQUE && !additive)
+		{
+			drawerargs.SetStyle(true, false, OPAQUE, basecolormap);
+		}
+		else
+		{
+			drawerargs.SetStyle(mask, additive, alpha, basecolormap);
+		}
+
 		CameraLight *cameraLight = CameraLight::Instance();
 		bool fixed = (cameraLight->FixedColormap() != NULL || cameraLight->FixedLightLevel() >= 0);
-
-		if (cameraLight->FixedColormap())
-			drawerargs.SetLight(cameraLight->FixedColormap(), 0, 0);
-		else
-			drawerargs.SetLight(basecolormap, 0, 0);
 
 		float dx = WallC.tright.X - WallC.tleft.X;
 		float dy = WallC.tright.Y - WallC.tleft.Y;
@@ -371,7 +377,7 @@ namespace swrenderer
 				continue;
 
 			if (!fixed)
-				drawerargs.SetLight(basecolormap, curlight, wallshade);
+				drawerargs.SetLight(curlight, lightlevel, foggy, Thread->Viewport.get());
 
 			if (x + 1 < x2) xmagnitude = fabs(FIXED2DBL(lwal[x + 1]) - FIXED2DBL(lwal[x]));
 
@@ -419,7 +425,7 @@ namespace swrenderer
 
 			lightlist_t *lit = &frontsector->e->XFloor.lightlist[i];
 			basecolormap = GetColorTable(lit->extra_colormap, frontsector->SpecialColors[sector_t::walltop]);
-			wallshade = LightVisibility::LightLevelToShade(curline->sidedef->GetLightLevel(foggy, *lit->p_lightlevel, lit->lightsource != NULL) + LightVisibility::ActualExtraLight(foggy, Thread->Viewport.get()), foggy);
+			lightlevel = curline->sidedef->GetLightLevel(foggy, *lit->p_lightlevel, lit->lightsource != NULL);
 		}
 
 		ProcessNormalWall(up, dwal, texturemid, swal, lwal);
@@ -427,12 +433,6 @@ namespace swrenderer
 
 	void RenderWallPart::ProcessWall(const short *uwal, const short *dwal, double texturemid, float *swal, fixed_t *lwal)
 	{
-		// Textures that aren't masked can use the faster ProcessNormalWall.
-		if (!rw_pic->bMasked && drawerargs.IsMaskedDrawer())
-		{
-			drawerargs.SetStyle(true, false, OPAQUE);
-		}
-
 		CameraLight *cameraLight = CameraLight::Instance();
 		if (cameraLight->FixedColormap() != NULL || cameraLight->FixedLightLevel() >= 0 || !(frontsector->e && frontsector->e->XFloor.lightlist.Size()))
 		{
@@ -516,16 +516,15 @@ namespace swrenderer
 		}
 	}
 
-	void RenderWallPart::Render(const WallDrawerArgs &drawerargs, sector_t *frontsector, seg_t *curline, const FWallCoords &WallC, FTexture *pic, int x1, int x2, const short *walltop, const short *wallbottom, double texturemid, float *swall, fixed_t *lwall, double yscale, double top, double bottom, bool mask, int wallshade, fixed_t xoffset, float light, float lightstep, FLightNode *light_list, bool foggy, FDynamicColormap *basecolormap)
+	void RenderWallPart::Render(sector_t *frontsector, seg_t *curline, const FWallCoords &WallC, FSoftwareTexture *pic, int x1, int x2, const short *walltop, const short *wallbottom, double texturemid, float *swall, fixed_t *lwall, double yscale, double top, double bottom, bool mask, bool additive, fixed_t alpha, int lightlevel, fixed_t xoffset, float light, float lightstep, FLightNode *light_list, bool foggy, FDynamicColormap *basecolormap)
 	{
-		this->drawerargs = drawerargs;
 		this->x1 = x1;
 		this->x2 = x2;
 		this->frontsector = frontsector;
 		this->curline = curline;
 		this->WallC = WallC;
 		this->yrepeat = yscale;
-		this->wallshade = wallshade;
+		this->lightlevel = lightlevel;
 		this->xoffset = xoffset;
 		this->light = light;
 		this->lightstep = lightstep;
@@ -534,10 +533,12 @@ namespace swrenderer
 		this->light_list = light_list;
 		this->rw_pic = pic;
 		this->mask = mask;
+		this->additive = additive;
+		this->alpha = alpha;
 
 		Thread->PrepareTexture(pic, DefaultRenderStyle()); // Get correct render style? Shaded won't get here.
 
-		if (rw_pic->GetHeight() != 1 << rw_pic->HeightBits)
+		if (rw_pic->GetHeight() != 1 << rw_pic->GetHeightBits())
 		{
 			ProcessWallNP2(walltop, wallbottom, texturemid, swall, lwall, top, bottom);
 		}
