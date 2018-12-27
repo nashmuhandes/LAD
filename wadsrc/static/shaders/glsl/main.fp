@@ -111,6 +111,9 @@ vec4 getTexel(vec2 st)
 			return texel;
 
 	}
+
+	texel.rgb += uAddColor.rgb;
+
 	if (uObjectColor2.a == 0.0) texel *= uObjectColor;
 	else texel *= mix(uObjectColor, uObjectColor2, gradientdist.z);
 
