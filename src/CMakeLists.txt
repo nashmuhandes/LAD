@@ -648,7 +648,6 @@ file( GLOB HEADER_FILES
 	g_shared/*.h
 	g_statusbar/*.h
 	g_inventory/*.h
-	g_LAD/*.h
 	intermission/*.h
 	menu/*.h
 	sound/adlmidi/*.h*
@@ -1308,7 +1307,6 @@ include_directories( .
 	g_statusbar
 	g_shared
 	g_inventory
-	g_LAD
 	sound
 	textures
 	sound/oplsynth
@@ -1425,7 +1423,6 @@ source_group("External\\SFMT" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/s
 source_group("FraggleScript" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/fragglescript/.+")
 source_group("Intermission" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/intermission/.+")
 source_group("Inventory" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/g_inventory/.+")
-source_group("Live Another Day" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/g_LAD/.+")
 source_group("Menu" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/menu/.+")
 source_group("Hardware Renderer" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/gl/.+")
 source_group("Hardware Renderer\\Data" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/hwrenderer/data/.+")
