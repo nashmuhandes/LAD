@@ -89,7 +89,6 @@
 #include "d_event.h"
 #include "d_netinf.h"
 #include "m_cheat.h"
-#include "compatibility.h"
 #include "m_joy.h"
 #include "po_man.h"
 #include "r_renderer.h"
@@ -2432,8 +2431,6 @@ void D_DoomMain (void)
 			StartScreen = new FStartupScreen(0);
 		}
 
-		ParseCompatibility();
-
 		CheckCmdLine();
 
 		// [RH] Load sound environments
@@ -2702,7 +2699,6 @@ void D_DoomMain (void)
 		DThinker::DestroyThinkersInList(STAT_STATIC);
 		E_Shutdown(false);
 		P_FreeLevelData();
-		P_FreeExtraLevelData();
 
 		M_SaveDefaults(NULL);			// save config before the restart
 
@@ -2717,7 +2713,6 @@ void D_DoomMain (void)
 		S_Shutdown();					// free all channels and delete playlist
 		C_ClearAliases();				// CCMDs won't be reinitialized so these need to be deleted here
 		DestroyCVarsFlagged(CVAR_MOD);	// Delete any cvar left by mods
-		FS_Close();						// destroy the global FraggleScript.
 		DeinitMenus();
 		LightDefaults.DeleteAndClear();			// this can leak heap memory if it isn't cleared.
 
