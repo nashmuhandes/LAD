@@ -15,8 +15,8 @@ c chase
 mouse1 +attack
 mouse2 +altattack
 mouse3 +zoom
-mwheelup "netevent EV_HotkeyItemPrev"
-mwheeldown "netevent EV_HotkeyItemNext"
+mwheelup "weapprev"
+mwheeldown "weapnext"
 capslock "toggle cl_run"
 f1 menu_help
 f2 menu_save
@@ -34,9 +34,8 @@ sysrq screenshot
 y messagemode
 \ +showscores
 f12 spynext
-tab "netevent EV_OpenCharacterMenu"
+tab +user1
 t "netevent EV_OpenRestMenu"
-f "netevent EV_TogglePlayerLight"
 
 // Generic joystick buttons
 /*
