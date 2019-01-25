@@ -167,6 +167,7 @@ private:
 	void FixMinisegReferences();
 	void FixHoles();
 	void ReportUnpairedMinisegs();
+	void CalcIndices();
 
 	void SetTexture(side_t *side, int position, const char *name, FMissingTextureTracker &track);
 	void SetTexture(sector_t *sector, int index, int position, const char *name, FMissingTextureTracker &track, bool truncate);
@@ -189,16 +190,52 @@ private:
 	void CreateBlockMap();
 	void PO_Init(void);
 
+	// During map init the items' own Index functions should not be used.
+	inline int Index(vertex_t *v) const
+	{
+		return int(v - &Level->vertexes[0]);
+	}
+
+	inline int Index(side_t *v) const
+	{
+		return int(v - &Level->sides[0]);
+	}
+
+	inline int Index(line_t *v) const
+	{
+		return int(v - &Level->lines[0]);
+	}
+
+	inline int Index(seg_t *v) const
+	{
+		return int(v - &Level->segs[0]);
+	}
+
+	inline int Index(subsector_t *v) const
+	{
+		return int(v - &Level->subsectors[0]);
+	}
+
+	inline int Index(node_t *v) const
+	{
+		return int(v - &Level->nodes[0]);
+	}
+
+	inline int Index(sector_t *v) const
+	{
+		return int(v - &Level->sectors[0]);
+	}
+
 public:
 	void LoadMapinfoACSLump();
 	void ProcessEDSectors();
 
 	void FloodZones();
 	void LoadVertexes(MapData * map);
-	void LoadExtendedNodes(FileReader &dalump, uint32_t id);
-	template<class segtype> void LoadSegs(MapData * map);
-	template<class subsectortype, class segtype> void LoadSubsectors(MapData * map);
-	template<class nodetype, class subsectortype> void LoadNodes(MapData * map);
+	bool LoadExtendedNodes(FileReader &dalump, uint32_t id);
+	template<class segtype> bool LoadSegs(MapData * map);
+	template<class subsectortype, class segtype> bool LoadSubsectors(MapData * map);
+	template<class nodetype, class subsectortype> bool LoadNodes(MapData * map);
 	bool LoadGLNodes(MapData * map);
 	bool CheckCachedNodes(MapData *map);
 	bool CheckNodes(MapData * map, bool rebuilt, int buildtime);

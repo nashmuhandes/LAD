@@ -353,21 +353,18 @@ IMPLEMENT_CLASS(DLevelCompatibility, true, false);
 
 void MapLoader::SetCompatibilityParams(FName checksum)
 {
-	if (checksum != NAME_None)
+	auto lc = Create<DLevelCompatibility>();
+	lc->loader = this;
+	lc->Level = Level;
+	for(auto cls : PClass::AllClasses)
 	{
-		auto lc = Create<DLevelCompatibility>();
-		lc->loader = this;
-		lc->Level = Level;
-		for(auto cls : PClass::AllClasses)
+		if (cls->IsDescendantOf(RUNTIME_CLASS(DLevelCompatibility)))
 		{
-			if (cls->IsDescendantOf(RUNTIME_CLASS(DLevelCompatibility)))
+			PFunction *const func = dyn_cast<PFunction>(cls->FindSymbol("Apply", false));
+			if (func != nullptr)
 			{
-				PFunction *const func = dyn_cast<PFunction>(cls->FindSymbol("Apply", false));
-				if (func != nullptr)
-				{
-					VMValue param[] = { lc, (int)checksum };
-					VMCall(func->Variants[0].Implementation, param, 2, nullptr, 0);
-				}
+				VMValue param[] = { lc, checksum.GetIndex(), &Level->MapName };
+				VMCall(func->Variants[0].Implementation, param, 3, nullptr, 0);
 			}
 		}
 	}
@@ -380,10 +377,13 @@ DEFINE_ACTION_FUNCTION(DLevelCompatibility, OffsetSectorPlane)
 	PARAM_INT(planeval);
 	PARAM_FLOAT(delta);
 
-	sector_t *sec = &self->Level->sectors[sector];
-	secplane_t& plane = sector_t::floor == planeval? sec->floorplane : sec->ceilingplane;
-	plane.ChangeHeight(delta);
-	sec->ChangePlaneTexZ(planeval, delta);
+	if ((unsigned)sector < self->Level->sectors.Size())
+	{
+		sector_t *sec = &self->Level->sectors[sector];
+		secplane_t& plane = sector_t::floor == planeval? sec->floorplane : sec->ceilingplane;
+		plane.ChangeHeight(delta);
+		sec->ChangePlaneTexZ(planeval, delta);
+	}
 	return 0;
 }
 
@@ -400,7 +400,32 @@ DEFINE_ACTION_FUNCTION(DLevelCompatibility, AddSectorTag)
 	PARAM_SELF_PROLOGUE(DLevelCompatibility);
 	PARAM_INT(sector);
 	PARAM_INT(tag);
-	tagManager.AddSectorTag(sector, tag);
+
+	if ((unsigned)sector < self->Level->sectors.Size())
+	{
+		tagManager.AddSectorTag(sector, tag);
+	}
+	return 0;
+}
+
+DEFINE_ACTION_FUNCTION(DLevelCompatibility, ClearLineIDs)
+{
+	PARAM_SELF_PROLOGUE(DLevelCompatibility);
+	PARAM_INT(line);
+	tagManager.RemoveLineIDs(line);
+	return 0;
+}
+
+DEFINE_ACTION_FUNCTION(DLevelCompatibility, AddLineID)
+{
+	PARAM_SELF_PROLOGUE(DLevelCompatibility);
+	PARAM_INT(line);
+	PARAM_INT(tag);
+	
+	if ((unsigned)line < self->Level->lines.Size())
+	{
+		tagManager.AddLineID(line, tag);
+	}
 	return 0;
 }
 

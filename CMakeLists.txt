@@ -163,14 +163,17 @@ option( NO_OPENAL "Disable OpenAL sound support" OFF )
 find_package( BZip2 )
 find_package( JPEG )
 find_package( ZLIB )
-find_package( asmjit )
+# find_package( asmjit )
+ # no, we're not using external asmjit for now, we made too many modifications to our's.
+ # if the asmjit author uses our changes then we'll update this.
+
 # GME
-find_path( GME_INCLUDE_DIR gme/gme.h )
-find_library( GME_LIBRARIES gme )
-mark_as_advanced( GME_INCLUDE_DIR GME_LIBRARIES )
-FIND_PACKAGE_HANDLE_STANDARD_ARGS( GME
-	REQUIRED_VARS GME_LIBRARIES GME_INCLUDE_DIR
-)
+#find_path( GME_INCLUDE_DIR gme/gme.h )
+#find_library( GME_LIBRARIES gme )
+#mark_as_advanced( GME_INCLUDE_DIR GME_LIBRARIES )
+#FIND_PACKAGE_HANDLE_STANDARD_ARGS( GME
+#	REQUIRED_VARS GME_LIBRARIES GME_INCLUDE_DIR
+#)
 
 if( MSVC )
 	# Eliminate unreferenced functions and data
@@ -271,8 +274,10 @@ set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEB_C_FLAGS} -D_DEBUG" )
 option(FORCE_INTERNAL_ZLIB "Use internal zlib")
 option(FORCE_INTERNAL_JPEG "Use internal jpeg")
 option(FORCE_INTERNAL_BZIP2 "Use internal bzip2")
-option(FORCE_INTERNAL_GME "Use internal gme")
-option(FORCE_INTERNAL_ASMJIT "Use internal asmjit")
+option(FORCE_INTERNAL_GME "Use internal gme" ON)
+mark_as_advanced( FORCE_INTERNAL_GME )
+option(FORCE_INTERNAL_ASMJIT "Use internal asmjit" ON)
+mark_as_advanced( FORCE_INTERNAL_ASMJIT )
 
 # Fast math flags, required by some subprojects
 set( ZD_FASTMATH_FLAG "" )

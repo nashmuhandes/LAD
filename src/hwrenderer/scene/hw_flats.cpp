@@ -148,9 +148,9 @@ void GLFlat::SetupLights(HWDrawInfo *di, FLightNode * node, FDynLightData &light
 	}
 	while (node)
 	{
-		ADynamicLight * light = node->lightsource;
+		FDynamicLight * light = node->lightsource;
 
-		if (light->flags2&MF2_DORMANT)
+		if (!light->IsActive())
 		{
 			node = node->nextLight;
 			continue;
@@ -159,7 +159,7 @@ void GLFlat::SetupLights(HWDrawInfo *di, FLightNode * node, FDynLightData &light
 
 		// we must do the side check here because gl_GetLight needs the correct plane orientation
 		// which we don't have for Legacy-style 3D-floors
-		double planeh = plane.plane.ZatPoint(light);
+		double planeh = plane.plane.ZatPoint(light->Pos);
 		if ((planeh<light->Z() && ceiling) || (planeh>light->Z() && !ceiling))
 		{
 			node = node->nextLight;
@@ -304,8 +304,8 @@ void GLFlat::DrawFlat(HWDrawInfo *di, FRenderState &state, bool translucent)
 
 	state.SetNormal(plane.plane.Normal().X, plane.plane.Normal().Z, plane.plane.Normal().Y);
 
-	state.SetColor(lightlevel, rel, di->isFullbrightScene(), Colormap, alpha);
-	state.SetFog(lightlevel, rel, di->isFullbrightScene(), &Colormap, false);
+	di->SetColor(state, lightlevel, rel, di->isFullbrightScene(), Colormap, alpha);
+	di->SetFog(state, lightlevel, rel, di->isFullbrightScene(), &Colormap, false);
 	state.SetObjectColor(FlatColor | 0xff000000);
 	state.SetAddColor(AddColor | 0xff000000);
 

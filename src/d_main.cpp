@@ -749,8 +749,7 @@ void D_Display ()
 		// Check for the presence of dynamic lights at the start of the frame once.
 		if ((gl_lights && vid_rendermode == 4) || (r_dynlights && vid_rendermode != 4))
 		{
-			TThinkerIterator<ADynamicLight> it(STAT_DLIGHT);
-			level.HasDynamicLights = !!it.Next();
+			level.HasDynamicLights = !!level.lights;
 		}
 		else level.HasDynamicLights = false;	// lights are off so effectively we have none.
 		
@@ -761,15 +760,15 @@ void D_Display ()
 		{
 			AM_Drawer (hud_althud? viewheight : StatusBar->GetTopOfStatusbar());
 		}
-		if (!automapactive || viewactive)
-		{
-			screen->RefreshViewBorder ();
-		}
 		
 		// for timing the statusbar code.
 		//cycle_t stb;
 		//stb.Reset();
 		//stb.Clock();
+		if (!automapactive || viewactive)
+		{
+			StatusBar->RefreshViewBorder ();
+		}
 		if (hud_althud && viewheight == SCREENHEIGHT && screenblocks > 10)
 		{
 			StatusBar->DrawBottomStuff (HUD_AltHud);

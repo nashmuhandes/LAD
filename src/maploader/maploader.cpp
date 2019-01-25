@@ -650,7 +650,7 @@ void MapLoader::LoadZNodes(FileReader &data, int glnodes)
 //
 //===========================================================================
 
-void MapLoader::LoadExtendedNodes (FileReader &dalump, uint32_t id)
+bool MapLoader::LoadExtendedNodes (FileReader &dalump, uint32_t id)
 {
 	int type;
 	bool compressed;
@@ -698,21 +698,40 @@ void MapLoader::LoadExtendedNodes (FileReader &dalump, uint32_t id)
 		break;
 
 	default:
-		return;
+		return false;
 	}
 	
-	if (compressed)
+	try
 	{
-		FileReader zip;
-		if (zip.OpenDecompressor(dalump, -1, METHOD_ZLIB, false))
+		if (compressed)
 		{
-			LoadZNodes(zip, type);
+			FileReader zip;
+			if (zip.OpenDecompressor(dalump, -1, METHOD_ZLIB, false))
+			{
+				LoadZNodes(zip, type);
+			}
+			else
+			{
+				Printf("Error loading nodes: Corrupt data.\n");
+				return false;
+			}
 		}
+		else
+		{
+			LoadZNodes(dalump, type);
+		}
+		return true;
 	}
-	else
+	catch (CRecoverableError &error)
 	{
-		LoadZNodes(dalump, type);
+		Printf("Error loading nodes: %s\n", error.GetMessage());
+		
+		Level->subsectors.Clear();
+		Level->segs.Clear();
+		Level->nodes.Clear();
+		return false;
 	}
+
 }
 
 
@@ -750,7 +769,7 @@ struct badseg
 };
 
 template<class segtype>
-void MapLoader::LoadSegs (MapData * map)
+bool MapLoader::LoadSegs (MapData * map)
 {
 	uint32_t numvertexes = Level->vertexes.Size();
 	TArray<uint8_t> vertchanged(numvertexes, true);
@@ -769,8 +788,7 @@ void MapLoader::LoadSegs (MapData * map)
 		Printf ("This map has no segs.\n");
 		Level->subsectors.Clear();
 		Level->nodes.Clear();
-		ForceNodeBuild = true;
-		return;
+		return false;
 	}
 
 	Level->segs.Alloc(numsegs);
@@ -790,7 +808,7 @@ void MapLoader::LoadSegs (MapData * map)
 
 	for (auto &line : Level->lines)
 	{
-		vertchanged[line.v1->Index()] = vertchanged[line.v2->Index()] = 1;
+		vertchanged[Index(line.v1)] = vertchanged[Index(line.v2)] = 1;
 	}
 
 	try
@@ -878,9 +896,9 @@ void MapLoader::LoadSegs (MapData * map)
 			{
 				throw badseg(3, i, side);
 			}
-			if ((unsigned)(ldef->sidedef[side]->Index()) >= Level->sides.Size())
+			if ((unsigned)(Index(ldef->sidedef[side])) >= Level->sides.Size())
 			{
-				throw badseg(2, i, ldef->sidedef[side]->Index());
+				throw badseg(2, i, Index(ldef->sidedef[side]));
 			}
 			li->sidedef = ldef->sidedef[side];
 			li->frontsector = ldef->sidedef[side]->sector;
@@ -921,8 +939,9 @@ void MapLoader::LoadSegs (MapData * map)
 		Level->segs.Clear();
 		Level->subsectors.Clear();
 		Level->nodes.Clear();
-		ForceNodeBuild = true;
+		return false;
 	}
+	return true;
 }
 
 
@@ -933,7 +952,7 @@ void MapLoader::LoadSegs (MapData * map)
 //===========================================================================
 
 template<class subsectortype, class segtype>
-void MapLoader::LoadSubsectors (MapData * map)
+bool MapLoader::LoadSubsectors (MapData * map)
 {
 	uint32_t maxseg = map->Size(ML_SEGS) / sizeof(segtype);
 
@@ -943,8 +962,7 @@ void MapLoader::LoadSubsectors (MapData * map)
 	{
 		Printf ("This map has an incomplete BSP tree.\n");
 		Level->nodes.Clear();
-		ForceNodeBuild = true;
-		return;
+		return false;
 	}
 
 	auto &subsectors = Level->subsectors;
@@ -965,8 +983,7 @@ void MapLoader::LoadSubsectors (MapData * map)
 			Printf ("Subsector %i is empty.\n", i);
 			Level->subsectors.Clear();
 			Level->nodes.Clear();
-			ForceNodeBuild = true;
-			return;
+			return false;
 		}
 
 		subsectors[i].numlines = subd.numsegs;
@@ -977,22 +994,22 @@ void MapLoader::LoadSubsectors (MapData * map)
 			Printf ("Subsector %d contains invalid segs %u-%u\n"
 				"The BSP will be rebuilt.\n", i, (unsigned)((size_t)subsectors[i].firstline),
 				(unsigned)((size_t)subsectors[i].firstline) + subsectors[i].numlines - 1);
-			ForceNodeBuild = true;
 			Level->nodes.Clear();
 			Level->subsectors.Clear();
-			break;
+			return false;
 		}
 		else if ((size_t)subsectors[i].firstline + subsectors[i].numlines > maxseg)
 		{
 			Printf ("Subsector %d contains invalid segs %u-%u\n"
 				"The BSP will be rebuilt.\n", i, maxseg,
 				(unsigned)((size_t)subsectors[i].firstline) + subsectors[i].numlines - 1);
-			ForceNodeBuild = true;
+
 			Level->nodes.Clear();
 			Level->subsectors.Clear();
-			break;
+			return false;
 		}
 	}
+	return true;
 }
 
 
@@ -1102,7 +1119,7 @@ void MapLoader::LoadSectors (MapData *map, FMissingTextureTracker &missingtex)
 //===========================================================================
 
 template<class nodetype, class subsectortype>
-void MapLoader::LoadNodes (MapData * map)
+bool MapLoader::LoadNodes (MapData * map)
 {
 	FMemLump	data;
 	int 		j;
@@ -1117,8 +1134,7 @@ void MapLoader::LoadNodes (MapData * map)
 
 	if ((numnodes == 0 && maxss != 1) || maxss == 0)
 	{
-		ForceNodeBuild = true;
-		return;
+		return false;
 	}
 	
 	auto &nodes = Level->nodes;
@@ -1146,28 +1162,25 @@ void MapLoader::LoadNodes (MapData * map)
 				{
 					Printf ("BSP node %d references invalid subsector %d.\n"
 						"The BSP will be rebuilt.\n", i, child);
-					ForceNodeBuild = true;
 					Level->nodes.Clear();
-					return;
+					return false;
 				}
 				no->children[j] = (uint8_t *)&Level->subsectors[child] + 1;
 			}
 			else if ((unsigned)child >= numnodes)
 			{
 				Printf ("BSP node %d references invalid node %d.\n"
-					"The BSP will be rebuilt.\n", i, ((node_t *)no->children[j])->Index());
-				ForceNodeBuild = true;
+					"The BSP will be rebuilt.\n", i, Index(((node_t *)no->children[j])));
 				Level->nodes.Clear();
-				return;
+				return false;
 			}
 			else if (used[child])
 			{
 				Printf ("BSP node %d references node %d,\n"
 					"which is already used by node %d.\n"
 					"The BSP will be rebuilt.\n", i, child, used[child]-1);
-				ForceNodeBuild = true;
 				Level->nodes.Clear();
-				return;
+				return false;
 			}
 			else
 			{
@@ -1180,6 +1193,7 @@ void MapLoader::LoadNodes (MapData * map)
 			}
 		}
 	}
+	return true;
 }
 
 //===========================================================================
@@ -1478,7 +1492,7 @@ void MapLoader::SaveLineSpecial (line_t *ld)
 	if (ld->sidedef[0] == nullptr)
 		return;
 
-	uint32_t sidenum = ld->sidedef[0]->Index();
+	uint32_t sidenum = Index(ld->sidedef[0]);
 	// killough 4/4/98: support special sidedef interpretation below
 	// [RH] Save Static_Init only if it's interested in the textures
 	if	(ld->special != Static_Init || ld->args[1] == Init_Color)
@@ -1506,7 +1520,7 @@ void MapLoader::FinishLoadingLineDef(line_t *ld, int alpha)
 	ld->backsector  = ld->sidedef[1] != nullptr ? ld->sidedef[1]->sector : nullptr;
 	double dx = (ld->v2->fX() - ld->v1->fX());
 	double dy = (ld->v2->fY() - ld->v1->fY());
-	int linenum = ld->Index();
+	int linenum = Index(ld);
 
 	if (ld->frontsector == nullptr)
 	{
@@ -1581,7 +1595,7 @@ void MapLoader::FinishLoadingLineDefs ()
 {
 	for (auto &line : Level->lines)
 	{
-		FinishLoadingLineDef(&line, sidetemp[line.sidedef[0]->Index()].a.alpha);
+		FinishLoadingLineDef(&line, sidetemp[Index(line.sidedef[0])].a.alpha);
 	}
 }
 
@@ -1869,7 +1883,7 @@ void MapLoader::LoopSidedefs (bool firstloop)
 		// as their left edge.
 		line_t *line = Level->sides[i].linedef;
 		int lineside = (line->sidedef[0] != &Level->sides[i]);
-		int vert = lineside ? line->v2->Index() : line->v1->Index();
+		int vert = lineside ? Index(line->v2) : Index(line->v1);
 		
 		sidetemp[i].b.lineside = lineside;
 		sidetemp[i].b.next = sidetemp[vert].b.first;
@@ -1893,26 +1907,26 @@ void MapLoader::LoopSidedefs (bool firstloop)
 		// instead of as part of another loop
 		if (line->frontsector == line->backsector)
 		{
-			const side_t* const rightside = line->sidedef[!sidetemp[i].b.lineside];
+			side_t* rightside = line->sidedef[!sidetemp[i].b.lineside];
 
 			if (nullptr == rightside)
 			{
 				// There is no right side!
-				if (firstloop) Printf ("Line %d's right edge is unconnected\n", linemap[line->Index()]);
+				if (firstloop) Printf ("Line %d's right edge is unconnected\n", linemap[Index(line)]);
 				continue;
 			}
 
-			right = rightside->Index();
+			right = Index(rightside);
 		}
 		else
 		{
 			if (sidetemp[i].b.lineside)
 			{
-				right = line->v1->Index();
+				right = Index(line->v1);
 			}
 			else
 			{
-				right = line->v2->Index();
+				right = Index(line->v2);
 			}
 
 			right = sidetemp[right].b.first;
@@ -1920,7 +1934,7 @@ void MapLoader::LoopSidedefs (bool firstloop)
 			if (right == NO_SIDE)
 			{ 
 				// There is no right side!
-				if (firstloop) Printf ("Line %d's right edge is unconnected\n", linemap[line->Index()]);
+				if (firstloop) Printf ("Line %d's right edge is unconnected\n", linemap[Index(line)]);
 				continue;
 			}
 
@@ -2686,7 +2700,7 @@ void MapLoader::GroupLines (bool buildmap)
 	{
 		if (sector->Lines.Count == 0)
 		{
-			Printf ("Sector %i (tag %i) has no lines\n", i, tagManager.GetFirstSectorTag(sector));
+			Printf ("Sector %i (tag %i) has no lines\n", i, tagManager.GetFirstSectorTag(Index(sector)));
 			// 0 the sector's tag so that no specials can use it
 			tagManager.RemoveSectorTags(i);
 		}
@@ -2702,11 +2716,11 @@ void MapLoader::GroupLines (bool buildmap)
 		auto li = &Level->lines[i];
 		if (li->frontsector != nullptr)
 		{
-			li->frontsector->Lines[linesDoneInEachSector[li->frontsector->Index()]++] = li;
+			li->frontsector->Lines[linesDoneInEachSector[Index(li->frontsector)]++] = li;
 		}
 		if (li->backsector != nullptr && li->backsector != li->frontsector)
 		{
-			li->backsector->Lines[linesDoneInEachSector[li->backsector->Index()]++] = li;
+			li->backsector->Lines[linesDoneInEachSector[Index(li->backsector)]++] = li;
 		}
 	}
 	
@@ -2825,12 +2839,12 @@ void MapLoader::LoadBehavior(MapData * map)
 {
 	if (map->Size(ML_BEHAVIOR) > 0)
 	{
-		FBehavior::StaticLoadModule(-1, &map->Reader(ML_BEHAVIOR), map->Size(ML_BEHAVIOR));
+		Level->Behaviors.LoadModule(-1, &map->Reader(ML_BEHAVIOR), map->Size(ML_BEHAVIOR));
 	}
-	if (!FBehavior::StaticCheckAllGood())
+	if (!Level->Behaviors.CheckAllGood())
 	{
 		Printf("ACS scripts unloaded.\n");
-		FBehavior::StaticUnloadModules();
+		Level->Behaviors.UnloadModules();
 	}
 }
 
@@ -2866,6 +2880,40 @@ void MapLoader::GetPolySpots (MapData * map, TArray<FNodeBuilder::FPolyStart> &s
 	}
 }
 
+//==========================================================================
+//
+//
+//
+//==========================================================================
+
+void MapLoader::CalcIndices()
+{
+	// sectornums were already initialized because some init code needs them.
+	for (unsigned int i = 0; i < Level->vertexes.Size(); ++i)
+	{
+		Level->vertexes[i].vertexnum = i;
+	}
+	for (unsigned int i = 0; i < Level->lines.Size(); ++i)
+	{
+		Level->lines[i].linenum = i;
+	}
+	for (unsigned int i = 0; i < Level->sides.Size(); ++i)
+	{
+		Level->sides[i].sidenum = i;
+	}
+	for (unsigned int i = 0; i < Level->segs.Size(); ++i)
+	{
+		Level->segs[i].segnum = i;
+	}
+	for (unsigned int i = 0; i < Level->subsectors.Size(); ++i)
+	{
+		Level->subsectors[i].subsectornum = i;
+	}
+	for (unsigned int i = 0; i < Level->nodes.Size(); ++i)
+	{
+		Level->nodes[i].nodenum = i;
+	}
+}
 
 //==========================================================================
 //
@@ -2881,7 +2929,7 @@ void MapLoader::LoadLevel(MapData *map, const char *lumpname, int position)
 	ForceNodeBuild = gennodes;
 
 	// [RH] Load in the BEHAVIOR lump
-	FBehavior::StaticUnloadModules();
+	Level->Behaviors.UnloadModules();
 	if (map->HasBehavior)
 	{
 		LoadBehavior(map);
@@ -2919,7 +2967,7 @@ void MapLoader::LoadLevel(MapData *map, const char *lumpname, int position)
 	{
 		ForceNodeBuild = true;
 	}
-	T_LoadScripts(map);
+	T_LoadScripts(Level, map);
 
 	if (!map->HasBehavior || map->isText)
 	{
@@ -2941,7 +2989,7 @@ void MapLoader::LoadLevel(MapData *map, const char *lumpname, int position)
 		Level->flags2 |= LEVEL2_DUMMYSWITCHES;
 	}
 
-	FBehavior::StaticLoadDefaultModules();
+	Level->Behaviors.LoadDefaultModules();
 	LoadMapinfoACSLump();
 
 
@@ -3006,22 +3054,11 @@ void MapLoader::LoadLevel(MapData *map, const char *lumpname, int position)
 			idcheck6 = MAKE_ID('X', 'G', 'L', '3');
 		}
 
+		bool NodesLoaded = false;
 		if (fr != nullptr && fr->isOpen()) fr->Read(&id, 4);
 		if (id != 0 && (id == idcheck || id == idcheck2 || id == idcheck3 || id == idcheck4 || id == idcheck5 || id == idcheck6))
 		{
-			try
-			{
-				LoadExtendedNodes(*fr, id);
-			}
-			catch (CRecoverableError &error)
-			{
-				Printf("Error loading nodes: %s\n", error.GetMessage());
-
-				ForceNodeBuild = true;
-				Level->subsectors.Clear();
-				Level->segs.Clear();
-				Level->nodes.Clear();
-			}
+			NodesLoaded = LoadExtendedNodes(*fr, id);
 		}
 		else if (!map->isText)	// regular nodes are not supported for text maps
 		{
@@ -3031,29 +3068,26 @@ void MapLoader::LoadLevel(MapData *map, const char *lumpname, int position)
 			{
 				if (!P_CheckV4Nodes(map))
 				{
-					LoadSubsectors<mapsubsector_t, mapseg_t>(map);
-					if (!ForceNodeBuild) LoadNodes<mapnode_t, mapsubsector_t>(map);
-					if (!ForceNodeBuild) LoadSegs<mapseg_t>(map);
+					NodesLoaded = LoadSubsectors<mapsubsector_t, mapseg_t>(map) &&
+						LoadNodes<mapnode_t, mapsubsector_t>(map) &&
+					 	LoadSegs<mapseg_t>(map);
 				}
 				else
 				{
-					LoadSubsectors<mapsubsector4_t, mapseg4_t>(map);
-					if (!ForceNodeBuild) LoadNodes<mapnode4_t, mapsubsector4_t>(map);
-					if (!ForceNodeBuild) LoadSegs<mapseg4_t>(map);
+					NodesLoaded = LoadSubsectors<mapsubsector4_t, mapseg4_t>(map) &&
+						LoadNodes<mapnode4_t, mapsubsector4_t>(map) &&
+						LoadSegs<mapseg4_t>(map);
 				}
 			}
-			else ForceNodeBuild = true;
 		}
-		else ForceNodeBuild = true;
 
 		// If loading the regular nodes failed try GL nodes before considering a rebuild
-		if (ForceNodeBuild)
+		if (!NodesLoaded)
 		{
 			if (LoadGLNodes(map))
-			{
-				ForceNodeBuild = false;
 				reloop = true;
-			}
+			else
+				ForceNodeBuild = true;
 		}
 	}
 	else reloop = true;
@@ -3061,9 +3095,21 @@ void MapLoader::LoadLevel(MapData *map, const char *lumpname, int position)
 	uint64_t startTime = 0, endTime = 0;
 
 	bool BuildGLNodes;
+
+	// The node builder needs these indices.
+	for (unsigned int i = 0; i < Level->sides.Size(); ++i)
+	{
+		Level->sides[i].sidenum = i;
+	}
+
 	if (ForceNodeBuild)
 	{
 		BuildGLNodes = true;
+		// In case the compatibility handler made changes to the map's layout
+		for(auto &line : Level->lines)
+		{
+			line.AdjustLine();
+		}
 
 		startTime = I_msTime();
 		TArray<FNodeBuilder::FPolyStart> polyspots, anchors;
@@ -3076,9 +3122,7 @@ void MapLoader::LoadLevel(MapData *map, const char *lumpname, int position)
 			0, 0, 0, 0
 		};
 		leveldata.FindMapBounds();
-		// We need GL nodes if am_textured is on.
-		// In case a sync critical game mode is started, also build GL nodes to avoid problems
-		// if the different machines' am_textured setting differs.
+
 		FNodeBuilder builder(leveldata, polyspots, anchors, BuildGLNodes);
 		builder.Extract(*Level);
 		endTime = I_msTime();
@@ -3114,7 +3158,7 @@ void MapLoader::LoadLevel(MapData *map, const char *lumpname, int position)
 	// use in P_PointInSubsector to avoid problems with maps that depend on the specific
 	// nodes they were built with (P:AR E1M3 is a good example for a map where this is the case.)
 	reloop |= CheckNodes(map, BuildGLNodes, (uint32_t)(endTime - startTime));
-
+	
 	// set the head node for gameplay purposes. If the separate gamenodes array is not empty, use that, otherwise use the render nodes.
 	Level->headgamenode = Level->gamenodes.Size() > 0 ? &Level->gamenodes[Level->gamenodes.Size() - 1] : Level->nodes.Size() ? &Level->nodes[Level->nodes.Size() - 1] : nullptr;
 
@@ -3126,6 +3170,9 @@ void MapLoader::LoadLevel(MapData *map, const char *lumpname, int position)
 	SetRenderSector();
 	FixMinisegReferences();
 	FixHoles();
+
+	// Create the item indices, after the last function which may change the data has run.
+	CalcIndices();
 
 	Level->bodyqueslot = 0;
 	// phares 8/10/98: Clear body queue so the corpses from previous games are
@@ -3174,7 +3221,7 @@ void MapLoader::LoadLevel(MapData *map, const char *lumpname, int position)
 		node.len = (float)g_sqrt(fdx * fdx + fdy * fdy);
 	}
 
-	InitRenderInfo();				// create hardware independent renderer resources for the level. This must be done BEFORE the PolyObj Spawn!!!	
+	InitRenderInfo();				// create hardware independent renderer resources for the level. This must be done BEFORE the PolyObj Spawn!!!
 	P_ClearDynamic3DFloorData();	// CreateVBO must be run on the plain 3D floor data.
 	screen->mVertexData->CreateVBO();
 

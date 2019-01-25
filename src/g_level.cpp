@@ -78,6 +78,7 @@
 #include "vm.h"
 #include "events.h"
 #include "i_music.h"
+#include "a_dynlight.h"
 
 #include "gi.h"
 
@@ -88,7 +89,7 @@
 #include "p_maputl.h"
 
 void STAT_StartNewGame(const char *lev);
-void STAT_ChangeLevel(const char *newl);
+void STAT_ChangeLevel(const char *newl, FLevelLocals *Level);
 
 EXTERN_CVAR(Bool, save_formatted)
 EXTERN_CVAR (Float, sv_gravity)
@@ -127,7 +128,7 @@ CUSTOM_CVAR(Int, gl_lightmode, 0, CVAR_ARCHIVE | CVAR_NOINITCALL) // [LAD] defau
 	else if (newself > 4) newself = 8;
 	else if (newself < 0) newself = 0;
 	if (self != newself) self = newself;
-	else if ((level.info == nullptr || level.info->lightmode == ELightMode::NotSet)) level.lightmode = (ELightMode)*self;
+	else if ((level.info == nullptr || level.info->lightmode == ELightMode::NotSet)) level.lightMode = (ELightMode)*self;
 }
 
 
@@ -340,8 +341,8 @@ void G_NewInit ()
 	int i;
 
 	// Destory all old player refrences that may still exist
-	TThinkerIterator<APlayerPawn> it(STAT_TRAVELLING);
-	APlayerPawn *pawn, *next;
+	TThinkerIterator<AActor> it(NAME_PlayerPawn, STAT_TRAVELLING);
+	AActor *pawn, *next;
 
 	next = it.Next();
 	while ((pawn = next) != NULL)
@@ -643,14 +644,14 @@ void G_ChangeLevel(const char *levelname, int position, int flags, int nextSkill
 
 	// [RH] Give scripts a chance to do something
 	unloading = true;
-	FBehavior::StaticStartTypedScripts (SCRIPT_Unloading, NULL, false, 0, true);
+	level.Behaviors.StartTypedScripts (SCRIPT_Unloading, NULL, false, 0, true);
 	// [ZZ] safe world unload
 	E_WorldUnloaded();
 	// [ZZ] unsafe world unload (changemap != map)
 	E_WorldUnloadedUnsafe();
 	unloading = false;
 
-	STAT_ChangeLevel(nextlevel);
+	STAT_ChangeLevel(nextlevel, &level);
 
 	if (thiscluster && (thiscluster->flags & CLUSTER_HUB))
 	{
@@ -856,7 +857,7 @@ void G_DoCompleted (void)
 			G_SnapshotLevel ();
 			// Do not free any global strings this level might reference
 			// while it's not loaded.
-			FBehavior::StaticLockLevelVarStrings();
+			level.Behaviors.LockLevelVarStrings(level.levelnum);
 		}
 		else
 		{ // Make sure we don't have a snapshot lying around from before.
@@ -1091,7 +1092,7 @@ void G_DoLoadLevel (int position, bool autosave, bool newGame)
 			if (fromSnapshot)
 			{
 				// ENTER scripts are being handled when the player gets spawned, this cannot be changed due to its effect on voodoo dolls.
-				FBehavior::StaticStartTypedScripts(SCRIPT_Return, players[ii].mo, true);
+				level.Behaviors.StartTypedScripts(SCRIPT_Return, players[ii].mo, true);
 			}
 		}
 	}
@@ -1099,7 +1100,7 @@ void G_DoLoadLevel (int position, bool autosave, bool newGame)
 	if (level.FromSnapshot)
 	{
 		// [Nash] run REOPEN scripts upon map re-entry
-		FBehavior::StaticStartTypedScripts(SCRIPT_Reopen, NULL, false);
+		level.Behaviors.StartTypedScripts(SCRIPT_Reopen, NULL, false);
 	}
 
 	StatusBar->AttachToPlayer (&players[consoleplayer]);
@@ -1291,7 +1292,7 @@ void G_StartTravel ()
 		{
 			AActor *pawn = players[i].mo;
 			AActor *inv;
-			players[i].camera = NULL;
+			players[i].camera = nullptr;
 
 			// Only living players travel. Dead ones get a new body on the new level.
 			if (players[i].health > 0)
@@ -1301,11 +1302,13 @@ void G_StartTravel ()
 				pawn->RemoveFromHash ();
 				pawn->tid = tid;		// Restore TID (but no longer linked into the hash chain)
 				pawn->ChangeStatNum (STAT_TRAVELLING);
+				pawn->DeleteAttachedLights();
 
 				for (inv = pawn->Inventory; inv != NULL; inv = inv->Inventory)
 				{
 					inv->ChangeStatNum (STAT_TRAVELLING);
 					inv->UnlinkFromWorld (nullptr);
+					inv->DeleteAttachedLights();
 				}
 			}
 		}
@@ -1327,15 +1330,15 @@ void G_StartTravel ()
 
 int G_FinishTravel ()
 {
-	TThinkerIterator<APlayerPawn> it (STAT_TRAVELLING);
-	APlayerPawn *pawn, *pawndup, *oldpawn, *next;
+	TThinkerIterator<AActor> it (NAME_PlayerPawn, STAT_TRAVELLING);
+	AActor *pawn, *pawndup, *oldpawn, *next;
 	AActor *inv;
 	FPlayerStart *start;
 	int pnum;
 	int failnum = 0;
 
 	// 
-	APlayerPawn* pawns[MAXPLAYERS];
+	AActor* pawns[MAXPLAYERS];
 	int pawnsnum = 0;
 
 	next = it.Next ();
@@ -1391,11 +1394,11 @@ int G_FinishTravel ()
 		{
 			P_FindFloorCeiling(pawn);
 		}
-		pawn->target = NULL;
-		pawn->lastenemy = NULL;
+		pawn->target = nullptr;
+		pawn->lastenemy = nullptr;
 		pawn->player->mo = pawn;
 		pawn->player->camera = pawn;
-		pawn->player->viewheight = pawn->ViewHeight;
+		pawn->player->viewheight = pawn->player->DefaultViewHeight();
 		pawn->flags2 &= ~MF2_BLASTED;
 		if (oldpawn != nullptr)
 		{
@@ -1530,11 +1533,12 @@ void G_InitLevelLocals ()
 
 	level.DefaultEnvironment = info->DefaultEnvironment;
 
-	level.lightmode = info->lightmode == ELightMode::NotSet? (ELightMode)*gl_lightmode : info->lightmode;
+	level.lightMode = info->lightmode == ELightMode::NotSet? (ELightMode)*gl_lightmode : info->lightmode;
 	level.brightfog = info->brightfog < 0? gl_brightfog : !!info->brightfog;
 	level.lightadditivesurfaces = info->lightadditivesurfaces < 0 ? gl_lightadditivesurfaces : !!info->lightadditivesurfaces;
 	level.notexturefill = info->notexturefill < 0 ? gl_notexturefill : !!info->notexturefill;
 
+	FLightDefaults::SetAttenuationForLevel();
 }
 
 //==========================================================================
@@ -1685,8 +1689,8 @@ void G_UnSnapshotLevel (bool hubLoad)
 		G_SerializeLevel (arc, hubLoad);
 		level.FromSnapshot = true;
 
-		TThinkerIterator<APlayerPawn> it;
-		APlayerPawn *pawn, *next;
+		TThinkerIterator<AActor> it(NAME_PlayerPawn);
+		AActor *pawn, *next;
 
 		next = it.Next();
 		while ((pawn = next) != 0)
@@ -1717,7 +1721,7 @@ void G_UnSnapshotLevel (bool hubLoad)
 	if (hubLoad)
 	{
 		// Unlock ACS global strings that were locked when the snapshot was made.
-		FBehavior::StaticUnlockLevelVarStrings();
+		level.Behaviors.UnlockLevelVarStrings(level.levelnum);
 	}
 }
 
@@ -1967,7 +1971,14 @@ void FLevelLocals::Tick ()
 
 void FLevelLocals::Mark()
 {
+	GC::Mark(SpotState);
+	GC::Mark(FraggleScriptThinker);
+	GC::Mark(ACSThinker);
 	canvasTextureInfo.Mark();
+	for (auto &c : CorpseQueue)
+	{
+		GC::Mark(c);
+	}
 	for (auto &s : sectorPortals)
 	{
 		GC::Mark(s.mSkybox);
@@ -2135,7 +2146,7 @@ DEFINE_ACTION_FUNCTION(FLevelLocals, SphericalCoords)
 
 	ACTION_RETURN_VEC3(DVector3(
 		deltaangle(vecTo.Angle(), viewYaw).Degrees,
-		deltaangle(-vecTo.Pitch(), viewPitch).Degrees,
+		deltaangle(vecTo.Pitch(), viewPitch).Degrees,
 		vecTo.Length()
 	));
 }
