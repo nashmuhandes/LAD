@@ -1024,9 +1024,8 @@ void G_Ticker ()
 
 	if (ToggleFullscreen)
 	{
-		static char toggle_fullscreen[] = "toggle fullscreen";
 		ToggleFullscreen = false;
-		AddCommandString (toggle_fullscreen);
+		AddCommandString ("toggle fullscreen");
 	}
 
 	// do things to change the game state
@@ -1176,6 +1175,7 @@ void G_Ticker ()
 
 	// [ZZ] also tick the UI part of the events
 	E_UiTick();
+	C_RunDelayedCommands();
 
 	// do main actions
 	switch (gamestate)
