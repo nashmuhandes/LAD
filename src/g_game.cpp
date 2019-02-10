@@ -214,9 +214,6 @@ FString			shotfile;
 FString savename;
 FString BackupSaveName;
 
-// [LAD]
-int saveCount;
-
 bool SendLand;
 const AActor *SendItemUse, *SendItemDrop;
 int SendItemDropAmount;
@@ -1893,8 +1890,6 @@ void G_DoLoadGame ()
 		return;
 	}
 
-	// [LAD] restore savecount
-	arc("savecount", saveCount);
 
 	// Read intermission data for hubs
 	G_SerializeHub(arc);
@@ -2196,11 +2191,6 @@ void G_DoSaveGame (bool okForQuicksave, FString filename, const char *descriptio
 		int tic = TICRATE;
 		savegameglobals("ticrate", tic);
 		savegameglobals("leveltime", level.time);
-
-		// [LAD] increment save counter
-		// To do: only increment upon manual saves, not autosaves
-		saveCount++;
-		savegameglobals("savecount", saveCount);
 	}
 
 	STAT_Serialize(savegameglobals);
@@ -2899,6 +2889,3 @@ DEFINE_GLOBAL(demoplayback)
 DEFINE_GLOBAL(automapactive);
 DEFINE_GLOBAL(Net_Arbitrator);
 DEFINE_GLOBAL(netgame);
-
-// [LAD]
-DEFINE_GLOBAL(saveCount);
