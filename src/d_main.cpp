@@ -527,7 +527,7 @@ CVAR (Flag, sv_nocountendmonst,		dmflags2, DF2_NOCOUNTENDMONST);
 CVAR (Flag, sv_respawnsuper,		dmflags2, DF2_RESPAWN_SUPER);
 
 // [LAD] allow mod control flags
-CVAR (Int, amcflags, 0, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
+CVAR (Int, amcflags, AMC_D_AUTOMAP | AMC_D_USERSAVE, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 CVAR (Flag, amc_automap,			amcflags, AMC_D_AUTOMAP);
 CVAR (Flag, amc_saves,				amcflags, AMC_D_USERSAVE);
 
