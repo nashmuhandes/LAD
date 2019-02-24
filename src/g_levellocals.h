@@ -571,6 +571,8 @@ public:
 	uint32_t		flags;
 	uint32_t		flags2;
 	uint32_t		flags3;
+
+	// [LAD]
 	uint32_t		ladflags;
 
 	uint32_t		fadeto;					// The color the palette fades to (usually black)
