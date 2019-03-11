@@ -838,8 +838,17 @@ int stripaccent(int code)
 	}
 	else if (code >= 0x100 && code < 0x180)
 	{
-		static const char accentless[] = "AaAaAaCcCcCcCcDdDdEeEeEeEeEeGgGgGgGgHhHhIiIiIiIiIiIiJjKkkLlLlLlLlLlNnNnNnnNnOoOoOoOoRrRrRrSsSsSsSsTtTtTtUuUuUuUuUuUuWwYyYZzZzZz ";
-		return accentless[code -0x100];
+		// For the double-accented Hungarian letters it makes more sense to first map them to the very similar looking Umlauts.
+		// (And screw the crappy specs here that do not allow UTF-8 multibyte characters here.)
+		if (code == 0x150) code = 0xd6;
+		else if (code == 0x151) code = 0xf6;
+		else if (code == 0x170) code = 0xdc;
+		else if (code == 0x171) code = 0xfc;
+		else
+		{
+			static const char accentless[] = "AaAaAaCcCcCcCcDdDdEeEeEeEeEeGgGgGgGgHhHhIiIiIiIiIiIiJjKkkLlLlLlLlLlNnNnNnnNnOoOoOoOoRrRrRrSsSsSsSsTtTtTtUuUuUuUuUuUuWwYyYZzZzZz ";
+			return accentless[code - 0x100];
+		}
 	}
 	else if (code >= 0x200 && code < 0x21c)
 	{
@@ -855,7 +864,8 @@ int stripaccent(int code)
 
 FFont *V_GetFont(const char *name, const char *fontlumpname)
 {
-	if (!stricmp(name, "CONFONT")) name = "ConsoleFont";	// several mods have used the name CONFONT directly and effectively duplicated the font.
+	if (!stricmp(name, "DBIGFONT")) name = "BigFont";	// several mods have used the name CONFONT directly and effectively duplicated the font.
+	else if (!stricmp(name, "CONFONT")) name = "ConsoleFont";	// several mods have used the name CONFONT directly and effectively duplicated the font.
 	FFont *font = FFont::FindFont (name);
 	if (font == nullptr)
 	{
@@ -1432,6 +1442,13 @@ void V_InitFonts()
 	InitLowerUpper();
 	V_InitCustomFonts();
 
+	FFont *CreateHexLumpFont(const char *fontname, int lump);
+
+	auto lump = Wads.CheckNumForFullName("newconsolefont.hex", 0);	// This is always loaded from gzdoom.pk3 to prevent overriding it with incomplete replacements.
+	if (lump == -1) I_FatalError("newconsolefont.hex not found");	// This font is needed - do not start up without it.
+	NewConsoleFont = CreateHexLumpFont("NewConsoleFont", lump);
+	CurrentConsoleFont = NewConsoleFont;
+
 	// load the heads-up font
 	if (!(SmallFont = V_GetFont("SmallFont", "SMALLFNT")))
 	{
@@ -1517,6 +1534,6 @@ void V_ClearFonts()
 		delete FFont::FirstFont;
 	}
 	FFont::FirstFont = nullptr;
-	SmallFont = SmallFont2 = BigFont = ConFont = IntermissionFont = nullptr;
+	CurrentConsoleFont = NewConsoleFont = SmallFont = SmallFont2 = BigFont = ConFont = IntermissionFont = nullptr;
 }
 

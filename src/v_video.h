@@ -343,7 +343,8 @@ protected:
 
 	template<class T>
 	bool ParseDrawTextureTags(FTexture *img, double x, double y, uint32_t tag, T& tags, DrawParms *parms, bool fortext) const;
-	void DrawTextCommon(FFont *font, int normalcolor, double x, double y, const char *string, DrawParms &parms);
+	template<class T>
+	void DrawTextCommon(FFont *font, int normalcolor, double x, double y, const T *string, DrawParms &parms);
 
 	F2DDrawer m2DDrawer;
 private:
@@ -351,9 +352,6 @@ private:
 	int Height = 0;
 protected:
 	int clipleft = 0, cliptop = 0, clipwidth = -1, clipheight = -1;
-
-	PalEntry Flash;						// Only needed to support some cruft in the interface that only makes sense for the software renderer
-	PalEntry SourcePalette[256];		// This is where unpaletted textures get their palette from
 
 public:
 	// Hardware render state that needs to be exposed to the API independent part of the renderer. For ease of access this is stored in the base class.
@@ -404,25 +402,11 @@ public:
 	// Make the surface visible.
 	virtual void Update ();
 
-	// Return a pointer to 256 palette entries that can be written to.
-	PalEntry *GetPalette ();
-
 	// Stores the palette with flash blended in into 256 dwords
-	void GetFlashedPalette (PalEntry palette[256]);
-
 	// Mark the palette as changed. It will be updated on the next Update().
 	virtual void UpdatePalette() {}
 
 	virtual void SetGamma() {}
-
-	// Sets a color flash. RGB is the color, and amount is 0-256, with 256
-	// being all flash and 0 being no flash. Returns false if the hardware
-	// does not support this. (Always true for now, since palettes can always
-	// be flashed.)
-	bool SetFlash (PalEntry rgb, int amount);
-
-	// Converse of SetFlash
-	void GetFlash (PalEntry &rgb, int &amount);
 
 	// Returns true if running fullscreen.
 	virtual bool IsFullscreen () = 0;
@@ -475,7 +459,6 @@ public:
 	}
 
 	// Report a game restart
-	void InitPalette();
 	void SetClearColor(int color);
 	virtual uint32_t GetCaps();
 	virtual void WriteSavePic(player_t *player, FileWriter *file, int width, int height);
@@ -502,6 +485,7 @@ public:
 	// Dim part of the canvas
 	void Dim(PalEntry color, float amount, int x1, int y1, int w, int h, FRenderStyle *style = nullptr);
 	void DoDim(PalEntry color, float amount, int x1, int y1, int w, int h, FRenderStyle *style = nullptr);
+	FVector4 CalcBlend(sector_t * viewsector, PalEntry *modulateColor);
 	void DrawBlend(sector_t * viewsector);
 
 	// Fill an area with a texture
@@ -546,6 +530,7 @@ public:
 	void DrawText(FFont *font, int normalcolor, double x, double y, const char *string, VMVa_List &args);
 	void DrawChar(FFont *font, int normalcolor, double x, double y, int character, int tag_first, ...);
 	void DrawChar(FFont *font, int normalcolor, double x, double y, int character, VMVa_List &args);
+	void DrawText(FFont *font, int normalcolor, double x, double y, const char32_t *string, int tag_first, ...);
 
 	void DrawFrame(int left, int top, int width, int height);
 	void DrawBorder(FTextureID, int x1, int y1, int x2, int y2);
@@ -626,6 +611,7 @@ bool AspectTallerThanWide(float aspect);
 void ScaleWithAspect(int &w, int &h, int Width, int Height);
 
 int GetUIScale(int altval);
+int GetConScale(int altval);
 
 EXTERN_CVAR(Int, uiscale);
 EXTERN_CVAR(Int, con_scaletext);
@@ -638,7 +624,7 @@ inline int active_con_scaletext()
 
 inline int active_con_scale()
 {
-	return GetUIScale(con_scale);
+	return GetConScale(con_scale);
 }
 
 

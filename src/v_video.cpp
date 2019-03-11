@@ -145,7 +145,7 @@ public:
 
 int DisplayWidth, DisplayHeight;
 
-FFont *SmallFont, *SmallFont2, *BigFont, *BigUpper, *ConFont, *IntermissionFont;
+FFont *SmallFont, *SmallFont2, *BigFont, *BigUpper, *ConFont, *IntermissionFont, *NewConsoleFont, *CurrentConsoleFont;
 
 uint32_t Col2RGB8[65][256];
 uint32_t *Col2RGB8_LessPrecision[65];
@@ -696,9 +696,6 @@ void V_Init (bool restart)
 	// Update screen palette when restarting
 	else
 	{
-		PalEntry *palette = screen->GetPalette ();
-		for (int i = 0; i < 256; ++i)
-			*palette++ = GPalette.BaseColors[i];
 		screen->UpdatePalette();
 	}
 
