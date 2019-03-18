@@ -145,7 +145,7 @@ public:
 
 int DisplayWidth, DisplayHeight;
 
-FFont *SmallFont, *SmallFont2, *BigFont, *BigUpper, *ConFont, *IntermissionFont, *NewConsoleFont, *CurrentConsoleFont;
+FFont *SmallFont, *SmallFont2, *BigFont, *BigUpper, *ConFont, *IntermissionFont, *NewConsoleFont, *NewSmallFont, *CurrentConsoleFont;
 
 uint32_t Col2RGB8[65][256];
 uint32_t *Col2RGB8_LessPrecision[65];
@@ -551,9 +551,13 @@ void V_UpdateModeSize (int width, int height)
 	else if (w >= 1600 && w < 1920) factor = 3; 
 	else  factor = w / 640;
 
-	CleanXfac = CleanYfac = CleanXfac_1 = CleanYfac_1 = factor;
-	CleanWidth = CleanWidth_1 = width / CleanXfac_1;
-	CleanHeight = CleanHeight_1 = height / CleanYfac_1;
+	CleanXfac = CleanYfac = factor;
+	CleanWidth = width / CleanXfac;
+	CleanHeight = height / CleanYfac;
+
+	CleanYfac_1 = CleanXfac_1 = MAX(1, int (CleanXfac * 0.7));
+	CleanWidth_1 = width / CleanXfac_1;
+	CleanHeight_1 = height / CleanYfac_1;
 
 	DisplayWidth = width;
 	DisplayHeight = height;
@@ -904,6 +908,7 @@ DEFINE_GLOBAL(SmallFont2)
 DEFINE_GLOBAL(BigFont)
 DEFINE_GLOBAL(ConFont)
 DEFINE_GLOBAL(NewConsoleFont)
+DEFINE_GLOBAL(NewSmallFont)
 DEFINE_GLOBAL(IntermissionFont)
 DEFINE_GLOBAL(CleanXfac)
 DEFINE_GLOBAL(CleanYfac)
