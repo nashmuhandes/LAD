@@ -1,0 +1,5 @@
+[enu default]
+
+MISCMNU_DELEGATEMODDERCONTROL = "Allow ZScript/MAPINFO Restrictions";
+MISCMNU_DELEGATESAVEGAMES = "Allow Savegame Restrictions";
+MISCMNU_DELEGATEAUTOMAP = "Allow Auto Map Restrictions";
