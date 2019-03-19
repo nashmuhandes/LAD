@@ -795,7 +795,7 @@ void D_Display ()
 		screen->DrawBlend(viewsec);
 		if (automapactive)
 		{
-			primaryLevel->automap->Drawer (hud_althud? viewheight : StatusBar->GetTopOfStatusbar());
+			primaryLevel->automap->Drawer ((hud_althud && viewheight == SCREENHEIGHT) ? viewheight : StatusBar->GetTopOfStatusbar());
 		}
 		
 		// for timing the statusbar code.
@@ -868,7 +868,7 @@ void D_Display ()
 	{
 		FTexture *tex;
 		int x;
-		FString pstring = "By ";
+		FString pstring = GStrings("TXT_BY");
 
 		tex = TexMan.GetTextureByName(gameinfo.PauseSign, true);
 		x = (SCREENWIDTH - tex->GetDisplayWidth() * CleanXfac)/2 +
@@ -876,7 +876,7 @@ void D_Display ()
 		screen->DrawTexture (tex, x, 4, DTA_CleanNoMove, true, TAG_DONE);
 		if (paused && multiplayer)
 		{
-			pstring += players[paused - 1].userinfo.GetName();
+			pstring << ' ' << players[paused - 1].userinfo.GetName();
 			screen->DrawText(SmallFont, CR_RED,
 				(screen->GetWidth() - SmallFont->StringWidth(pstring)*CleanXfac) / 2,
 				(tex->GetDisplayHeight() * CleanYfac) + 4, pstring, DTA_CleanNoMove, true, TAG_DONE);
