@@ -140,6 +140,10 @@ bool FGLRenderState::ApplyShader()
 	activeShader->muSpecularMaterial.Set(mGlossiness, mSpecularLevel);
 	activeShader->muAddColor.Set(mAddColor);
 
+	// [LAD] sunlight hack
+	activeShader->muSunPos.Set(mSunPos.vec);
+	activeShader->muSunColor.Set(mSunColor);
+
 	if (mGlowEnabled)
 	{
 		activeShader->muGlowTopColor.Set(mGlowTop.vec);

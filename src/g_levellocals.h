@@ -728,6 +728,11 @@ public:
 		return savegamerestore
 			|| (info != nullptr && info->Snapshot.mBuffer != nullptr && info->isValid());
 	}
+
+	// [LAD] sunlight hack
+	DVector3 sunPos;
+	PalEntry sunColor;
+
 };
 
 

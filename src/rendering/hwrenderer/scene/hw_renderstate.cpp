@@ -39,6 +39,10 @@
 //==========================================================================
 void HWDrawInfo::SetColor(FRenderState &state, int sectorlightlevel, int rellight, bool fullbright, const FColormap &cm, float alpha, bool weapon)
 {
+	// [LAD] sunlight hack
+	// I don't know where else to put this :S
+	state.SetSunParms();
+
 	if (fullbright)
 	{
 		state.SetColorAlpha(0xffffff, alpha, 0);

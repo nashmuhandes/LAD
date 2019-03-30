@@ -34,6 +34,23 @@ vec2 lightAttenuation(int i, vec3 normal, vec3 viewdir, float lightcolorA)
 	return vec2(attenuation, attenuation * specularLevel * pow(specAngle, phExp));
 }
 
+// [LAD] sunlight hack
+vec2 sunlightAttenuation(vec3 normal, vec3 viewdir)
+{
+	// Sun direction
+	vec3 sundir = normalize(uSunPos.xyz);
+
+	float attenuation = clamp(dot(normal, sundir), 0.0, 1.0);
+
+	float glossiness = uSpecularMaterial.x;
+	float specularLevel = uSpecularMaterial.y;
+
+	vec3 halfdir = normalize(viewdir + sundir);
+	float specAngle = clamp(dot(halfdir, normal), 0.0f, 1.0f);
+	float phExp = glossiness * 4.0f;
+	return vec2(attenuation, attenuation * specularLevel * pow(specAngle, phExp));
+}
+
 vec3 ProcessMaterialLight(Material material, vec3 color)
 {
 	vec4 dynlight = uDynLightColor;
@@ -66,6 +83,12 @@ vec3 ProcessMaterialLight(Material material, vec3 color)
 			}
 		}
 	}
+
+	// [LAD] sunlight hack
+	vec3 suncolor = uSunColor.rgb;
+	vec2 attenuation = sunlightAttenuation(normal, viewdir);
+	dynlight.rgb += suncolor * attenuation.x;
+	specular.rgb += suncolor * attenuation.y;
 
 	dynlight.rgb = clamp(color + desaturate(dynlight).rgb, 0.0, 1.4);
 	specular.rgb = clamp(desaturate(specular).rgb, 0.0, 1.4);

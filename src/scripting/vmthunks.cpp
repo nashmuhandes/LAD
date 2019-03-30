@@ -2981,6 +2981,8 @@ DEFINE_FIELD_BIT(FLevelLocals, flags3, removeitems, LEVEL3_REMOVEITEMS)
 // [LAD]
 DEFINE_FIELD_BIT(FLevelLocals, ladflags, noautomap, LADLEVEL_NOAUTOMAP)
 DEFINE_FIELD_BIT(FLevelLocals, ladflags, nousersave, LADLEVEL_NOSAVEGAME)
+DEFINE_FIELD(FLevelLocals, sunPos)
+DEFINE_FIELD(FLevelLocals, sunColor)
 
 DEFINE_FIELD_X(Sector, sector_t, floorplane)
 DEFINE_FIELD_X(Sector, sector_t, ceilingplane)

@@ -258,6 +258,10 @@ class FShader
 	FBufferedUniform1f muAlphaThreshold;
 	FBufferedUniform2f muSpecularMaterial;
 	FBufferedUniform1f muTimer;
+
+	// [LAD] sunlight hack
+	FBufferedUniform4f muSunPos;
+	FBufferedUniformPE muSunColor;
 	
 	int lights_index;
 	int modelmatrix_index;

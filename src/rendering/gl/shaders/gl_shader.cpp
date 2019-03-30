@@ -266,6 +266,10 @@ bool FShader::Load(const char * name, const char * vert_prog_lump, const char * 
 	i_data += "#define uLightDist uLightAttr.r\n";
 	i_data += "uniform int uFogEnabled;\n";
 
+	// [LAD] sunlight hack
+	i_data += "uniform vec4 uSunPos;\n";
+	i_data += "uniform vec4 uSunColor;\n";
+
 	// dynamic lights
 	i_data += "uniform int uLightIndex;\n";
 
@@ -537,6 +541,10 @@ bool FShader::Load(const char * name, const char * vert_prog_lump, const char * 
 	muSpecularMaterial.Init(hShader, "uSpecularMaterial");
 	muAddColor.Init(hShader, "uAddColor");
 	muTimer.Init(hShader, "timer");
+
+	// [LAD] sunlight hack
+	muSunPos.Init(hShader, "uSunPos");
+	muSunColor.Init(hShader, "uSunColor");
 
 	lights_index = glGetUniformLocation(hShader, "lights");
 	fakevb_index = glGetUniformLocation(hShader, "fakeVB");

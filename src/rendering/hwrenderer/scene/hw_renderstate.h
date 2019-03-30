@@ -156,6 +156,10 @@ protected:
 	FStateVec4 mDynColor;
 	FRenderStyle mRenderStyle;
 
+	// [LAD] sunlight hack
+	FStateVec4 mSunPos;
+	PalEntry mSunColor;
+
 	FMaterialState mMaterial;
 	FDepthBiasState mBias;
 
@@ -391,6 +395,16 @@ public:
 	{
 		mLightParms[1] = f;
 		mLightParms[0] = d;
+	}
+
+	void SetSunParms(void)
+	{
+		mSunPos.Set(primaryLevel->sunPos.X, primaryLevel->sunPos.Y, primaryLevel->sunPos.Z, 0.f);
+		PalEntry sc;
+		sc.r = primaryLevel->sunColor.r;
+		sc.g = primaryLevel->sunColor.g;
+		sc.b = primaryLevel->sunColor.b;
+		mSunColor = sc;
 	}
 
 	PalEntry GetFogColor() const

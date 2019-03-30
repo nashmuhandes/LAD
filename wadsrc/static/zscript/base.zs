@@ -710,6 +710,8 @@ struct LevelLocals native
 	// [LAD]
 	native bool noautomap;
 	native bool nousersave;
+	native Vector3 sunPos;
+	native Color sunColor;
 
 	native String GetUDMFString(int type, int index, Name key);
 	native int GetUDMFInt(int type, int index, Name key);
