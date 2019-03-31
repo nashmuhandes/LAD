@@ -60,10 +60,14 @@ vec3 ProcessMaterialLight(Material material, vec3 color)
 	}
 
 	// [LAD] sunlight hack
-	// Sun direction
 	vec3 sundir = normalize(uSunPos.xyz);
 	vec3 suncolor = uSunColor.rgb;
 	dynlight.rgb += suncolor * clamp(dot(normal, sundir), 0.0, 1.0);
+
+	// [LAD] ambient light hack
+	vec3 ambdir = normalize(vec3(1.0, 1.0, 1.0));
+	vec3 ambcolor = vec3(1.0, 1.0, 1.0);
+	dynlight.rgb += ambcolor * clamp(dot(normal, ambdir), 0.0, 0.05);
 
 	vec3 frag = material.Base.rgb * clamp(color + desaturate(dynlight).rgb, 0.0, 1.4);
 

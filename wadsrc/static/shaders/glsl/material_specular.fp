@@ -51,6 +51,22 @@ vec2 sunlightAttenuation(vec3 normal, vec3 viewdir)
 	return vec2(attenuation, attenuation * specularLevel * pow(specAngle, phExp));
 }
 
+// [LAD] ambient light hack
+vec2 ambientlightAttenuation(vec3 normal, vec3 viewdir)
+{
+	vec3 ambdir = normalize(vec3(1.0, 1.0, 1.0));
+
+	float attenuation = clamp(dot(normal, ambdir), 0.0, 0.05);
+
+	float glossiness = uSpecularMaterial.x;
+	float specularLevel = uSpecularMaterial.y;
+
+	vec3 halfdir = normalize(viewdir + ambdir);
+	float specAngle = clamp(dot(halfdir, normal), 0.0f, 1.0f);
+	float phExp = glossiness * 4.0f;
+	return vec2(attenuation, attenuation * specularLevel * pow(specAngle, phExp));
+}
+
 vec3 ProcessMaterialLight(Material material, vec3 color)
 {
 	vec4 dynlight = uDynLightColor;
@@ -89,6 +105,12 @@ vec3 ProcessMaterialLight(Material material, vec3 color)
 	vec2 attenuation = sunlightAttenuation(normal, viewdir);
 	dynlight.rgb += suncolor * attenuation.x;
 	specular.rgb += suncolor * attenuation.y;
+
+	// [LAD] ambient light hack
+	vec3 ambcolor = vec3(1.0, 1.0, 1.0);
+	vec2 ambattenuation = ambientlightAttenuation(normal, viewdir);
+	dynlight.rgb += ambcolor * ambattenuation.x;
+	specular.rgb += ambcolor * ambattenuation.y;
 
 	dynlight.rgb = clamp(color + desaturate(dynlight).rgb, 0.0, 1.4);
 	specular.rgb = clamp(desaturate(specular).rgb, 0.0, 1.4);
