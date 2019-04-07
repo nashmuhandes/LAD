@@ -2193,7 +2193,6 @@ OptionMenu CustomResolutionMenu protected
 	StaticText "$VIDMNU_RESPRESETHEAD"
 	StaticText ""
 	StaticText "$VIDMNU_ASPECT43"
-	Command "320x240", "menu_resolution_set_custom 320 240"
 	Command "640x480", "menu_resolution_set_custom 640 480"
 	Command "1024x768", "menu_resolution_set_custom 1024 768"
 	Command "1280x960", "menu_resolution_set_custom 1280 960"
@@ -2656,12 +2655,14 @@ OptionMenu "ReverbSave" protected
 OptionString "LanguageOptions"
 {
 	"auto", "Auto"
+	"default", "English (US)"
 	"eng", "English (UK)"
-	"enu", "English (US)"
-	"fr", "Français (FR)"
-	"ita", "Italiano (ITA)"
-	"ptb", "Português do Brasil (PTB)"
-	"rus", "Русский (RU)"
+	"de", "Deutsch"
+	"es", "Español (España)"
+	"esm", "Español (Latino)"
+	"fr", "Français"
+	"it", "Italiano"
+	"ru", "Русский"
 }
 
 /*=======================================
