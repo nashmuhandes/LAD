@@ -1083,6 +1083,10 @@ xx(MapMarker)
 xx(Spawn2)
 xx(LevelLocals)
 xx(Level)
+xx(PlayerTeam)
+xx(PlayerColors)
+xx(PlayerSkin)
+xx(NewPlayerMenu)
 
 // [LAD]
 xx(LADBodyPart)
