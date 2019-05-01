@@ -78,6 +78,9 @@ class PPRenderState
 public:
 	virtual ~PPRenderState() = default;
 
+	virtual void PushGroup(const FString &name) = 0;
+	virtual void PopGroup() = 0;
+
 	virtual void Draw() = 0;
 
 	void Clear()
@@ -723,7 +726,7 @@ struct PresentUniforms
 	FVector2 Scale;
 	FVector2 Offset;
 	float ColorScale;
-	float Padding;
+	int HdrMode;
 
 	static std::vector<UniformFieldDesc> Desc()
 	{
@@ -738,6 +741,7 @@ struct PresentUniforms
 			{ "UVScale", UniformType::Vec2, offsetof(PresentUniforms, Scale) },
 			{ "UVOffset", UniformType::Vec2, offsetof(PresentUniforms, Offset) },
 			{ "ColorScale", UniformType::Float, offsetof(PresentUniforms, ColorScale) },
+			{ "HdrMode", UniformType::Int, offsetof(PresentUniforms, HdrMode) }
 		};
 	}
 };

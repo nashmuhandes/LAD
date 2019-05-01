@@ -72,6 +72,10 @@ extern bool NoInterpolateView;
 extern int rendered_commandbuffers;
 int current_rendered_commandbuffers;
 
+extern bool gpuStatActive;
+extern bool keepGpuStatActive;
+extern FString gpuStatOutput;
+
 VulkanFrameBuffer::VulkanFrameBuffer(void *hMonitor, bool fullscreen, VulkanDevice *dev) : 
 	Super(hMonitor, fullscreen) 
 {
@@ -93,13 +97,13 @@ VulkanFrameBuffer::VulkanFrameBuffer(void *hMonitor, bool fullscreen, VulkanDevi
 
 VulkanFrameBuffer::~VulkanFrameBuffer()
 {
+	// screen is already null at this point, but VkHardwareTexture::ResetAll needs it during clean up. Is there a better way we can do this?
+	auto tmp = screen;
+	screen = this;
+
 	// All descriptors must be destroyed before the descriptor pool in renderpass manager is destroyed
-	for (VkHardwareTexture *cur = VkHardwareTexture::First; cur; cur = cur->Next)
-		cur->Reset();
-
-	for (VKBuffer *cur = VKBuffer::First; cur; cur = cur->Next)
-		cur->Reset();
-
+	VkHardwareTexture::ResetAll();
+	VKBuffer::ResetAll();
 	PPResource::ResetAll();
 
 	delete MatricesUBO;
@@ -109,6 +113,8 @@ VulkanFrameBuffer::~VulkanFrameBuffer()
 	delete mViewpoints;
 	delete mLights;
 	mShadowMap.Reset();
+
+	screen = tmp;
 
 	DeleteFrameObjects();
 }
@@ -158,6 +164,12 @@ void VulkanFrameBuffer::InitializeState()
 #else
 	mRenderState.reset(new VkRenderState());
 #endif
+
+	QueryPoolBuilder querybuilder;
+	querybuilder.setQueryType(VK_QUERY_TYPE_TIMESTAMP, MaxTimestampQueries);
+	mTimestampQueryPool = querybuilder.create(device);
+
+	GetDrawCommands()->resetQueryPool(mTimestampQueryPool.get(), 0, MaxTimestampQueries);
 }
 
 void VulkanFrameBuffer::Update()
@@ -178,6 +190,7 @@ void VulkanFrameBuffer::Update()
 	Flush3D.Unclock();
 
 	WaitForCommands(true);
+	UpdateGpuStats();
 
 	Super::Update();
 }
@@ -188,6 +201,7 @@ void VulkanFrameBuffer::DeleteFrameObjects()
 	FrameDeleteList.ImageViews.clear();
 	FrameDeleteList.Buffers.clear();
 	FrameDeleteList.Descriptors.clear();
+	FrameDeleteList.DescriptorPools.clear();
 	FrameDeleteList.CommandBuffers.clear();
 }
 
@@ -272,8 +286,12 @@ void VulkanFrameBuffer::WaitForCommands(bool finish)
 	}
 
 	int numWaitFences = MIN(mNextSubmit, (int)maxConcurrentSubmitCount);
-	vkWaitForFences(device->device, numWaitFences, mSubmitWaitFences, VK_TRUE, std::numeric_limits<uint64_t>::max());
-	vkResetFences(device->device, numWaitFences, mSubmitWaitFences);
+
+	if (numWaitFences > 0)
+	{
+		vkWaitForFences(device->device, numWaitFences, mSubmitWaitFences, VK_TRUE, std::numeric_limits<uint64_t>::max());
+		vkResetFences(device->device, numWaitFences, mSubmitWaitFences);
+	}
 
 	DeleteFrameObjects();
 	mNextSubmit = 0;
@@ -776,12 +794,77 @@ TArray<uint8_t> VulkanFrameBuffer::GetScreenshotBuffer(int &pitch, ESSType &colo
 
 void VulkanFrameBuffer::BeginFrame()
 {
+	if (mNextTimestampQuery > 0)
+	{
+		GetDrawCommands()->resetQueryPool(mTimestampQueryPool.get(), 0, mNextTimestampQuery);
+		mNextTimestampQuery = 0;
+	}
+
 	SetViewportRects(nullptr);
 	mScreenBuffers->BeginFrame(screen->mScreenViewport.width, screen->mScreenViewport.height, screen->mSceneViewport.width, screen->mSceneViewport.height);
 	mSaveBuffers->BeginFrame(SAVEPICWIDTH, SAVEPICHEIGHT, SAVEPICWIDTH, SAVEPICHEIGHT);
 	mPostprocess->BeginFrame();
 	mRenderState->BeginFrame();
 	mRenderPassManager->UpdateDynamicSet();
+}
+
+void VulkanFrameBuffer::PushGroup(const FString &name)
+{
+	if (!gpuStatActive)
+		return;
+
+	if (mNextTimestampQuery < VulkanFrameBuffer::MaxTimestampQueries)
+	{
+		TimestampQuery q;
+		q.name = name;
+		q.startIndex = mNextTimestampQuery++;
+		q.endIndex = 0;
+		GetDrawCommands()->writeTimestamp(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, mTimestampQueryPool.get(), q.startIndex);
+		mGroupStack.push_back(timeElapsedQueries.size());
+		timeElapsedQueries.push_back(q);
+	}
+}
+
+void VulkanFrameBuffer::PopGroup()
+{
+	if (!gpuStatActive || mGroupStack.empty())
+		return;
+
+	TimestampQuery &q = timeElapsedQueries[mGroupStack.back()];
+	mGroupStack.pop_back();
+
+	if (mNextTimestampQuery < VulkanFrameBuffer::MaxTimestampQueries)
+	{
+		q.endIndex = mNextTimestampQuery++;
+		GetDrawCommands()->writeTimestamp(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, mTimestampQueryPool.get(), q.endIndex);
+	}
+}
+
+void VulkanFrameBuffer::UpdateGpuStats()
+{
+	uint64_t timestamps[MaxTimestampQueries];
+	mTimestampQueryPool->getResults(0, mNextTimestampQuery, sizeof(uint64_t) * mNextTimestampQuery, timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+
+	double timestampPeriod = device->PhysicalDevice.Properties.limits.timestampPeriod;
+
+	gpuStatOutput = "";
+	for (auto &q : timeElapsedQueries)
+	{
+		if (q.endIndex <= q.startIndex)
+			continue;
+
+		int64_t timeElapsed = std::max(static_cast<int64_t>(timestamps[q.endIndex] - timestamps[q.startIndex]), (int64_t)0);
+		double timeNS = timeElapsed * timestampPeriod;
+
+		FString out;
+		out.Format("%s=%04.2f ms\n", q.name.GetChars(), timeNS / 1000000.0f);
+		gpuStatOutput += out;
+	}
+	timeElapsedQueries.clear();
+	mGroupStack.clear();
+
+	gpuStatActive = keepGpuStatActive;
+	keepGpuStatActive = false;
 }
 
 void VulkanFrameBuffer::Draw2D()

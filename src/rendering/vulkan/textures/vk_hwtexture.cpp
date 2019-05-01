@@ -53,32 +53,39 @@ VkHardwareTexture::~VkHardwareTexture()
 	if (Prev) Prev->Next = Next;
 	else First = Next;
 
-	auto fb = GetVulkanFrameBuffer();
-	if (fb)
-	{
-		auto &deleteList = fb->FrameDeleteList;
-		for (auto &it : mDescriptorSets)
-		{
-			deleteList.Descriptors.push_back(std::move(it.descriptor));
-			it.descriptor = nullptr;
-		}
-		mDescriptorSets.clear();
-		if (mImage) deleteList.Images.push_back(std::move(mImage));
-		if (mImageView) deleteList.ImageViews.push_back(std::move(mImageView));
-		if (mStagingBuffer) deleteList.Buffers.push_back(std::move(mStagingBuffer));
-	}
+	Reset();
+}
+
+void VkHardwareTexture::ResetAll()
+{
+	for (VkHardwareTexture *cur = VkHardwareTexture::First; cur; cur = cur->Next)
+		cur->Reset();
 }
 
 void VkHardwareTexture::Reset()
 {
-	mDescriptorSets.clear();
-	mImage.reset();
-	mImageView.reset();
-	mStagingBuffer.reset();
+	if (auto fb = GetVulkanFrameBuffer())
+	{
+		ResetDescriptors();
+
+		auto &deleteList = fb->FrameDeleteList;
+		if (mImage) deleteList.Images.push_back(std::move(mImage));
+		if (mImageView) deleteList.ImageViews.push_back(std::move(mImageView));
+	}
 }
 
 void VkHardwareTexture::ResetDescriptors()
 {
+	if (auto fb = GetVulkanFrameBuffer())
+	{
+		auto &deleteList = fb->FrameDeleteList;
+
+		for (auto &it : mDescriptorSets)
+		{
+			deleteList.Descriptors.push_back(std::move(it.descriptor));
+		}
+	}
+
 	mDescriptorSets.clear();
 }
 
@@ -221,12 +228,12 @@ void VkHardwareTexture::CreateTexture(int w, int h, int pixelsize, VkFormat form
 	BufferBuilder bufbuilder;
 	bufbuilder.setSize(totalSize);
 	bufbuilder.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-	mStagingBuffer = bufbuilder.create(fb->device);
-	mStagingBuffer->SetDebugName("VkHardwareTexture.mStagingBuffer");
+	std::unique_ptr<VulkanBuffer> stagingBuffer = bufbuilder.create(fb->device);
+	stagingBuffer->SetDebugName("VkHardwareTexture.mStagingBuffer");
 
-	uint8_t *data = (uint8_t*)mStagingBuffer->Map(0, totalSize);
+	uint8_t *data = (uint8_t*)stagingBuffer->Map(0, totalSize);
 	memcpy(data, pixels, totalSize);
-	mStagingBuffer->Unmap();
+	stagingBuffer->Unmap();
 
 	ImageBuilder imgbuilder;
 	imgbuilder.setFormat(format);
@@ -252,7 +259,9 @@ void VkHardwareTexture::CreateTexture(int w, int h, int pixelsize, VkFormat form
 	region.imageExtent.depth = 1;
 	region.imageExtent.width = w;
 	region.imageExtent.height = h;
-	cmdbuffer->copyBufferToImage(mStagingBuffer->buffer, mImage->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	cmdbuffer->copyBufferToImage(stagingBuffer->buffer, mImage->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+	fb->FrameDeleteList.Buffers.push_back(std::move(stagingBuffer));
 
 	GenerateMipmaps(mImage.get(), cmdbuffer);
 }
