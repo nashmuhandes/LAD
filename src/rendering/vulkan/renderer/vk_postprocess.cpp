@@ -34,7 +34,7 @@ void VkPostprocess::SetActiveRenderTarget()
 	imageTransition.addImage(buffers->PipelineImage[mCurrentPipelineImage].get(), &buffers->PipelineLayout[mCurrentPipelineImage], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false);
 	imageTransition.execute(fb->GetDrawCommands());
 
-	fb->GetRenderState()->SetRenderTarget(buffers->PipelineView[mCurrentPipelineImage].get(), buffers->GetWidth(), buffers->GetHeight(), VK_SAMPLE_COUNT_1_BIT);
+	fb->GetRenderState()->SetRenderTarget(buffers->PipelineView[mCurrentPipelineImage].get(), nullptr, buffers->GetWidth(), buffers->GetHeight(), VK_FORMAT_R16G16B16A16_SFLOAT, VK_SAMPLE_COUNT_1_BIT);
 }
 
 void VkPostprocess::PostProcessScene(int fixedcm, const std::function<void()> &afterBloomDrawEndScene2D)
@@ -751,9 +751,9 @@ void VkPPRenderPassSetup::CreateRenderPass(const VkPPRenderPassKey &key)
 	builder.addSubpassColorAttachmentRef(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	builder.addExternalSubpassDependency(
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-		VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+		VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT);
 	RenderPass = builder.create(GetVulkanFrameBuffer()->device);
 	RenderPass->SetDebugName("VkPPRenderPassSetup.RenderPass");
 }

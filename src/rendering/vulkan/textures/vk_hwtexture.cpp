@@ -36,6 +36,7 @@
 #include "vulkan/textures/vk_samplers.h"
 #include "vulkan/renderer/vk_renderpass.h"
 #include "vulkan/renderer/vk_postprocess.h"
+#include "vulkan/renderer/vk_renderbuffers.h"
 #include "vk_hwtexture.h"
 
 VkHardwareTexture *VkHardwareTexture::First = nullptr;
@@ -71,6 +72,8 @@ void VkHardwareTexture::Reset()
 		auto &deleteList = fb->FrameDeleteList;
 		if (mImage) deleteList.Images.push_back(std::move(mImage));
 		if (mImageView) deleteList.ImageViews.push_back(std::move(mImageView));
+		if (mDepthStencil) deleteList.Images.push_back(std::move(mDepthStencil));
+		if (mDepthStencilView) deleteList.ImageViews.push_back(std::move(mDepthStencilView));
 	}
 }
 
@@ -172,6 +175,36 @@ VulkanImageView *VkHardwareTexture::GetImageView(FTexture *tex, int translation,
 		CreateImage(tex, translation, flags);
 	}
 	return mImageView.get();
+}
+
+VulkanImageView *VkHardwareTexture::GetDepthStencilView(FTexture *tex)
+{
+	if (!mDepthStencilView)
+	{
+		auto fb = GetVulkanFrameBuffer();
+
+		VkFormat format = fb->GetBuffers()->SceneDepthStencilFormat;
+		int w = tex->GetWidth();
+		int h = tex->GetHeight();
+
+		ImageBuilder builder;
+		builder.setSize(w, h);
+		builder.setSamples(VK_SAMPLE_COUNT_1_BIT);
+		builder.setFormat(format);
+		builder.setUsage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		mDepthStencil = builder.create(fb->device);
+		mDepthStencil->SetDebugName("VkHardwareTexture.DepthStencil");
+
+		ImageViewBuilder viewbuilder;
+		viewbuilder.setImage(mDepthStencil.get(), format, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+		mDepthStencilView = viewbuilder.create(fb->device);
+		mDepthStencilView->SetDebugName("VkHardwareTexture.DepthStencilView");
+
+		PipelineBarrier barrier;
+		barrier.addImage(mDepthStencil.get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+		barrier.execute(fb->GetTransferCommands(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+	}
+	return mDepthStencilView.get();
 }
 
 void VkHardwareTexture::CreateImage(FTexture *tex, int translation, int flags)
@@ -323,6 +356,11 @@ int VkHardwareTexture::GetMipLevels(int w, int h)
 
 void VkHardwareTexture::AllocateBuffer(int w, int h, int texelsize)
 {
+	if (mImage && (mImage->width != w || mImage->height != h || mTexelsize != texelsize))
+	{
+		Reset();
+	}
+
 	if (!mImage)
 	{
 		auto fb = GetVulkanFrameBuffer();
@@ -330,11 +368,15 @@ void VkHardwareTexture::AllocateBuffer(int w, int h, int texelsize)
 		VkFormat format = texelsize == 4 ? VK_FORMAT_B8G8R8A8_UNORM : VK_FORMAT_R8_UNORM;
 
 		ImageBuilder imgbuilder;
+		VkDeviceSize allocatedBytes = 0;
 		imgbuilder.setFormat(format);
 		imgbuilder.setSize(w, h);
-		imgbuilder.setUsage(VK_IMAGE_USAGE_SAMPLED_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
 		imgbuilder.setLinearTiling();
-		mImage = imgbuilder.create(fb->device);
+		imgbuilder.setUsage(VK_IMAGE_USAGE_SAMPLED_BIT, VMA_MEMORY_USAGE_UNKNOWN, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
+		imgbuilder.setMemoryType(
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		mImage = imgbuilder.create(fb->device, &allocatedBytes);
 		mImage->SetDebugName("VkHardwareTexture.mImage");
 		mImageLayout = VK_IMAGE_LAYOUT_GENERAL;
 		mTexelsize = texelsize;
@@ -349,6 +391,8 @@ void VkHardwareTexture::AllocateBuffer(int w, int h, int texelsize)
 		PipelineBarrier imageTransition;
 		imageTransition.addImage(mImage.get(), VK_IMAGE_LAYOUT_UNDEFINED, mImageLayout, 0, VK_ACCESS_SHADER_READ_BIT);
 		imageTransition.execute(cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+		bufferpitch = int(allocatedBytes / h / texelsize);
 	}
 }
 
