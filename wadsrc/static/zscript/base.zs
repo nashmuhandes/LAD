@@ -322,6 +322,7 @@ struct Font native
 	native int StringWidth(String code);
 	native bool CanPrint(String code);
 	native int GetHeight();
+	native int GetDisplacement();
 	native String GetCursor();
 
 	native static int FindFontColor(Name color);
@@ -401,6 +402,7 @@ struct GameInfoStruct native
 	native GIFont mStatscreenMapNameFont;
 	native GIFont mStatscreenEnteringFont;
 	native GIFont mStatscreenFinishedFont;
+	native GIFont mStatscreenContentFont;
 	native double gibfactor;
 	native bool intermissioncounter;
 	native Name mSliderColor;
