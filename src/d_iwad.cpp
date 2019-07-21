@@ -262,9 +262,9 @@ void FIWadManager::ParseIWadInfo(const char *fn, const char *data, int datasize,
 //
 //==========================================================================
 
-FIWadManager::FIWadManager(const char *fn)
+FIWadManager::FIWadManager(const char *fn, const char *optfn)
 {
-	FResourceFile *resfile = FResourceFile::OpenResourceFile(fn, true);
+	FResourceFile *resfile = FResourceFile::OpenResourceFile(optfn, true);
 	if (resfile != NULL)
 	{
 		uint32_t cnt = resfile->LumpCount();
@@ -280,10 +280,10 @@ FIWadManager::FIWadManager(const char *fn)
 			}
 		}
 		delete resfile;
-	}
-	if (mIWadNames.Size() == 0 || mIWadInfos.Size() == 0)
-	{
-		I_FatalError("No IWAD definitions found");
+		if (mIWadNames.Size() == 0 || mIWadInfos.Size() == 0)
+		{
+			I_FatalError("No IWAD definitions found");
+		}
 	}
 }
 
