@@ -3132,7 +3132,7 @@ bool AActor::Slam (AActor *thing)
 			// The charging monster may have died by the target's actions here.
 			if (health > 0)
 			{
-				if (SeeState != NULL) SetState (SeeState);
+				if (SeeState != NULL && !(flags8 & MF8_RETARGETAFTERSLAM)) SetState (SeeState);
 				else SetIdle();
 			}
 		}
@@ -3968,7 +3968,13 @@ void AActor::Tick ()
 					}
 					if (Vel.Z != 0 && (BounceFlags & BOUNCE_Actors))
 					{
-						P_BounceActor(this, onmo, true);
+						bool res = P_BounceActor(this, onmo, true);
+						// If the bouncer is a missile and has hit the other actor it needs to be exploded here
+						// to be in line with the case when an actor's side is hit.
+						if (!res && (flags & MF_MISSILE))
+						{
+							P_ExplodeMissile(this, nullptr, onmo);
+						}
 					}
 					else
 					{
