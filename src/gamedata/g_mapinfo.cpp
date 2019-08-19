@@ -62,6 +62,8 @@ TArray<FEpisode> AllEpisodes;
 
 extern TMap<int, FString> HexenMusic;
 
+TArray<int> ParsedLumps(8, true);
+
 //==========================================================================
 //
 //
@@ -2234,6 +2236,15 @@ void FMapInfoParser::ParseMapInfo (int lump, level_info_t &gamedefaults, level_i
 	defaultinfo = gamedefaults;
 	HexenHack = false;
 
+	if (ParsedLumps.Find(lump) != ParsedLumps.Size())
+	{
+		sc.ScriptMessage("MAPINFO file is processed more than once\n");
+	}
+	else
+	{
+		ParsedLumps.Push(lump);
+	}
+
 	while (sc.GetString ())
 	{
 		if (sc.Compare("include"))
@@ -2418,6 +2429,7 @@ static void ClearMapinfo()
 	DeinitIntermissions();
 	primaryLevel->info = nullptr;
 	primaryLevel->F1Pic = "";
+	ParsedLumps.Clear();
 }
 
 //==========================================================================
