@@ -107,19 +107,23 @@ class OptionMenu : Menu
 		mDesc = desc;
 		DontDim = desc.mDontDim;
 
-		let last = mDesc.mItems[mDesc.mItems.size() - 1];
-		bool lastIsText = (last is "OptionMenuItemStaticText");
-		if (lastIsText)
+		let itemCount = mDesc.mItems.size();
+		if (itemCount > 0)
 		{
-			String text = last.mLabel;
-			bool lastIsSpace = (text == "" || text == " ");
-			if (lastIsSpace)
+			let last = mDesc.mItems[itemCount - 1];
+			bool lastIsText = (last is "OptionMenuItemStaticText");
+			if (lastIsText)
 			{
-				mDesc.mItems.Pop();
+				String text = last.mLabel;
+				bool lastIsSpace = (text == "" || text == " ");
+				if (lastIsSpace)
+				{
+					mDesc.mItems.Pop();
+				}
 			}
 		}
 
-		if (mDesc != NULL && mDesc.mSelectedItem == -1) mDesc.mSelectedItem = FirstSelectable();
+		if (mDesc.mSelectedItem == -1) mDesc.mSelectedItem = FirstSelectable();
 		mDesc.CalcIndent();
 
 		// notify all items that the menu was just created.
@@ -155,18 +159,15 @@ class OptionMenu : Menu
 
 	int FirstSelectable()
 	{
-		if (mDesc != NULL)
+		// Go down to the first selectable item
+		int i = -1;
+		do
 		{
-			// Go down to the first selectable item
-			int i = -1;
-			do
-			{
-				i++;
-			}
-			while (i < mDesc.mItems.Size() && !mDesc.mItems[i].Selectable());
-			if (i>=0 && i < mDesc.mItems.Size()) return i;
+			i++;
 		}
-		return -1;
+		while (i < mDesc.mItems.Size() && !mDesc.mItems[i].Selectable());
+		if (i>=0 && i < mDesc.mItems.Size()) return i;
+		else return -1;
 	}
 
 	//=============================================================================
