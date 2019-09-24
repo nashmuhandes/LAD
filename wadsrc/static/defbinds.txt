@@ -18,7 +18,7 @@ d +moveright
 e +use
 r +reload
 shift "netevent EV_Sprint"
-alt +speed
+alt +user2
 space +jump
 ctrl crouch
 c chase
