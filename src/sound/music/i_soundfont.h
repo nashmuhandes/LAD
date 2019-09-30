@@ -3,15 +3,7 @@
 #include "doomtype.h"
 #include "w_wad.h"
 #include "files.h"
-#include "timiditypp/timidity_file.h"
-
-enum
-{
-    SF_SF2 = 1,
-    SF_GUS = 2,
-    SF_WOPL = 4,
-    SF_WOPN = 8
-};
+#include "filereadermusicinterface.h"
 
 struct FSoundFontInfo
 {
@@ -27,7 +19,8 @@ struct FSoundFontInfo
 //
 //==========================================================================
 
-class FSoundFontReader : public TimidityPlus::SoundFontReaderInterface
+class FSoundFontReader : public MusicIO::SoundFontReaderInterface
+// Yes, it's 3 copies of essentially the same interface, but since we want to keep the 3 renderers as isolated modules we have to pull in their own implementations here.
 {
 protected:
     // This is only doable for loose config files that get set as sound fonts. All other cases read from a contained environment where this does not apply.
@@ -59,11 +52,16 @@ public:
 	}
 
 	virtual FileReader Open(const char* name, std::string &filename);
-	virtual struct TimidityPlus::timidity_file* open_timidityplus_file(const char* name);
-	virtual void timidityplus_add_path(const char* name)
+
+	// Timidity++ interface
+	struct MusicIO::FileInterface* open_file(const char* name) override;
+	void add_search_path(const char* name) override
 	{
 		return AddPath(name);
 	}
+
+	MusicIO::FileInterface* open_interface(const char* name);
+
 };
 
 //==========================================================================
@@ -133,7 +131,7 @@ class FPatchSetReader : public FSoundFontReader
 	FString mFullPathToConfig;
 
 public:
-	FPatchSetReader();
+	FPatchSetReader(FileReader &reader);
 	FPatchSetReader(const char *filename);
 	virtual FileReader OpenMainConfigFile() override;
 	virtual FileReader OpenFile(const char *name) override;

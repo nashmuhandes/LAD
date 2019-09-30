@@ -23,11 +23,6 @@ if( ZD_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
 	endif()
 endif()
 
-option( DYN_FLUIDSYNTH "Dynamically load fluidsynth" ON )
-option( DYN_OPENAL "Dynamically load OpenAL" ON )
-option( DYN_SNDFILE "Dynamically load libsndfile" ON )
-option( DYN_MPG123 "Dynamically load libmpg123" ON )
-
 if( APPLE )
     option( OSX_COCOA_BACKEND "Use native Cocoa backend instead of SDL" ON )
 endif()
@@ -468,7 +463,7 @@ set( ZDOOM_LIBS ${ZDOOM_LIBS} "${ZLIB_LIBRARIES}" "${JPEG_LIBRARIES}" "${BZIP2_L
 if (HAVE_VULKAN)
 	set( ZDOOM_LIBS ${ZDOOM_LIBS} "glslang" "SPIRV" "OGLCompiler")
 endif()
-include_directories( "${ZLIB_INCLUDE_DIR}" "${BZIP2_INCLUDE_DIR}" "${LZMA_INCLUDE_DIR}" "${JPEG_INCLUDE_DIR}" "${GME_INCLUDE_DIR}" "${ADL_INCLUDE_DIR}" "${OPN_INCLUDE_DIR}" "${TIMIDITYPP_INCLUDE_DIR}" )
+include_directories( "${ZLIB_INCLUDE_DIR}" "${BZIP2_INCLUDE_DIR}" "${LZMA_INCLUDE_DIR}" "${JPEG_INCLUDE_DIR}" "${ZMUSIC_INCLUDE_DIR}" )
 
 if( ${HAVE_VM_JIT} )
 	add_definitions( -DHAVE_VM_JIT )
@@ -493,10 +488,7 @@ endif()
 
 # Start defining source files for ZDoom
 set( PLAT_WIN32_SOURCES
-	sound/mididevices/music_win_mididevice.cpp
 	win32/hardware.cpp
-	win32/helperthread.cpp
-	win32/i_cd.cpp
 	win32/i_crash.cpp
 	win32/i_input.cpp
 	win32/i_keyboard.cpp
@@ -518,7 +510,6 @@ if (HAVE_VULKAN)
 endif()
 	
 set( PLAT_POSIX_SOURCES
-	posix/i_cd.cpp
 	posix/i_steam.cpp )
 set( PLAT_SDL_SOURCES
 	posix/sdl/crashcatcher.c
@@ -625,24 +616,6 @@ add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sc_man_scanner.h
 
 include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
-if( DYN_SNDFILE)
-	add_definitions( -DHAVE_SNDFILE -DDYN_SNDFILE )
-elseif( SNDFILE_FOUND )
-	add_definitions( -DHAVE_SNDFILE )
-endif()
-
-if( DYN_MPG123)
-	add_definitions( -DHAVE_MPG123 -DDYN_MPG123 )
-elseif( MPG123_FOUND )
-	add_definitions( -DHAVE_MPG123 )
-endif()
-
-if( DYN_FLUIDSYNTH )
-	add_definitions( -DHAVE_FLUIDSYNTH -DDYN_FLUIDSYNTH )
-elseif( FLUIDSYNTH_FOUND )
-	add_definitions( -DHAVE_FLUIDSYNTH )
-endif()
-
 option( SEND_ANON_STATS "Enable sending of anonymous hardware statistics" ON )
 
 if( NOT SEND_ANON_STATS )
@@ -672,8 +645,6 @@ file( GLOB HEADER_FILES
 	sound/*.h
 	sound/backend/*.h*
 	sound/music/*.h*
-	sound/oplsynth/*.h
-	sound/oplsynth/dosbox/*.h
 	posix/*.h
 	posix/cocoa/*.h
 	posix/sdl/*.h
@@ -690,11 +661,7 @@ file( GLOB HEADER_FILES
 	scripting/zscript/*.h
 	scripting/vm/*.h
 	sound/midisources/*.h
-	sound/oplsynth/*.h
-	sound/oplsynth/dosbox/*.h
 	sound/thirdparty/*.h
-	sound/timidity/*.h
-	sound/wildmidi/*.h
 	rendering/*.h
 	rendering/2d/*.h
 	rendering/swrenderer/*.h
@@ -840,11 +807,8 @@ set( FASTMATH_SOURCES
 	rendering/swrenderer/r_all.cpp
 	rendering/swrenderer/r_swscene.cpp
 	rendering/polyrenderer/poly_all.cpp
-	sound/oplsynth/opl_mus_player.cpp
-	sound/backend/mpg123_decoder.cpp
 	sound/music/music_midi_base.cpp
 	sound/backend/oalsound.cpp
-	sound/backend/sndfile_decoder.cpp
 	gamedata/textures/hires/hqnx/init.cpp
 	gamedata/textures/hires/hqnx/hq2x.cpp
 	gamedata/textures/hires/hqnx/hq3x.cpp
@@ -1192,48 +1156,7 @@ set (PCH_SOURCES
 	sound/music/i_music.cpp
 	sound/music/i_soundfont.cpp
 	sound/backend/i_sound.cpp
-	sound/mididevices/music_adlmidi_mididevice.cpp
-	sound/mididevices/music_opldumper_mididevice.cpp
-	sound/mididevices/music_opl_mididevice.cpp
-	sound/mididevices/music_opnmidi_mididevice.cpp
-	sound/mididevices/music_timiditypp_mididevice.cpp
-	sound/mididevices/music_fluidsynth_mididevice.cpp
-	sound/mididevices/music_softsynth_mididevice.cpp
-	sound/mididevices/music_timidity_mididevice.cpp
-	sound/mididevices/music_wildmidi_mididevice.cpp
-	sound/mididevices/music_wavewriter_mididevice.cpp
-	sound/midisources/midisource.cpp
-	sound/midisources/midisource_mus.cpp
-	sound/midisources/midisource_smf.cpp
-	sound/midisources/midisource_hmi.cpp
-	sound/midisources/midisource_xmi.cpp
-	sound/musicformats/music_cd.cpp
-	sound/musicformats/music_dumb.cpp
-	sound/musicformats/music_gme.cpp
-	sound/musicformats/music_libsndfile.cpp
-	sound/musicformats/music_midistream.cpp
-	sound/musicformats/music_opl.cpp
-	sound/musicformats/music_stream.cpp
-	sound/oplsynth/fmopl.cpp
-	sound/oplsynth/musicblock.cpp
-	sound/oplsynth/oplio.cpp
-	sound/oplsynth/dosbox/opl.cpp
-	sound/oplsynth/OPL3.cpp
-	sound/oplsynth/nukedopl3.cpp
-	sound/timidity/common.cpp
-	sound/timidity/instrum.cpp
-	sound/timidity/instrum_dls.cpp
-	sound/timidity/instrum_font.cpp
-	sound/timidity/instrum_sf2.cpp
-	sound/timidity/mix.cpp
-	sound/timidity/playmidi.cpp
-	sound/timidity/resample.cpp
-	sound/timidity/timidity.cpp
-	sound/wildmidi/file_io.cpp
-	sound/wildmidi/gus_pat.cpp
-	sound/wildmidi/reverb.cpp
-	sound/wildmidi/wildmidi_lib.cpp
-	sound/wildmidi/wm_error.cpp
+	sound/music/music_config.cpp
 	rendering/swrenderer/textures/r_swtexture.cpp
 	rendering/swrenderer/textures/warptexture.cpp
 	rendering/swrenderer/textures/swcanvastexture.cpp
@@ -1256,7 +1179,6 @@ set (PCH_SOURCES
 	utility/atterm.cpp
 	utility/cmdlib.cpp
 	utility/configfile.cpp
-	utility/i_module.cpp
 	utility/i_time.cpp
 	utility/m_alloc.cpp
 	utility/m_argv.cpp
@@ -1330,7 +1252,7 @@ if( UNIX )
 	endif()
 endif()
 
-target_link_libraries( zdoom ${ZDOOM_LIBS} gdtoa dumb lzma adl opn timidityplus )
+target_link_libraries( zdoom ${ZDOOM_LIBS} gdtoa dumb lzma adl opn timidity timidityplus wildmidi oplsynth zmusic )
 
 include_directories( .
 	g_statusbar
@@ -1347,9 +1269,6 @@ include_directories( .
 	sound
 	sound/music
 	sound/backend
-	sound/oplsynth
-	sound/timidity
-	sound/wildmidi
 	xlat
 	utility
 	utility/nodebuilder
@@ -1358,7 +1277,6 @@ include_directories( .
 	rendering
 	rendering/vulkan/thirdparty
 	../libraries/gdtoa
-	../libraries/dumb/include
 	../libraries/glslang/glslang/Public
 	../libraries/glslang/spirv
 	${CMAKE_BINARY_DIR}/libraries/gdtoa
@@ -1441,7 +1359,8 @@ if( APPLE )
 
 	set_target_properties(zdoom PROPERTIES
 		LINK_FLAGS "${LINK_FRAMEWORKS}"
-		MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/posix/osx/zdoom-info.plist" )
+		MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/posix/osx/zdoom-info.plist"
+		XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "" )
 
 	# Dymanic libraries like libvulkan.dylib or libMoltenVK.dylib will be loaded by dlopen()
 	# if placed in the directory with the main executable
@@ -1459,12 +1378,6 @@ install(TARGETS zdoom
 
 source_group("Audio Files" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/sound/.+")
 source_group("Audio Files\\Backend" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/sound/backend/.+")
-source_group("Audio Files\\OPL Synth" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/sound/oplsynth/.+")
-source_group("Audio Files\\OPL Synth\\DOSBox" FILES sound/oplsynth/dosbox/opl.cpp sound/oplsynth/dosbox/opl.h)
-source_group("Audio Files\\Timidity" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/sound/timidity/.+")
-source_group("Audio Files\\WildMidi" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/sound/wildmidi/.+")
-source_group("Audio Files\\MIDI Devices" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/sound/mididevices/.+")
-source_group("Audio Files\\MIDI Sources" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/sound/midisources/.+")
 source_group("Audio Files\\Music formats" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/sound/musicformats/.+")
 source_group("Audio Files\\Third-party" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/sound/thirdparty/.+")
 source_group("Game Data" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/gamedata/.+")

@@ -129,24 +129,24 @@ double flt_rand()
 	return (int)GenRand_Real1();
 }
 
-struct timidity_file *open_file(const char *name, SoundFontReaderInterface *sfreader)
+timidity_file *open_file(const char *name, MusicIO::SoundFontReaderInterface *sfreader)
 {
-	return sfreader->open_timidityplus_file(name);
+	return sfreader->open_file(name);
 }
 
 /* This closes files opened with open_file */
-void tf_close(struct timidity_file *tf)
+void tf_close(timidity_file *tf)
 {
-	delete tf;
+	if (tf) tf->close();
 }
 
 /* This is meant for skipping a few bytes. */
-void skip(struct timidity_file *tf, size_t len)
+void skip(timidity_file *tf, size_t len)
 {
 	tf_seek(tf, (long)len, SEEK_CUR);
 }
 
-int tf_getc(struct timidity_file *tf)
+int tf_getc(timidity_file *tf)
 {
 	unsigned char c;
 	auto read = tf_read(&c, 1, 1, tf);
@@ -157,7 +157,6 @@ void default_ctl_cmsg(int type, int verbosity_level, const char* fmt, ...)
 {
 	if (verbosity_level >= VERB_DEBUG) return;	// Don't waste time on diagnostics.
 
-	char buffer[2048];
 	va_list args;
 	va_start(args, fmt);
 
@@ -178,6 +177,6 @@ void default_ctl_cmsg(int type, int verbosity_level, const char* fmt, ...)
 }
 
 // Allow hosting applications to capture the messages and deal with them themselves.
-void (*ctl_cmsg)(int type, int verbosity_level, const char* fmt, ...) = default_ctl_cmsg;
+void (*printMessage)(int type, int verbosity_level, const char* fmt, ...) = default_ctl_cmsg;
 
 }
