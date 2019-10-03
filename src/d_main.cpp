@@ -108,6 +108,7 @@ EXTERN_CVAR(Bool, hud_althud)
 EXTERN_CVAR(Int, vr_mode)
 void DrawHUD();
 void D_DoAnonStats();
+void I_DetectOS();
 
 
 // MACROS ------------------------------------------------------------------
@@ -134,6 +135,7 @@ void D_AddWildFile (TArray<FString> &wadfiles, const char *pattern);
 void D_LoadWadSettings ();
 void ParseGLDefs();
 void DrawFullscreenSubtitle(const char *text);
+void D_Cleanup();
 
 // PRIVATE FUNCTION PROTOTYPES ---------------------------------------------
 
@@ -2271,6 +2273,15 @@ static void CheckCmdLine()
 	}
 }
 
+void I_Quit()
+{
+	if (demorecording)
+	{
+		G_CheckDemoStatus();
+	}
+	
+	C_DeinitConsole();
+}
 
 //==========================================================================
 //
@@ -2288,6 +2299,10 @@ void D_DoomMain (void)
 	int argcount;	
 	FIWadManager *iwad_man;
 	const char *batchout = Args->CheckValue("-errorlog");
+	
+	C_InitConsole(80*8, 25*8, false);
+	I_DetectOS();
+	atterm(I_Quit);
 
 	// +logfile gets checked too late to catch the full startup log in the logfile so do some extra check for it here.
 	FString logfile = Args->TakeValue("+logfile");
@@ -2458,15 +2473,32 @@ void D_DoomMain (void)
 			I_Init ();
 		}
 
+		// [RH] Initialize palette management
+		InitPalette ();
+		
 		if (!batchrun) Printf ("V_Init: allocate screen.\n");
-		V_Init (!!restart);
+		if (!restart)
+		{
+			V_InitScreenSize();
+		}
+		
+		if (!restart)
+		{
+			// This allocates a dummy framebuffer as a stand-in until V_Init2 is called.
+			V_InitScreen ();
+		}
+		
+		if (restart)
+		{
+			// Update screen palette when restarting
+			screen->UpdatePalette();
+		}
 
 		// Base systems have been inited; enable cvar callbacks
 		FBaseCVar::EnableCallbacks ();
 
 		if (!batchrun) Printf ("S_Init: Setting up sound.\n");
 		S_Init ();
-		S_InitMusic();
 
 		if (!batchrun) Printf ("ST_Init: Init startup screen.\n");
 		if (!restart)
@@ -2732,71 +2764,81 @@ void D_DoomMain (void)
 		// Clean up after a restart
 		//
 
-		// Music and sound should be stopped first
-		S_StopMusic(true);
-		S_StopAllChannels ();
-
-		M_ClearMenus();					// close menu if open
-		F_EndFinale();					// If an intermission is active, end it now
-		AM_ClearColorsets();
-
-		// clean up game state
-		ST_Clear();
-		D_ErrorCleanup ();
-		for (auto Level : AllLevels())
-		{
-			Level->Thinkers.DestroyThinkersInList(STAT_STATIC);
-		}
-		staticEventManager.Shutdown();
-		P_FreeLevelData();
-
-		M_SaveDefaults(NULL);			// save config before the restart
-
-		// delete all data that cannot be left until reinitialization
-		screen->CleanForRestart();
-		V_ClearFonts();					// must clear global font pointers
-		ColorSets.Clear();
-		PainFlashes.Clear();
-		R_DeinitTranslationTables();	// some tables are initialized from outside the translation code.
-		gameinfo.~gameinfo_t();
-		new (&gameinfo) gameinfo_t;		// Reset gameinfo
-		S_ShutdownMusic();
-		S_Shutdown();					// free all channels and delete playlist
-		C_ClearAliases();				// CCMDs won't be reinitialized so these need to be deleted here
-		DestroyCVarsFlagged(CVAR_MOD);	// Delete any cvar left by mods
-		DeinitMenus();
-		LightDefaults.DeleteAndClear();			// this can leak heap memory if it isn't cleared.
-
-		// delete DoomStartupInfo data
-		DoomStartupInfo.Name = "";
-		DoomStartupInfo.BkColor = DoomStartupInfo.FgColor = DoomStartupInfo.Type = 0;
-		DoomStartupInfo.LoadLights = DoomStartupInfo.LoadBrightmaps = -1;
-
-		GC::FullGC();					// clean up before taking down the object list.
-
-		// Delete the reference to the VM functions here which were deleted and will be recreated after the restart.
-		FAutoSegIterator probe(ARegHead, ARegTail);
-		while (*++probe != NULL)
-		{
-			AFuncDesc *afunc = (AFuncDesc *)*probe;
-			*(afunc->VMPointer) = NULL;
-		}
-
-		GC::DelSoftRootHead();
-
-		PClass::StaticShutdown();
-
-		GC::FullGC();					// perform one final garbage collection after shutdown
-
-		assert(GC::Root == nullptr);
-
-		restart++;
-		PClass::bShutdown = false;
-		PClass::bVMOperational = false;
+		D_Cleanup();
 
 		gamestate = GS_STARTUP;
 	}
 	while (1);
+}
+
+//==========================================================================
+//
+// clean up the resources
+//
+//==========================================================================
+
+void D_Cleanup()
+{
+	// Music and sound should be stopped first
+	S_StopMusic(true);
+	S_StopAllChannels ();
+	
+	M_ClearMenus();					// close menu if open
+	F_EndFinale();					// If an intermission is active, end it now
+	AM_ClearColorsets();
+	
+	// clean up game state
+	ST_Clear();
+	D_ErrorCleanup ();
+	for (auto Level : AllLevels())
+	{
+		Level->Thinkers.DestroyThinkersInList(STAT_STATIC);
+	}
+	staticEventManager.Shutdown();
+	P_FreeLevelData();
+	
+	M_SaveDefaults(NULL);			// save config before the restart
+	
+	// delete all data that cannot be left until reinitialization
+	screen->CleanForRestart();
+	V_ClearFonts();					// must clear global font pointers
+	ColorSets.Clear();
+	PainFlashes.Clear();
+	R_DeinitTranslationTables();	// some tables are initialized from outside the translation code.
+	gameinfo.~gameinfo_t();
+	new (&gameinfo) gameinfo_t;		// Reset gameinfo
+	S_Shutdown();					// free all channels and delete playlist
+	C_ClearAliases();				// CCMDs won't be reinitialized so these need to be deleted here
+	DestroyCVarsFlagged(CVAR_MOD);	// Delete any cvar left by mods
+	DeinitMenus();
+	LightDefaults.DeleteAndClear();			// this can leak heap memory if it isn't cleared.
+	
+	// delete DoomStartupInfo data
+	DoomStartupInfo.Name = "";
+	DoomStartupInfo.BkColor = DoomStartupInfo.FgColor = DoomStartupInfo.Type = 0;
+	DoomStartupInfo.LoadLights = DoomStartupInfo.LoadBrightmaps = -1;
+	
+	GC::FullGC();					// clean up before taking down the object list.
+	
+	// Delete the reference to the VM functions here which were deleted and will be recreated after the restart.
+	FAutoSegIterator probe(ARegHead, ARegTail);
+	while (*++probe != NULL)
+	{
+		AFuncDesc *afunc = (AFuncDesc *)*probe;
+		*(afunc->VMPointer) = NULL;
+	}
+	
+	GC::DelSoftRootHead();
+	
+	PClass::StaticShutdown();
+	
+	GC::FullGC();					// perform one final garbage collection after shutdown
+	
+	assert(GC::Root == nullptr);
+	
+	restart++;
+	PClass::bShutdown = false;
+	PClass::bVMOperational = false;
 }
 
 //==========================================================================

@@ -98,7 +98,6 @@
 LRESULT CALLBACK WndProc (HWND, UINT, WPARAM, LPARAM);
 void CreateCrashLog (const char *custominfo, DWORD customsize, HWND richedit);
 void DisplayCrashLog ();
-extern uint8_t *ST_Util_BitsForBitmap (BITMAPINFO *bitmap_info);
 void I_FlushBufferedConsoleStuff();
 
 // PUBLIC FUNCTION PROTOTYPES ----------------------------------------------
@@ -108,7 +107,6 @@ void I_FlushBufferedConsoleStuff();
 // EXTERNAL DATA DECLARATIONS ----------------------------------------------
 
 extern EXCEPTION_POINTERS CrashPointers;
-extern BITMAPINFO *StartupBitmap;
 extern UINT TimerPeriod;
 
 // PUBLIC DATA DEFINITIONS -------------------------------------------------
@@ -481,7 +479,7 @@ LRESULT CALLBACK LConProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				// so flip it vertically while drawing it.
 				StretchDIBits (drawitem->hDC, rect.left, rect.bottom - 1, rect.right - rect.left, rect.top - rect.bottom,
 					0, 0, StartupBitmap->bmiHeader.biWidth, StartupBitmap->bmiHeader.biHeight,
-					ST_Util_BitsForBitmap(StartupBitmap), StartupBitmap, DIB_RGB_COLORS, SRCCOPY);
+					ST_Util_BitsForBitmap(StartupBitmap), reinterpret_cast<const BITMAPINFO*>(StartupBitmap), DIB_RGB_COLORS, SRCCOPY);
 
 				// If the title banner is gone, then this is an ENDOOM screen, so draw a short prompt
 				// where the command prompt would have been in DOS.
@@ -749,6 +747,11 @@ void PeekThreadedErrorPane()
 	PeekMessage(&msg, 0, 0, 0, PM_NOREMOVE);
 }
 
+static void UnTbp()
+{
+	timeEndPeriod(TimerPeriod);
+}
+
 //==========================================================================
 //
 // DoMain
@@ -857,22 +860,9 @@ void DoMain (HINSTANCE hInstance)
 			TimerPeriod = tc.wPeriodMin;
 
 		timeBeginPeriod (TimerPeriod);
-
-		/*
-		killough 1/98:
-
-		This fixes some problems with exit handling
-		during abnormal situations.
-
-		The old code called I_Quit() to end program,
-		while now I_Quit() is installed as an exit
-		handler and exit() is called to exit, either
-		normally or abnormally.
-		*/
+		atexit(UnTbp);
 
 		atexit (call_terms);
-
-		atterm (I_Quit);
 
 		// Figure out what directory the program resides in.
 		WCHAR progbuff[1024];
@@ -939,7 +929,10 @@ void DoMain (HINSTANCE hInstance)
 				NULL);
 
 		if (!Window)
-			I_FatalError ("Could not open window");
+		{
+			MessageBoxA(nullptr, "Unable to create main window", "Fatal", MB_ICONEXCLAMATION|MB_OK);
+			exit(-1);
+		}
 
 		if (kernel != NULL)
 		{
@@ -962,7 +955,7 @@ void DoMain (HINSTANCE hInstance)
 					}
 					else
 					{
-						atterm (UnWTS);
+						atexit (UnWTS);
 					}
 				}
 			}
@@ -974,11 +967,8 @@ void DoMain (HINSTANCE hInstance)
 		WinHeight = cRect.bottom;
 
 		CoInitialize (NULL);
-		atterm (UnCOM);
-
-		C_InitConsole (((WinWidth / 8) + 2) * 8, (WinHeight / 12) * 8, false);
-
-		I_DetectOS ();
+		atexit (UnCOM);
+		
 		D_DoomMain ();
 	}
 	catch (class CNoRunExit &)
@@ -1027,7 +1017,7 @@ void DoMain (HINSTANCE hInstance)
 				Printf("%s\n", msg);
 			}
 		}
-		exit (-1);
+		exit(-1);
 	}
 }
 
@@ -1141,7 +1131,7 @@ void CALLBACK ExitFatally (ULONG_PTR dummy)
 	I_ShutdownGraphics ();
 	RestoreConView ();
 	DisplayCrashLog ();
-	exit (-1);
+	exit(-1);
 }
 
 //==========================================================================
@@ -1241,7 +1231,7 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE nothing, LPWSTR cmdline, int
 		// don't support Windows 95, we have no obligation to provide assistance in
 		// getting it installed.
 		MessageBoxA(NULL, "Could not load riched20.dll", GAMENAME " Error", MB_OK | MB_ICONSTOP);
-		exit(0);
+		return 0;
 	}
 
 #if !defined(__GNUC__) && defined(_DEBUG)
@@ -1256,7 +1246,7 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE nothing, LPWSTR cmdline, int
 		{
 		}
 		DisplayCrashLog ();
-		exit (0);
+		return 0;
 	}
 	if (__argc == 2 && __wargv != nullptr && wcscmp (__wargv[1], L"TestStackCrash") == 0)
 	{
@@ -1269,7 +1259,7 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE nothing, LPWSTR cmdline, int
 		{
 		}
 		DisplayCrashLog ();
-		exit (0);
+		return 0;
 	}
 #endif
 

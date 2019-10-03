@@ -149,6 +149,11 @@ static int DoomSpecificInfo (char *buffer, char *end)
 	return p;
 }
 
+void I_DetectOS()
+{
+	// The POSIX version never implemented this.
+}
+
 void I_StartupJoysticks();
 void I_ShutdownJoysticks();
 
@@ -179,7 +184,7 @@ int main (int argc, char **argv)
 		fprintf (stderr, "Could not initialize SDL:\n%s\n", SDL_GetError());
 		return -1;
 	}
-	atterm (SDL_Quit);
+	atexit (SDL_Quit);	// This one should NOT be in the engine's list of exit handlers!
 
 	printf("\n");
 	
@@ -187,24 +192,7 @@ int main (int argc, char **argv)
     {
 		Args = new FArgs(argc, argv);
 
-		/*
-		  killough 1/98:
-
-		  This fixes some problems with exit handling
-		  during abnormal situations.
-
-		  The old code called I_Quit() to end program,
-		  while now I_Quit() is installed as an exit
-		  handler and exit() is called to exit, either
-		  normally or abnormally. Seg faults are caught
-		  and the error handler is used, to prevent
-		  being left in graphics mode or having very
-		  loud SFX noise because the sound card is
-		  left in an unstable state.
-		*/
-
 		atexit (call_terms);
-		atterm (I_Quit);
 
 		// Should we even be doing anything with progdir on Unix systems?
 		char program[PATH_MAX];
@@ -222,7 +210,6 @@ int main (int argc, char **argv)
 		}
 
 		I_StartupJoysticks();
-		C_InitConsole (80*8, 25*8, false);
 		D_DoomMain ();
     }
     catch (std::exception &error)
@@ -254,7 +241,7 @@ int main (int argc, char **argv)
 			}
 		}
 
-		exit (-1);
+		return -1;
     }
     catch (...)
     {

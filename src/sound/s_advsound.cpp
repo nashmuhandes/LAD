@@ -948,10 +948,7 @@ static void S_ClearSoundData()
 	unsigned int i;
 
 	S_StopAllChannels();
-	for (i = 0; i < S_sfx.Size(); ++i)
-	{
-		S_UnloadSound(&S_sfx[i]);
-	}
+	S_UnloadAllSounds();
 	S_sfx.Clear();
 	Ambients.Clear();
 	while (MusicVolumes != NULL)
@@ -986,7 +983,7 @@ void S_ParseSndInfo (bool redefine)
 	int lump;
 
 	if (!redefine) SavedPlayerSounds.Clear();	// clear skin sounds only for initial parsing.
-	atterm (S_ClearSoundData);
+	atterm(S_ClearSoundData);
 	S_ClearSoundData();	// remove old sound data first!
 
 	CurrentPitchMask = 0;
