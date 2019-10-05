@@ -43,6 +43,8 @@
 
 FluidConfig fluidConfig;
 
+#ifdef HAVE_FLUIDSYNTH
+
 #if !defined DYN_FLUIDSYNTH
 #include <fluidsynth.h>
 #else
@@ -571,6 +573,8 @@ extern "C" unsigned __stdcall GetSystemDirectoryA(char* lpBuffer, unsigned uSize
 
 void Fluid_SetupConfig(const char* patches, std::vector<std::string> &patch_paths, bool systemfallback)
 {
+	if (*patches == 0) patches = fluidConfig.fluid_patchset.c_str();
+
 	//Resolve the paths here, the renderer will only get a final list of file names.
 
 	if (musicCallbacks.PathForSoundfont)
@@ -671,3 +675,5 @@ MIDIDevice *CreateFluidSynthMIDIDevice(int samplerate, const char *Args)
 	Fluid_SetupConfig(Args, fluid_patchset, true);
 	return new FluidSynthMIDIDevice(samplerate, fluid_patchset, musicCallbacks.Fluid_MessageFunc);
 }
+
+#endif // HAVE_FLUIDSYNTH

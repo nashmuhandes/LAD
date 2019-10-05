@@ -204,26 +204,7 @@ endif()
 
 if( NO_OPENAL )
 	add_definitions( -DNO_OPENAL=1 )
-
-	set(MPG123_FOUND NO)
-	set(SNDFILE_FOUND NO)
-else()
-	# Search for libSndFile
-
-	if ( NOT DYN_SNDFILE )
-		find_package( SndFile )
-	endif()
-
-	# Search for libmpg123
-
-	if ( NOT DYN_MPG123 )
-		find_package( MPG123 )
-	endif()
 endif()
-
-# Search for FluidSynth
-
-find_package( FluidSynth )
 
 # Decide on SSE setup
 
@@ -420,15 +401,8 @@ if( NOT STRUPR_EXISTS )
 	add_definitions( -DNEED_STRUPR=1 )
 endif()
 
-CHECK_FUNCTION_EXISTS( stricmp STRICMP_EXISTS )
-if( NOT STRICMP_EXISTS )
-	add_definitions( -Dstricmp=strcasecmp )
-endif()
-
-CHECK_FUNCTION_EXISTS( strnicmp STRNICMP_EXISTS )
-if( NOT STRNICMP_EXISTS )
-	add_definitions( -Dstrnicmp=strncasecmp )
-endif()
+require_stricmp()
+require_strnicmp()
 
 if( NOT MSVC )
 	add_definitions( -D__forceinline=inline )
@@ -458,7 +432,6 @@ add_custom_target( revision_check ALL
 
 # Libraries ZDoom needs
 
-message( STATUS "Fluid synth libs: ${FLUIDSYNTH_LIBRARIES}" )
 set( ZDOOM_LIBS ${ZDOOM_LIBS} "${ZLIB_LIBRARIES}" "${JPEG_LIBRARIES}" "${BZIP2_LIBRARIES}" "${GME_LIBRARIES}" "${CMAKE_DL_LIBS}" )
 if (HAVE_VULKAN)
 	set( ZDOOM_LIBS ${ZDOOM_LIBS} "glslang" "SPIRV" "OGLCompiler")
@@ -469,21 +442,6 @@ if( ${HAVE_VM_JIT} )
 	add_definitions( -DHAVE_VM_JIT )
 	include_directories( "${ASMJIT_INCLUDE_DIR}" )
 	set( ZDOOM_LIBS ${ZDOOM_LIBS} "${ASMJIT_LIBRARIES}")
-endif()
-
-if( SNDFILE_FOUND )
-    set( ZDOOM_LIBS ${ZDOOM_LIBS} "${SNDFILE_LIBRARIES}" )
-    include_directories( "${SNDFILE_INCLUDE_DIRS}" )
-endif()
-if( MPG123_FOUND )
-    set( ZDOOM_LIBS ${ZDOOM_LIBS} "${MPG123_LIBRARIES}" )
-    include_directories( "${MPG123_INCLUDE_DIR}" )
-endif()
-if( NOT DYN_FLUIDSYNTH )
-	if( FLUIDSYNTH_FOUND )
-		set( ZDOOM_LIBS ${ZDOOM_LIBS} "${FLUIDSYNTH_LIBRARIES}" )
-		include_directories( "${FLUIDSYNTH_INCLUDE_DIR}" )
-	endif()
 endif()
 
 # Start defining source files for ZDoom
