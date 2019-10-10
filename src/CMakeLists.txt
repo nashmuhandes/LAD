@@ -1048,6 +1048,7 @@ set (PCH_SOURCES
 	gamedata/textures/formats/emptytexture.cpp
 	gamedata/textures/formats/shadertexture.cpp
 	gamedata/textures/formats/tgatexture.cpp
+	gamedata/textures/formats/stbtexture.cpp
 	gamedata/textures/hires/hqresize.cpp
 	gamedata/textures/hires/hirestex.cpp
 	gamedata/fonts/singlelumpfont.cpp
@@ -1135,7 +1136,6 @@ set (PCH_SOURCES
 	utility/nodebuilder/nodebuild_utility.cpp
 	utility/sc_man.cpp
 	utility/stats.cpp
-	utility/atterm.cpp
 	utility/cmdlib.cpp
 	utility/configfile.cpp
 	utility/i_time.cpp
