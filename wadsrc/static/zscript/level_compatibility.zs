@@ -1387,13 +1387,9 @@ class LevelCompatibility native play
 			}
 			case '0EF86635676FD512CE0E962040125553': // Illusions of Home e3m7
 			{
-				// Fix red key and red key area door
-				// Also fix missing texture in red key area
+				// Fix red key and missing texture in red key area
 				SetThingFlags(247, 2016);
 				SetThingSkills(247, 31);
-				SetLineActivation(49, SPAC_Use);
-				SetLineSpecial(49, Door_Raise, 0, 16, 150, 0);
-				SetLineFlags(49, Line.ML_REPEAT_SPECIAL);
 				SetWallTexture(608, Line.back, Side.bottom, "GRAY5");
 				break;
 			}
@@ -1422,6 +1418,17 @@ class LevelCompatibility native play
 				SetLineFlags(2039, Line.ML_REPEAT_SPECIAL);
 				SetLineFlags(2040, Line.ML_REPEAT_SPECIAL);
 				break;
+			}
+
+			case '0E379EEBEB189F294ED122BC60D10A68': // Hellbound MAP29
+			{
+				// Remove the cyberdemons stuck in the closet boxes that cannot teleport.
+				SetThingFlags(2970,0);
+				SetThingFlags(2969,0);
+				SetThingFlags(2968,0);
+				SetThingFlags(2169,0);
+				SetThingFlags(2168,0);
+				SetThingFlags(2167,0);
 			}
 		}
 	}
