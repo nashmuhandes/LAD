@@ -77,7 +77,7 @@ class Actor : Thinker native
 	const TELEFRAG_DAMAGE = 1000000;
 	const MinVel = 1./65536;
 	const LARGE_MASS = 10000000;	// not INT_MAX on purpose
-	const ORIG_FRICTION = (0xE800 / 65536.);	// original value
+	const ORIG_FRICTION = (0xE800/65536.);	// original value
 	const ORIG_FRICTION_FACTOR = (2048/65536.);	// original value
 	const DEFMORPHTICS = 40 * TICRATE;
 
