@@ -2022,7 +2022,8 @@ void OpenALSoundRenderer::UpdateListener(SoundListener *listener)
 					schan = schan->NextChan;
 				}
 			}
-
+			// [LAD] disable underwater pitch shift
+			/*
 			FSoundChan *schan = Channels;
 			while (schan)
 			{
@@ -2031,6 +2032,7 @@ void OpenALSoundRenderer::UpdateListener(SoundListener *listener)
 					alSourcef(source, AL_PITCH, schan->Pitch / 128.0f * PITCH_MULT);
 				schan = schan->NextChan;
 			}
+			*/
 			getALError();
 		}
 	}
@@ -2060,7 +2062,8 @@ void OpenALSoundRenderer::UpdateListener(SoundListener *listener)
 				schan = schan->NextChan;
 			}
 		}
-
+		// [LAD] disable underwater pitch shift
+		/*
 		FSoundChan *schan = Channels;
 		while (schan)
 		{
@@ -2069,6 +2072,7 @@ void OpenALSoundRenderer::UpdateListener(SoundListener *listener)
 				alSourcef(source, AL_PITCH, schan->Pitch / 128.0f);
 			schan = schan->NextChan;
 		}
+		*/
 		getALError();
 	}
 }
