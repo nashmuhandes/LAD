@@ -47,6 +47,8 @@ enum EStartSoundFlags
 	SNDF_AREA=4,
 	SNDF_ABSTIME=8,
 	SNDF_NOREVERB=16,
+	// [LAD]
+	SNDF_RADIO=32,
 };
 
 enum ECodecType

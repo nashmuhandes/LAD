@@ -57,6 +57,9 @@ CVAR (String, snd_aldevice, "Default", CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR (Bool, snd_efx, true, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR (String, snd_alresampler, "Default", CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 
+// [LAD] radio highpass frequency
+#define RADIO_HIGHPASS_LF 0.025
+
 #ifdef _WIN32
 #define OPENALLIB "openal32.dll"
 #elif defined(__OpenBSD__)
@@ -844,8 +847,9 @@ OpenALSoundRenderer::OpenALSoundRenderer()
 			alGenFilters(2, EnvFilters);
 			if(getALError() == AL_NO_ERROR)
 			{
-				alFilteri(EnvFilters[0], AL_FILTER_TYPE, AL_FILTER_LOWPASS);
-				alFilteri(EnvFilters[1], AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+				// [LAD] Changed filters from lowpass to bandpass for radio filter
+				alFilteri(EnvFilters[0], AL_FILTER_TYPE, AL_FILTER_BANDPASS);
+				alFilteri(EnvFilters[1], AL_FILTER_TYPE, AL_FILTER_BANDPASS);
 				if(getALError() == AL_NO_ERROR)
 					DPrintf(DMSG_SPAMMY, "  Lowpass found\n");
 				else
@@ -1487,6 +1491,18 @@ FISoundChannel *OpenALSoundRenderer::StartSound(SoundHandle sfx, float vol, int 
 		return NULL;
 	}
 
+	// [LAD] apply radio filter
+	if((chanflags&SNDF_RADIO))
+	{
+		alFilterf(EnvFilters[0], AL_BANDPASS_GAINLF, RADIO_HIGHPASS_LF);
+		alSourcei(source, AL_DIRECT_FILTER, EnvFilters[0]);
+	}
+	else
+	{
+		alFilterf(EnvFilters[0], AL_BANDPASS_GAINLF, 1.f);
+		alSourcei(source, AL_DIRECT_FILTER, EnvFilters[0]);
+	}
+
 	if(!(chanflags&SNDF_NOREVERB))
 		ReverbSfx.Push(source);
 	if(!(chanflags&SNDF_NOPAUSE))
@@ -1687,6 +1703,18 @@ FISoundChannel *OpenALSoundRenderer::StartSound3D(SoundHandle sfx, SoundListener
 	}
 	if(getALError() != AL_NO_ERROR)
 		return NULL;
+
+	// [LAD] apply radio filter
+	if((chanflags&SNDF_RADIO))
+	{
+		alFilterf(EnvFilters[0], AL_BANDPASS_GAINLF, RADIO_HIGHPASS_LF);
+		alSourcei(source, AL_DIRECT_FILTER, EnvFilters[0]);
+	}
+	else
+	{
+		alFilterf(EnvFilters[0], AL_BANDPASS_GAINLF, 1.f);
+		alSourcei(source, AL_DIRECT_FILTER, EnvFilters[0]);
+	}
 
 	alSourcei(source, AL_BUFFER, buffer);
 	if((chanflags&SNDF_NOPAUSE) || !SFXPaused)
@@ -2004,16 +2032,20 @@ void OpenALSoundRenderer::UpdateListener(SoundListener *listener)
 				LoadReverb(env ? env : DefaultEnvironments[0]);
 
 				// [LAD] Almost remove completely the dry mix from underwater filter.
-				alFilterf(EnvFilters[0], AL_LOWPASS_GAIN, 0.1);
-				alFilterf(EnvFilters[0], AL_LOWPASS_GAINHF, 0.125f);
-				alFilterf(EnvFilters[1], AL_LOWPASS_GAIN, 1.f);
-				alFilterf(EnvFilters[1], AL_LOWPASS_GAINHF, 1.f);
+				// [LAD] Changed filters from lowpass to bandpass for radio filter
+				alFilterf(EnvFilters[0], AL_BANDPASS_GAIN, 0.1);
+				alFilterf(EnvFilters[0], AL_BANDPASS_GAINHF, 0.125f);
+				alFilterf(EnvFilters[1], AL_BANDPASS_GAIN, 1.f);
+				alFilterf(EnvFilters[1], AL_BANDPASS_GAINHF, 1.f);
 
 				// Apply the updated filters on the sources
 				FSoundChan *schan = Channels;
 				while (schan)
 				{
 					ALuint source = GET_PTRID(schan->SysChannel);
+					// [LAD] apply radio filter
+					if (source && (schan->ChanFlags & CHAN_RADIO)) alFilterf(EnvFilters[0], AL_BANDPASS_GAINLF, RADIO_HIGHPASS_LF);
+					else alFilterf(EnvFilters[0], AL_BANDPASS_GAINLF, 1.f);
 					if (source && !(schan->ChanFlags & CHAN_UI))
 					{
 						alSourcei(source, AL_DIRECT_FILTER, EnvFilters[0]);
@@ -2043,15 +2075,19 @@ void OpenALSoundRenderer::UpdateListener(SoundListener *listener)
 		{
 			LoadReverb(env);
 
-			alFilterf(EnvFilters[0], AL_LOWPASS_GAIN, 1.f);
-			alFilterf(EnvFilters[0], AL_LOWPASS_GAINHF, 1.f);
-			alFilterf(EnvFilters[1], AL_LOWPASS_GAIN, 1.f);
-			alFilterf(EnvFilters[1], AL_LOWPASS_GAINHF, 1.f);
+			// [LAD] Changed filters from lowpass to bandpass for radio filter
+			alFilterf(EnvFilters[0], AL_BANDPASS_GAIN, 1.f);
+			alFilterf(EnvFilters[0], AL_BANDPASS_GAINHF, 1.f);
+			alFilterf(EnvFilters[1], AL_BANDPASS_GAIN, 1.f);
+			alFilterf(EnvFilters[1], AL_BANDPASS_GAINHF, 1.f);
 
 			FSoundChan *schan = Channels;
 			while (schan)
 			{
 				ALuint source = GET_PTRID(schan->SysChannel);
+				// [LAD] apply radio filter
+				if (source && (schan->ChanFlags & CHAN_RADIO)) alFilterf(EnvFilters[0], AL_BANDPASS_GAINLF, RADIO_HIGHPASS_LF);
+				else alFilterf(EnvFilters[0], AL_BANDPASS_GAINLF, 1.f);
 				if (source && !(schan->ChanFlags & CHAN_UI))
 				{
 					alSourcei(source, AL_DIRECT_FILTER, EnvFilters[0]);

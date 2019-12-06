@@ -419,8 +419,9 @@ enum ESoundFlags
 	CHAN_NOPAUSE = 64,
 	CHAN_LOOP = 256,
 	CHAN_PICKUP = (CHAN_ITEM|CHAN_MAYBE_LOCAL),
-	CHAN_NOSTOP = 4096
-
+	CHAN_NOSTOP = 4096,
+	// [LAD]
+	CHAN_RADIO = 8192
 };
 
 // sound attenuation values

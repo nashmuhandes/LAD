@@ -1154,6 +1154,9 @@ static FSoundChan *S_StartSound(AActor *actor, const sector_t *sec, const FPolyO
 		if (chanflags & (CHAN_UI|CHAN_NOPAUSE)) startflags |= SNDF_NOPAUSE;
 		if (chanflags & CHAN_UI) startflags |= SNDF_NOREVERB;
 
+		// [LAD]
+		if (chanflags & CHAN_RADIO) startflags |= SNDF_RADIO;
+
 		if (attenuation > 0)
 		{
             S_LoadSound3D(sfx, &SoundBuffer);
@@ -1244,6 +1247,9 @@ void S_RestartSound(FSoundChan *chan)
 	if (chan->ChanFlags & CHAN_AREA) startflags |= SNDF_AREA;
 	if (chan->ChanFlags & (CHAN_UI|CHAN_NOPAUSE)) startflags |= SNDF_NOPAUSE;
 	if (chan->ChanFlags & CHAN_ABSTIME) startflags |= SNDF_ABSTIME;
+
+	// [LAD]
+	if (chan->ChanFlags & CHAN_RADIO) startflags |= SNDF_RADIO;
 
 	if (chan->ChanFlags & CHAN_IS3D)
 	{

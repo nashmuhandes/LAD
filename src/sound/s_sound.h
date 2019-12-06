@@ -277,6 +277,9 @@ void S_PlaySoundPitch(AActor *a, int chan, FSoundID sid, float vol, float atten,
 #define CHAN_VIRTUAL			2048// internal: Channel is currently virtual
 #define CHAN_NOSTOP				4096// only for A_PlaySound. Does not start if channel is playing something.
 
+// [LAD]
+#define CHAN_RADIO				8192// radio effects
+
 // sound attenuation values
 #define ATTN_NONE				0.f	// full volume the entire level
 #define ATTN_NORM				1.f
