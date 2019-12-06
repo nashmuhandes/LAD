@@ -1088,6 +1088,7 @@ xx(PlayerTeam)
 xx(PlayerColors)
 xx(PlayerSkin)
 xx(NewPlayerMenu)
+xx(AltHud)
 
 // [LAD]
 xx(LADBodyPart)
