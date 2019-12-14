@@ -29,6 +29,7 @@
 #include "polyrenderer/drawers/poly_vertex_shader.h"
 
 class DCanvas;
+class RenderMemory;
 class PolyDrawerCommand;
 class PolyInputAssembly;
 class PolyDepthStencil;
@@ -43,36 +44,40 @@ enum class PolyDrawMode
 	TriangleStrip
 };
 
-class PolyTriangleDrawer
+class PolyCommandBuffer
 {
 public:
-	static void SetViewport(const DrawerCommandQueuePtr &queue, int x, int y, int width, int height, DCanvas *canvas, PolyDepthStencil *depthStencil);
-	static void SetInputAssembly(const DrawerCommandQueuePtr &queue, PolyInputAssembly *input);
-	static void SetVertexBuffer(const DrawerCommandQueuePtr &queue, const void *vertices);
-	static void SetIndexBuffer(const DrawerCommandQueuePtr &queue, const void *elements);
-	static void SetLightBuffer(const DrawerCommandQueuePtr& queue, const void *lights);
-	static void SetViewpointUniforms(const DrawerCommandQueuePtr &queue, const HWViewpointUniforms *uniforms);
-	static void SetDepthClamp(const DrawerCommandQueuePtr &queue, bool on);
-	static void SetDepthMask(const DrawerCommandQueuePtr &queue, bool on);
-	static void SetDepthFunc(const DrawerCommandQueuePtr &queue, int func);
-	static void SetDepthRange(const DrawerCommandQueuePtr &queue, float min, float max);
-	static void SetDepthBias(const DrawerCommandQueuePtr &queue, float depthBiasConstantFactor, float depthBiasSlopeFactor);
-	static void SetColorMask(const DrawerCommandQueuePtr &queue, bool r, bool g, bool b, bool a);
-	static void SetStencil(const DrawerCommandQueuePtr &queue, int stencilRef, int op);
-	static void SetCulling(const DrawerCommandQueuePtr &queue, int mode);
-	static void EnableClipDistance(const DrawerCommandQueuePtr &queue, int num, bool state);
-	static void EnableStencil(const DrawerCommandQueuePtr &queue, bool on);
-	static void SetScissor(const DrawerCommandQueuePtr &queue, int x, int y, int w, int h);
-	static void EnableDepthTest(const DrawerCommandQueuePtr &queue, bool on);
-	static void SetRenderStyle(const DrawerCommandQueuePtr &queue, FRenderStyle style);
-	static void SetTexture(const DrawerCommandQueuePtr &queue, int unit, void *pixels, int width, int height, bool bgra);
-	static void SetShader(const DrawerCommandQueuePtr &queue, int specialEffect, int effectState, bool alphaTest);
-	static void PushStreamData(const DrawerCommandQueuePtr &queue, const StreamData &data, const PolyPushConstants &constants);
-	static void PushMatrices(const DrawerCommandQueuePtr &queue, const VSMatrix &modelMatrix, const VSMatrix &normalModelMatrix, const VSMatrix &textureMatrix);
-	static void ClearDepth(const DrawerCommandQueuePtr &queue, float value);
-	static void ClearStencil(const DrawerCommandQueuePtr &queue, uint8_t value);
-	static void Draw(const DrawerCommandQueuePtr &queue, int index, int vcount, PolyDrawMode mode = PolyDrawMode::Triangles);
-	static void DrawIndexed(const DrawerCommandQueuePtr &queue, int index, int count, PolyDrawMode mode = PolyDrawMode::Triangles);
+	PolyCommandBuffer(RenderMemory* frameMemory);
+
+	void SetViewport(int x, int y, int width, int height, DCanvas *canvas, PolyDepthStencil *depthStencil, bool topdown);
+	void SetInputAssembly(PolyInputAssembly *input);
+	void SetVertexBuffer(const void *vertices);
+	void SetIndexBuffer(const void *elements);
+	void SetLightBuffer(const void *lights);
+	void SetViewpointUniforms(const HWViewpointUniforms *uniforms);
+	void SetDepthClamp(bool on);
+	void SetDepthMask(bool on);
+	void SetDepthFunc(int func);
+	void SetDepthRange(float min, float max);
+	void SetDepthBias(float depthBiasConstantFactor, float depthBiasSlopeFactor);
+	void SetColorMask(bool r, bool g, bool b, bool a);
+	void SetStencil(int stencilRef, int op);
+	void SetCulling(int mode);
+	void EnableStencil(bool on);
+	void SetScissor(int x, int y, int w, int h);
+	void SetRenderStyle(FRenderStyle style);
+	void SetTexture(int unit, void *pixels, int width, int height, bool bgra);
+	void SetShader(int specialEffect, int effectState, bool alphaTest);
+	void PushStreamData(const StreamData &data, const PolyPushConstants &constants);
+	void PushMatrices(const VSMatrix &modelMatrix, const VSMatrix &normalModelMatrix, const VSMatrix &textureMatrix);
+	void ClearDepth(float value);
+	void ClearStencil(uint8_t value);
+	void Draw(int index, int vcount, PolyDrawMode mode = PolyDrawMode::Triangles);
+	void DrawIndexed(int index, int count, PolyDrawMode mode = PolyDrawMode::Triangles);
+	void Submit();
+
+private:
+	std::shared_ptr<DrawerCommandQueue> mQueue;
 };
 
 class PolyDepthStencil
@@ -115,6 +120,13 @@ public:
 	virtual void Load(PolyTriangleThreadData *thread, const void *vertices, int index) = 0;
 };
 
+struct PolyLight
+{
+	uint32_t color;
+	float x, y, z;
+	float radius;
+};
+
 class PolyTriangleThreadData
 {
 public:
@@ -125,7 +137,7 @@ public:
 
 	void ClearDepth(float value);
 	void ClearStencil(uint8_t value);
-	void SetViewport(int x, int y, int width, int height, uint8_t *dest, int dest_width, int dest_height, int dest_pitch, bool dest_bgra, PolyDepthStencil *depthstencil);
+	void SetViewport(int x, int y, int width, int height, uint8_t *dest, int dest_width, int dest_height, int dest_pitch, bool dest_bgra, PolyDepthStencil *depthstencil, bool topdown);
 
 	void SetCullCCW(bool value) { ccw = value; }
 	void SetTwoSided(bool value) { twosided = value; }
@@ -143,10 +155,8 @@ public:
 	void SetColorMask(bool r, bool g, bool b, bool a);
 	void SetStencil(int stencilRef, int op);
 	void SetCulling(int mode);
-	void EnableClipDistance(int num, bool state);
 	void EnableStencil(bool on);
 	void SetScissor(int x, int y, int w, int h);
-	void EnableDepthTest(bool on);
 	void SetRenderStyle(FRenderStyle style);
 	void SetTexture(int unit, const void *pixels, int width, int height, bool bgra);
 	void SetShader(int specialEffect, int effectState, bool alphaTest);
@@ -189,14 +199,20 @@ public:
 	struct Scanline
 	{
 		float W[MAXWIDTH];
-		float U[MAXWIDTH];
-		float V[MAXWIDTH];
+		uint16_t U[MAXWIDTH];
+		uint16_t V[MAXWIDTH];
 		float WorldX[MAXWIDTH];
 		float WorldY[MAXWIDTH];
 		float WorldZ[MAXWIDTH];
+		uint8_t vColorA[MAXWIDTH];
+		uint8_t vColorR[MAXWIDTH];
+		uint8_t vColorG[MAXWIDTH];
+		uint8_t vColorB[MAXWIDTH];
+		float GradientdistZ[MAXWIDTH];
 		uint32_t FragColor[MAXWIDTH];
 		uint16_t lightarray[MAXWIDTH];
-		//uint32_t dynlights[MAXWIDTH];
+		uint32_t dynlights[MAXWIDTH];
+		uint8_t discard[MAXWIDTH];
 	} scanline;
 
 	static PolyTriangleThreadData *Get(DrawerThread *thread);
@@ -207,6 +223,7 @@ public:
 	bool dest_bgra = false;
 	uint8_t *dest = nullptr;
 	PolyDepthStencil *depthstencil = nullptr;
+	bool topdown = true;
 
 	float depthbias = 0.0f;
 
@@ -224,21 +241,16 @@ public:
 	int SpecialEffect = EFF_NONE;
 	int EffectState = 0;
 	bool AlphaTest = false;
+	uint32_t AlphaThreshold = 0x7f000000;
 	const PolyPushConstants* PushConstants = nullptr;
 
 	const void *vertices = nullptr;
 	const unsigned int *elements = nullptr;
 	const FVector4 *lights = nullptr;
 
-	/*struct PolyLight
-	{
-		uint32_t color;
-		float x, y, z;
-		float radius;
-	};
-
 	enum { maxPolyLights = 16 };
-	PolyLight polyLights[maxPolyLights];*/
+	PolyLight polyLights[maxPolyLights];
+	int numPolyLights = 0;
 
 	PolyMainVertexShader mainVertexShader;
 
@@ -258,11 +270,14 @@ public:
 	uint8_t StencilTestValue = 0;
 	uint8_t StencilWriteValue = 0;
 
+	void (*FragmentShader)(int x0, int x1, PolyTriangleThreadData* thread) = nullptr;
+	void (*WriteColorFunc)(int y, int x0, int x1, PolyTriangleThreadData* thread) = nullptr;
+
 private:
 	ShadedTriVertex ShadeVertex(int index);
 	void DrawShadedPoint(const ShadedTriVertex *const* vertex);
 	void DrawShadedLine(const ShadedTriVertex *const* vertices);
-	void DrawShadedTriangle(const ShadedTriVertex *const* vertices, bool ccw, TriDrawTriangleArgs *args);
+	void DrawShadedTriangle(const ShadedTriVertex *const* vertices, bool ccw);
 	static bool IsDegenerate(const ShadedTriVertex *const* vertices);
 	static bool IsFrontfacing(TriDrawTriangleArgs *args);
 
@@ -371,17 +386,6 @@ private:
 	int mode;
 };
 
-class PolyEnableClipDistanceCommand : public PolyDrawerCommand
-{
-public:
-	PolyEnableClipDistanceCommand(int num, bool state) : num(num), state(state) { }
-	void Execute(DrawerThread *thread) override { PolyTriangleThreadData::Get(thread)->EnableClipDistance(num, state); }
-
-private:
-	int num;
-	bool state;
-};
-
 class PolyEnableStencilCommand : public PolyDrawerCommand
 {
 public:
@@ -403,16 +407,6 @@ private:
 	int y;
 	int w;
 	int h;
-};
-
-class PolyEnableDepthTestCommand : public PolyDrawerCommand
-{
-public:
-	PolyEnableDepthTestCommand(bool on) : on(on) { }
-	void Execute(DrawerThread *thread) override { PolyTriangleThreadData::Get(thread)->EnableDepthTest(on); }
-
-private:
-	bool on;
 };
 
 class PolySetRenderStyleCommand : public PolyDrawerCommand
@@ -514,9 +508,9 @@ private:
 class PolySetViewportCommand : public PolyDrawerCommand
 {
 public:
-	PolySetViewportCommand(int x, int y, int width, int height, uint8_t *dest, int dest_width, int dest_height, int dest_pitch, bool dest_bgra, PolyDepthStencil *depthstencil)
-		: x(x), y(y), width(width), height(height), dest(dest), dest_width(dest_width), dest_height(dest_height), dest_pitch(dest_pitch), dest_bgra(dest_bgra), depthstencil(depthstencil) { }
-	void Execute(DrawerThread *thread) override { PolyTriangleThreadData::Get(thread)->SetViewport(x, y, width, height, dest, dest_width, dest_height, dest_pitch, dest_bgra, depthstencil); }
+	PolySetViewportCommand(int x, int y, int width, int height, uint8_t *dest, int dest_width, int dest_height, int dest_pitch, bool dest_bgra, PolyDepthStencil *depthstencil, bool topdown)
+		: x(x), y(y), width(width), height(height), dest(dest), dest_width(dest_width), dest_height(dest_height), dest_pitch(dest_pitch), dest_bgra(dest_bgra), depthstencil(depthstencil), topdown(topdown) { }
+	void Execute(DrawerThread *thread) override { PolyTriangleThreadData::Get(thread)->SetViewport(x, y, width, height, dest, dest_width, dest_height, dest_pitch, dest_bgra, depthstencil, topdown); }
 
 private:
 	int x;
@@ -529,6 +523,7 @@ private:
 	int dest_pitch;
 	bool dest_bgra;
 	PolyDepthStencil *depthstencil;
+	bool topdown;
 };
 
 class PolySetViewpointUniformsCommand : public PolyDrawerCommand

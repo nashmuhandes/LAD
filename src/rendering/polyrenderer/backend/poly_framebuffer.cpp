@@ -90,8 +90,6 @@ void PolyFrameBuffer::InitializeState()
 	mViewpoints = new HWViewpointBuffer;
 	mLights = new FLightBuffer();
 
-	PolyTriangleDrawer::SetLightBuffer(GetDrawCommands(), mLightBuffer->Memory());
-
 	CheckCanvas();
 }
 
@@ -99,6 +97,7 @@ void PolyFrameBuffer::CheckCanvas()
 {
 	if (!mCanvas || mCanvas->GetWidth() != GetWidth() || mCanvas->GetHeight() != GetHeight())
 	{
+		FlushDrawCommands();
 		DrawerThreads::WaitForWorkers();
 
 		mCanvas.reset(new DCanvas(0, 0, true));
@@ -106,22 +105,26 @@ void PolyFrameBuffer::CheckCanvas()
 		mDepthStencil.reset();
 		mDepthStencil.reset(new PolyDepthStencil(GetWidth(), GetHeight()));
 
-		mRenderState->SetRenderTarget(GetCanvas(), GetDepthStencil());
+		mRenderState->SetRenderTarget(GetCanvas(), GetDepthStencil(), true);
 	}
 }
 
-const DrawerCommandQueuePtr &PolyFrameBuffer::GetDrawCommands()
+PolyCommandBuffer *PolyFrameBuffer::GetDrawCommands()
 {
 	if (!mDrawCommands)
-		mDrawCommands = std::make_shared<DrawerCommandQueue>(&mFrameMemory);
-	return mDrawCommands;
+	{
+		mDrawCommands.reset(new PolyCommandBuffer(&mFrameMemory));
+		mDrawCommands->SetLightBuffer(mLightBuffer->Memory());
+	}
+	return mDrawCommands.get();
 }
 
 void PolyFrameBuffer::FlushDrawCommands()
 {
+	mRenderState->EndRenderPass();
 	if (mDrawCommands)
 	{
-		DrawerThreads::Execute(mDrawCommands);
+		mDrawCommands->Submit();
 		mDrawCommands.reset();
 	}
 }
@@ -340,7 +343,7 @@ void PolyFrameBuffer::RenderTextureView(FCanvasTexture *tex, AActor *Viewpoint, 
 	int height = mat->TextureHeight();
 	DCanvas *image = BaseLayer->GetImage(tex, 0, 0);
 	PolyDepthStencil *depthStencil = BaseLayer->GetDepthStencil(tex);
-	mRenderState->SetRenderTarget(image, depthStencil);
+	mRenderState->SetRenderTarget(image, depthStencil, false);
 
 	IntRect bounds;
 	bounds.left = bounds.top = 0;
@@ -350,8 +353,9 @@ void PolyFrameBuffer::RenderTextureView(FCanvasTexture *tex, AActor *Viewpoint, 
 	FRenderViewpoint texvp;
 	RenderViewpoint(texvp, Viewpoint, &bounds, FOV, (float)width / height, (float)width / height, false, false);
 
+	FlushDrawCommands();
 	DrawerThreads::WaitForWorkers();
-	mRenderState->SetRenderTarget(GetCanvas(), GetDepthStencil());
+	mRenderState->SetRenderTarget(GetCanvas(), GetDepthStencil(), true);
 
 	tex->SetUpdated(true);
 }

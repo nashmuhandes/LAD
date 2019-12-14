@@ -12,7 +12,7 @@
 
 struct HWViewpointUniforms;
 
-class PolyRenderState : public FRenderState
+class PolyRenderState final : public FRenderState
 {
 public:
 	PolyRenderState();
@@ -40,9 +40,10 @@ public:
 	void EnableLineSmooth(bool on) override;
 	void EnableDrawBuffers(int count) override;
 
-	void SetRenderTarget(DCanvas *canvas, PolyDepthStencil *depthStencil);
+	void SetRenderTarget(DCanvas *canvas, PolyDepthStencil *depthStencil, bool topdown);
 	void Bind(PolyDataBuffer *buffer, uint32_t offset, uint32_t length);
 	PolyVertexInputAssembly *GetVertexFormat(int numBindingPoints, int numAttributes, size_t stride, const FVertexBufferAttribute *attrs);
+	void EndRenderPass();
 
 private:
 	void Apply();
@@ -68,5 +69,29 @@ private:
 	{
 		DCanvas *Canvas = nullptr;
 		PolyDepthStencil *DepthStencil = nullptr;
+		bool TopDown = true;
 	} mRenderTarget;
+
+	struct Rect
+	{
+		int x = 0;
+		int y = 0;
+		int width = 0;
+		int height = 0;
+	} mScissor, mViewport;
+
+	bool mNeedApply = true;
+
+	bool mDepthTest = false;
+	bool mDepthMask = false;
+	int mDepthFunc = DF_Always;
+	float mDepthRangeMin = 0.0f;
+	float mDepthRangeMax = 1.0f;
+	bool mStencilEnabled = false;
+	int mStencilValue = 0;
+	int mStencilOp = SOP_Keep;
+	int mCulling = Cull_None;
+	bool mColorMask[4] = { true, true, true, true };
+
+	PolyCommandBuffer* mDrawCommands = nullptr;
 };
