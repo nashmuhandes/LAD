@@ -145,6 +145,7 @@ void DrawFullscreenSubtitle(const char *text);
 void D_Cleanup();
 void FreeSBarInfoScript();
 void I_UpdateWindowTitle();
+void C_GrabCVarDefaults ();
 
 // PRIVATE FUNCTION PROTOTYPES ---------------------------------------------
 
@@ -276,7 +277,7 @@ void D_ToggleHud()
 	static int saved_screenblocks;
 	static bool saved_drawplayersprite, saved_showmessages;
 
-	if (hud_toggled = !hud_toggled)
+	if ((hud_toggled = !hud_toggled))
 	{
 		saved_screenblocks = screenblocks;
 		saved_drawplayersprite = r_drawplayersprites;
@@ -1481,6 +1482,10 @@ void ParseCVarInfo()
 				{
 					cvarflags |= CVAR_LATCH;
 				}
+				else if (stricmp(sc.String, "nosave") == 0)
+				{
+					cvarflags |= CVAR_NOSAVE;
+				}
 				else
 				{
 					sc.ScriptError("Unknown cvar attribute '%s'", sc.String);
@@ -2535,6 +2540,8 @@ static int D_DoomMain_Internal (void)
 		allwads.Clear();
 		allwads.ShrinkToFit();
 		SetMapxxFlag();
+
+		C_GrabCVarDefaults(); //parse DEFCVARS
 
 		GameConfig->DoKeySetup(gameinfo.ConfigName);
 
