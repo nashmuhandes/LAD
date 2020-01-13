@@ -62,6 +62,13 @@
 
 // MACROS ------------------------------------------------------------------
 
+// Requires SDL 2.0.6 or newer
+//#define SDL2_STATIC_LIBRARY
+
+#if defined SDL2_STATIC_LIBRARY && defined HAVE_VULKAN
+#include <SDL_vulkan.h>
+#endif // SDL2_STATIC_LIBRARY && HAVE_VULKAN
+
 // TYPES -------------------------------------------------------------------
 
 // PUBLIC FUNCTION PROTOTYPES ----------------------------------------------
@@ -113,10 +120,19 @@ CCMD(vid_list_sdl_render_drivers)
 
 namespace Priv
 {
+#ifdef SDL2_STATIC_LIBRARY
+
+#define SDL2_OPTIONAL_FUNCTION(RESULT, NAME, ...) \
+	RESULT(*NAME)(__VA_ARGS__) = SDL_ ## NAME
+
+#else // !SDL2_STATIC_LIBRARY
+
 	FModule library("SDL2");
 
 #define SDL2_OPTIONAL_FUNCTION(RESULT, NAME, ...) \
 	static TOptProc<library, RESULT(*)(__VA_ARGS__)> NAME("SDL_" #NAME)
+
+#endif // SDL2_STATIC_LIBRARY
 
 	SDL2_OPTIONAL_FUNCTION(int,      GetWindowBordersSize,         SDL_Window *window, int *top, int *left, int *bottom, int *right);
 #ifdef HAVE_VULKAN
@@ -149,7 +165,7 @@ namespace Priv
 		}
 
 		FString caption;
-		caption.Format(GAMESIG " %s (%s)", GetVersionString(), GetGitTime());
+		caption.Format(GAMENAME " %s (%s)", GetVersionString(), GetGitTime());
 
 		const uint32_t windowFlags = (win_maximized ? SDL_WINDOW_MAXIMIZED : 0) | SDL_WINDOW_RESIZABLE | extraFlags;
 		Priv::window = SDL_CreateWindow(caption,
@@ -408,11 +424,13 @@ SDLVideo::SDLVideo ()
 		return;
 	}
 
+#ifndef SDL2_STATIC_LIBRARY
 	// Load optional SDL functions
 	if (!Priv::library.IsLoaded())
 	{
 		Priv::library.Load({ "libSDL2-2.0.so.0", "libSDL2-2.0.so", "libSDL2.so" });
 	}
+#endif // !SDL2_STATIC_LIBRARY
 
 #ifdef HAVE_VULKAN
 	Priv::vulkanEnabled = vid_preferbackend == 1
@@ -753,7 +771,7 @@ void I_SetWindowTitle(const char* caption)
 	else
 	{
 		FString default_caption;
-		default_caption.Format(GAMESIG " %s (%s)", GetVersionString(), GetGitTime());
+		default_caption.Format(GAMENAME " %s (%s)", GetVersionString(), GetGitTime());
 		SDL_SetWindowTitle(Priv::window, default_caption);
 	}
 }
