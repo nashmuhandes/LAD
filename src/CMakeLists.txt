@@ -470,7 +470,8 @@ if (HAVE_VULKAN)
 endif()
 	
 set( PLAT_POSIX_SOURCES
-	posix/i_steam.cpp )
+	posix/i_steam.cpp
+	posix/i_system_posix.cpp )
 set( PLAT_SDL_SOURCES
 	posix/sdl/crashcatcher.c
 	posix/sdl/hardware.cpp
@@ -713,7 +714,6 @@ set( POLYRENDER_SOURCES
 	rendering/polyrenderer/drawers/screen_scanline_setup.cpp
 	rendering/polyrenderer/drawers/screen_shader.cpp
 	rendering/polyrenderer/drawers/screen_blend.cpp
-	rendering/polyrenderer/math/gpu_types.cpp
 )
 
 # These files will be flagged as "headers" so that they appear in project files
