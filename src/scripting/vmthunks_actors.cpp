@@ -142,6 +142,15 @@ DEFINE_ACTION_FUNCTION_NATIVE(AActor, A_StopSound, NativeStopSound)
 	return 0;
 }
 
+DEFINE_ACTION_FUNCTION_NATIVE(AActor, A_StopSounds, S_StopActorSounds)
+{
+	PARAM_SELF_PROLOGUE(AActor);
+	PARAM_INT(chanmin);
+	PARAM_INT(chanmax);
+	S_StopActorSounds(self, chanmin, chanmax);
+	return 0;
+}
+
 DEFINE_ACTION_FUNCTION_NATIVE(AActor, A_SoundPitch, S_ChangeActorSoundPitch)
 {
 	PARAM_SELF_PROLOGUE(AActor);
@@ -170,7 +179,7 @@ DEFINE_ACTION_FUNCTION_NATIVE(AActor, A_PlaySound, A_PlaySound)
 	PARAM_FLOAT(attenuation);
 	PARAM_BOOL(local);
 	PARAM_FLOAT(pitch);
-	A_PlaySound(self, soundid, channel, volume, looping, attenuation, local, pitch);
+	A_PlaySound(self, soundid, channel, volume, looping, attenuation, local, pitch, 0.0f);
 	return 0;
 }
 
@@ -183,7 +192,8 @@ DEFINE_ACTION_FUNCTION_NATIVE(AActor, A_StartSound, A_StartSound)
 	PARAM_FLOAT(volume);
 	PARAM_FLOAT(attenuation);
 	PARAM_FLOAT(pitch);
-	A_StartSound(self, soundid, channel, flags, volume, attenuation, pitch);
+	PARAM_FLOAT(startTime);
+	A_StartSound(self, soundid, channel, flags, volume, attenuation, pitch, startTime);
 	return 0;
 }
 

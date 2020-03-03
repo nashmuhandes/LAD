@@ -301,12 +301,13 @@ public:
 	void UpdateSounds(int time);
 
 	FSoundChan* StartSound(int sourcetype, const void* source,
-		const FVector3* pt, int channel, EChanFlags flags, FSoundID sound_id, float volume, float attenuation, FRolloffInfo* rolloff = nullptr, float spitch = 0.0f);
+		const FVector3* pt, int channel, EChanFlags flags, FSoundID sound_id, float volume, float attenuation, FRolloffInfo* rolloff = nullptr, float spitch = 0.0f, float startTime = 0.0f);
 
 	// Stops an origin-less sound from playing from this channel.
 	void StopSoundID(int sound_id);
 	void StopSound(int channel, int sound_id = -1);
 	void StopSound(int sourcetype, const void* actor, int channel, int sound_id = -1);
+	void StopActorSounds(int sourcetype, const void* actor, int chanmin, int chanmax);
 
 	void RelinkSound(int sourcetype, const void* from, const void* to, const FVector3* optpos);
 	void ChangeSoundVolume(int sourcetype, const void* source, int channel, double dvolume);
