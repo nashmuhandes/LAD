@@ -94,6 +94,7 @@ const char *GetVersionString();
 #define GAMESIG "LAD"
 #define BASEWAD "engine.pk3"
 #define OPTIONALWAD "game_support.pk3"
+#define GZDOOM 1
 
 // More stuff that needs to be different for derivatives.
 #define GAMENAME "LiveAnotherDay"

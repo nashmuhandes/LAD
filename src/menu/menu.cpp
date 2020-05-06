@@ -53,7 +53,9 @@
 #include "events.h"
 #include "v_video.h"
 #include "i_system.h"
-#include "scripting/types.h"
+#include "c_buttons.h"
+#include "types.h"
+#include "texturemanager.h"
 
 // [LAD]
 #include "g_levellocals.h"
@@ -129,6 +131,8 @@ void D_ToggleHud();
 #define KEY_REPEAT_DELAY	(TICRATE*5/12)
 #define KEY_REPEAT_RATE		(3)
 
+bool OkForLocalization(FTextureID texnum, const char* substitute);
+
 //============================================================================
 //
 //
@@ -149,7 +153,7 @@ DEFINE_ACTION_FUNCTION_NATIVE(DMenuDescriptor, GetDescriptor, GetMenuDescriptor)
 {
 	PARAM_PROLOGUE;
 	PARAM_NAME(name);
-	ACTION_RETURN_OBJECT(GetMenuDescriptor(name));
+	ACTION_RETURN_OBJECT(GetMenuDescriptor(name.GetIndex()));
 }
 
 size_t DListMenuDescriptor::PropagateMark()
@@ -330,7 +334,7 @@ void DMenu::CallDrawer()
 	{
 		VMValue params[] = { (DObject*)this };
 		VMCall(func, params, 1, nullptr, 0);
-		screen->ClearClipRect();	// make sure the scripts don't leave a valid clipping rect behind.
+		twod->ClearClipRect();	// make sure the scripts don't leave a valid clipping rect behind.
 	}
 }
 
@@ -362,7 +366,7 @@ void M_StartControlPanel (bool makeSound, bool scaleoverride)
 	if (CurrentMenu != nullptr)
 		return;
 
-	ResetButtonStates ();
+	buttonMap.ResetButtonStates ();
 	for (int i = 0; i < NUM_MKEYS; ++i)
 	{
 		MenuButtons[i].ReleaseKey(0);
@@ -421,7 +425,7 @@ EXTERN_CVAR(Int, cl_gfxlocalization)
 void M_SetMenu(FName menu, int param)
 {
 	// some menus need some special treatment
-	switch (menu)
+	switch (menu.GetIndex())
 	{
 	case NAME_Mainmenu:
 		if (gameinfo.gametype & GAME_DoomStrifeChex)	// Raven's games always used text based menus
@@ -444,7 +448,7 @@ void M_SetMenu(FName menu, int param)
 							// This assumes that replacing one graphic will replace all of them.
 							// So this only checks the "New game" entry for localization capability.
 							FTextureID texid = TexMan.CheckForTexture("M_NGAME", ETextureType::MiscPatch);
-							if (!TexMan.OkForLocalization(texid, "$MNU_NEWGAME"))
+							if (!OkForLocalization(texid, "$MNU_NEWGAME"))
 							{
 								menu = NAME_MainmenuTextOnly;
 							}
@@ -884,7 +888,7 @@ static void M_Dim()
 		amount = gameinfo.dimamount;
 	}
 
-	screen->Dim(dimmer, amount, 0, 0, screen->GetWidth(), screen->GetHeight());
+	Dim(twod, dimmer, amount, 0, 0, twod->GetWidth(), twod->GetHeight());
 }
 
 
@@ -958,6 +962,7 @@ void M_Init (void)
 	try
 	{
 		M_ParseMenuDefs();
+		GC::AddMarkerFunc(M_MarkMenus);
 	}
 	catch (CVMAbortException &err)
 	{
