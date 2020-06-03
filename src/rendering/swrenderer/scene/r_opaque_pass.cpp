@@ -951,7 +951,8 @@ namespace swrenderer
 					{
 						thinglightlevel = thing->Sector->GetTexture(sector_t::ceiling) == skyflatnum ? thing->Sector->GetCeilingLight() : thing->Sector->GetFloorLight();
 						auto nc = !!(thing->Level->flags3 & LEVEL3_NOCOLOREDSPRITELIGHTING);
-						thingColormap = GetSpriteColorTable(thing->Sector->Colormap, thing->Sector->SpecialColors[sector_t::sprites], nc);					}
+						thingColormap = GetSpriteColorTable(thing->Sector->Colormap, thing->Sector->SpecialColors[sector_t::sprites], nc);					
+					}
 
 					if ((sprite.renderflags & RF_SPRITETYPEMASK) == RF_WALLSPRITE)
 					{
@@ -1029,11 +1030,8 @@ namespace swrenderer
 		{
 			sprite.picnum = thing->picnum;
 
-			sprite.tex = TexMan.GetPalettedTexture(sprite.picnum, true);
-			if (!sprite.tex->isValid())
-			{
-				return false;
-			}
+			sprite.tex = GetPalettedSWTexture(sprite.picnum, true);
+			if (!sprite.tex) return false;
 
 			if (sprite.tex->GetRotations() != 0xFFFF)
 			{
@@ -1060,7 +1058,8 @@ namespace swrenderer
 				{
 					sprite.renderflags ^= RF_XFLIP;
 				}
-				sprite.tex = TexMan.GetPalettedTexture(sprite.picnum, false);	// Do not animate the rotation
+				sprite.tex = GetPalettedSWTexture(sprite.picnum, false);	// Do not animate the rotation
+				if (!sprite.tex) return false;
 			}
 		}
 		else
@@ -1090,7 +1089,7 @@ namespace swrenderer
 					{
 						sprite.renderflags ^= RF_XFLIP;
 					}
-					sprite.tex = TexMan.GetPalettedTexture(tex, false);	// Do not animate the rotation
+					sprite.tex = GetPalettedSWTexture(tex, false);	// Do not animate the rotation
 				}
 
 				if (r_drawvoxels)
@@ -1102,7 +1101,7 @@ namespace swrenderer
 					return false;
 			}
 
-			if (sprite.voxel == nullptr && (sprite.tex == nullptr || !sprite.tex->isValid()))
+			if (sprite.voxel == nullptr && sprite.tex == nullptr)
 			{
 				return false;
 			}
