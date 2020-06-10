@@ -141,8 +141,8 @@ CUSTOM_CVAR(Bool, gl_notexturefill, false, CVAR_NOINITCALL)
 CUSTOM_CVAR(Int, gl_lightmode, 0, CVAR_ARCHIVE | CVAR_NOINITCALL) // [LAD] default to 0
 {
 	int newself = self;
-	if (newself > 8) newself = 16;	// use 8 and 16 for software lighting to avoid conflicts with the bit mask
-	else if (newself > 4) newself = 8;
+	if (newself > 8) newself = 16;	// use 8 and 16 for software lighting to avoid conflicts with the bit mask ( in hindsight a bad idea.)
+	else if (newself > 5) newself = 8;
 	else if (newself < 0) newself = 0;
 	if (self != newself) self = newself;
 	else for (auto Level : AllLevels())
@@ -954,6 +954,8 @@ bool FLevelLocals::DoCompleted (FString nextlevel, wbstartstruct_t &wminfo)
 	// Intermission stats for entire hubs
 	G_LeavingHub(this, mode, thiscluster, &wminfo);
 
+	// Do not allow playing sounds in here - they'd never be able to play properly.
+	soundEngine->BlockNewSounds(true);
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (playeringame[i])
@@ -961,6 +963,7 @@ bool FLevelLocals::DoCompleted (FString nextlevel, wbstartstruct_t &wminfo)
 			G_PlayerFinishLevel (i, mode, changeflags);
 		}
 	}
+	soundEngine->BlockNewSounds(false);
 
 	if (mode == FINISH_SameHub)
 	{ // Remember the level's state for re-entry.

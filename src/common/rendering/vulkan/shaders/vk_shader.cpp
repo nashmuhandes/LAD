@@ -25,6 +25,7 @@
 #include "hw_shaderpatcher.h"
 #include "filesystem.h"
 #include "engineerrors.h"
+#include "version.h"
 #include <ShaderLang.h>
 
 VkShaderManager::VkShaderManager(VulkanDevice *device) : device(device)
@@ -162,6 +163,9 @@ static const char *shaderBindings = R"(
 		vec4 uSplitBottomPlane;
 
 		vec4 uDetailParms;
+		#ifdef NPOT_EMULATION
+		vec2 uNpotEmulation;
+		#endif
 	};
 
 	layout(set = 0, binding = 3, std140) uniform StreamUBO {
@@ -179,6 +183,9 @@ static const char *shaderBindings = R"(
 	layout(set = 1, binding = 5) uniform sampler2D texture6;
 	layout(set = 1, binding = 6) uniform sampler2D texture7;
 	layout(set = 1, binding = 7) uniform sampler2D texture8;
+	layout(set = 1, binding = 8) uniform sampler2D texture9;
+	layout(set = 1, binding = 9) uniform sampler2D texture10;
+	layout(set = 1, binding = 10) uniform sampler2D texture11;
 
 	// This must match the PushConstants struct
 	layout(push_constant) uniform PushConstants
@@ -248,6 +255,7 @@ static const char *shaderBindings = R"(
 	#define uSplitTopPlane data[uDataIndex].uSplitTopPlane
 	#define uSplitBottomPlane data[uDataIndex].uSplitBottomPlane
 	#define uDetailParms data[uDataIndex].uDetailParms
+	#define uNpotEmulation data[uDataIndex].uNpotEmulation
 
 	#define SUPPORTS_SHADOWMAPS
 	#define VULKAN_COORDINATE_SYSTEM
@@ -270,6 +278,9 @@ std::unique_ptr<VulkanShader> VkShaderManager::LoadVertShader(FString shadername
 	FString code = GetTargetGlslVersion();
 	code << defines;
 	code << "\n#define MAX_STREAM_DATA " << std::to_string(MAX_STREAM_DATA).c_str() << "\n";
+#ifdef NPOT_EMULATION
+	code << "#define NPOT_EMULATION\n"
+#endif
 	code << shaderBindings;
 	if (!device->UsedDeviceFeatures.shaderClipDistance) code << "#define NO_CLIPDISTANCE_SUPPORT\n";
 	code << "#line 1\n";

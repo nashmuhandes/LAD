@@ -68,11 +68,10 @@ FSoftwareTexture::FSoftwareTexture(FGameTexture *tex)
 	mSource = tex->GetTexture();
 
 	mBufferFlags = CTF_ProcessData;
-	auto f = mBufferFlags;
 
-	if (shouldUpscale(tex, scaleFlagFromUseType(tex->GetUseType()))) f |= CTF_Upscale;
+	if (shouldUpscale(tex, scaleFlagFromUseType(tex->GetUseType()))) mBufferFlags |= CTF_Upscale;
 	// calculate the real size after running the scaler.
-	auto info = mSource->CreateTexBuffer(0, CTF_CheckOnly| f);
+	auto info = mSource->CreateTexBuffer(0, CTF_CheckOnly| mBufferFlags);
 	mPhysicalWidth = info.mWidth;
 	mPhysicalHeight = info.mHeight; 
 	mPhysicalScale = tex->GetTexelWidth() > 0 ? mPhysicalWidth / tex->GetTexelWidth() : mPhysicalWidth;
@@ -130,7 +129,7 @@ const uint8_t *FSoftwareTexture::GetPixels(int style)
 		}
 		else
 		{
-			auto f = mBufferFlags | CTF_Upscale;
+			auto f = mBufferFlags;
 			auto tempbuffer = mSource->CreateTexBuffer(0, f);
 			Pixels.Resize(GetPhysicalWidth()*GetPhysicalHeight());
 			PalEntry *pe = (PalEntry*)tempbuffer.mBuffer;
