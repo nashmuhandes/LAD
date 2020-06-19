@@ -1541,13 +1541,6 @@ void DAutomap::Ticker ()
 	if (!automapactive)
 		return;
 
-	// [LAD] automap forbidden by zscript and/or mapinfo settings
-	if ((primaryLevel->ladflags & LADLEVEL_NOAUTOMAP) && (amcflags & AMC_D_AUTOMAP))
-	{
-		AM_ToggleMap();
-		return;
-	}
-
 	amclock++;
 
 	if (am_followplayer)
@@ -3361,10 +3354,6 @@ void AM_ToggleMap()
 
 	// ... or if there is no automap.
 	if (!primaryLevel || !primaryLevel->automap)
-		return;
-
-	// [LAD] mapinfo noautomap flag
-	if (!automapactive && (primaryLevel->ladflags & LADLEVEL_NOAUTOMAP) && (amcflags & AMC_D_AUTOMAP))
 		return;
 
 	if (!automapactive)

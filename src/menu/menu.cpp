@@ -58,8 +58,6 @@
 #include "texturemanager.h"
 #include "v_draw.h"
 
-#include "g_levellocals.h"
-
 int DMenu::InMenu;
 static ScaleOverrider *CurrentScaleOverrider;
 //
@@ -519,12 +517,6 @@ void M_SetMenu(FName menu, int param)
 			M_StartMessage (GStrings("SAVEDEAD"), 1);
 			return;
 		}
-		if ((amcflags & AMC_D_USERSAVE) && (primaryLevel->ladflags & LADLEVEL_NOSAVEGAME))
-		{
-			M_StartMessage (GStrings("SAVEBLOCKED"), 1);
-			return;
-		}
-
 
 	case NAME_VideoModeMenu:
 		break;

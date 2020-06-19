@@ -249,9 +249,6 @@ enum ELevelFlags : unsigned int
 	LEVEL3_EXITSECRETUSED		= 0x00000040,
 	LEVEL3_FORCEWORLDPANNING	= 0x00000080,	// Forces the world panning flag for all textures, even those without it explicitly set.
 	LEVEL3_HIDEAUTHORNAME		= 0x00000100,
-
-	LADLEVEL_NOAUTOMAP			= 0x00000001,	// Disallow automap
-	LADLEVEL_NOSAVEGAME			= 0x00000002,	// Disallow user saves
 };
 
 
@@ -324,7 +321,6 @@ struct level_info_t
 	int32_t		flags;
 	uint32_t	flags2;
 	uint32_t	flags3;
-	uint32_t	ladflags;
 
 	FString		Music;
 	FString		LevelName;

@@ -1223,13 +1223,6 @@ OptionMenu "MiscOptions" protected
 		StaticText " "
 		Option	"$DSPLYMNU_SHOWENDOOM",			"showendoom", "Endoom"
 	}
-
-	
-
-	StaticText " "
-	StaticText "$MISCMNU_DELEGATEMODDERCONTROL", 1
-	Option "$MISCMNU_DELEGATESAVEGAMES",		"amc_saves", "OnOff"
-	Option "$MISCMNU_DELEGATEAUTOMAP",			"amc_automap", "OnOff"
 }
 
 //-------------------------------------------------------------------------------------------
