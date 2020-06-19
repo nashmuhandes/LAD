@@ -42,8 +42,6 @@
 #include "c_dispatch.h"
 #include "g_game.h"
 #include "vm.h"
-
-// [LAD]
 #include "g_levellocals.h"
 
 EXTERN_CVAR (Bool, saveloadconfirmation) // [mxd]
@@ -183,7 +181,6 @@ CCMD (quicksave)
 		return;
 	}
 
-	// [LAD]
 	if ((amcflags & AMC_D_USERSAVE) && (primaryLevel->ladflags & LADLEVEL_NOSAVEGAME))
 		return;
 

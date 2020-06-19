@@ -632,7 +632,6 @@ UNSAFE_CCMD (load)
 
 UNSAFE_CCMD (save)
 {
-	// [LAD]
 	if ((amcflags & AMC_D_USERSAVE) && (primaryLevel->ladflags & LADLEVEL_NOSAVEGAME))
 	{
 		Printf("savegame is disabled. disable amc_saves to override\n");

@@ -734,11 +734,9 @@ struct LevelLocals native
 	native name deathsequence;
 	native readonly int compatflags;
 	native readonly int compatflags2;
-// level_info_t *info cannot be done yet.
-
-	// [LAD]
 	native bool noautomap;
 	native bool nousersave;
+// level_info_t *info cannot be done yet.
 
 	native String GetUDMFString(int type, int index, Name key);
 	native int GetUDMFInt(int type, int index, Name key);

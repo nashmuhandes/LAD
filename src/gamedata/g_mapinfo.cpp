@@ -1552,11 +1552,10 @@ enum EMIType
 	MITYPE_SETFLAG3,
 	MITYPE_CLRFLAG3,
 	MITYPE_SCFLAGS3,
-	MITYPE_COMPATFLAG,
-	// [LAD]
 	MITYPE_SETLADFLAG,
 	MITYPE_CLRLADFLAG,
 	MITYPE_SCLADFLAGS,
+	MITYPE_COMPATFLAG,
 };
 
 struct MapInfoFlagHandler
@@ -1648,6 +1647,10 @@ MapFlagHandlers[] =
 	{ "nolightfade",					MITYPE_SETFLAG3,	LEVEL3_NOLIGHTFADE, 0 },
 	{ "nocoloredspritelighting",		MITYPE_SETFLAG3,	LEVEL3_NOCOLOREDSPRITELIGHTING, 0 },
 	{ "forceworldpanning",				MITYPE_SETFLAG3,	LEVEL3_FORCEWORLDPANNING, 0 },
+	{ "noautomap",						MITYPE_SETLADFLAG,	LADLEVEL_NOAUTOMAP, 0 },
+	{ "allowautomap",					MITYPE_CLRLADFLAG,	LADLEVEL_NOAUTOMAP, 0 },
+	{ "nousersave",						MITYPE_SETLADFLAG,	LADLEVEL_NOSAVEGAME, 0 },
+	{ "allowusersave",					MITYPE_CLRLADFLAG,	LADLEVEL_NOSAVEGAME, 0 },
 	{ "nobotnodes",						MITYPE_IGNORE,	0, 0 },		// Skulltag option: nobotnodes
 	{ "compat_shorttex",				MITYPE_COMPATFLAG, COMPATF_SHORTTEX, 0 },
 	{ "compat_stairs",					MITYPE_COMPATFLAG, COMPATF_STAIRINDEX, 0 },
@@ -1695,11 +1698,6 @@ MapFlagHandlers[] =
 	{ "cd_end3_track",					MITYPE_EATNEXT,	0, 0 },
 	{ "cd_intermission_track",			MITYPE_EATNEXT,	0, 0 },
 	{ "cd_title_track",					MITYPE_EATNEXT,	0, 0 },
-	// [LAD]
-	{ "noautomap",						MITYPE_SETLADFLAG,	LADLEVEL_NOAUTOMAP, 0 },
-	{ "allowautomap",					MITYPE_CLRLADFLAG,	LADLEVEL_NOAUTOMAP, 0 },
-	{ "nousersave",						MITYPE_SETLADFLAG,	LADLEVEL_NOSAVEGAME, 0 },
-	{ "allowusersave",					MITYPE_CLRLADFLAG,	LADLEVEL_NOSAVEGAME, 0 },
 	{ NULL, MITYPE_IGNORE, 0, 0}
 };
 
@@ -1800,6 +1798,30 @@ void FMapInfoParser::ParseMapDefinition(level_info_t &info)
 				info.flags3 = (info.flags3 & handler->data2) | handler->data1;
 				break;
 
+			case MITYPE_SETLADFLAG:
+				if (!CheckAssign())
+				{
+					info.ladflags |= handler->data1;
+				}
+				else
+				{
+					sc.MustGetNumber();
+					if (sc.Number) info.ladflags |= handler->data1;
+					else info.ladflags &= ~handler->data1;
+				}
+				info.ladflags |= handler->data2;
+				break;
+
+			case MITYPE_CLRLADFLAG:
+				info.ladflags &= ~handler->data1;
+				info.ladflags |= handler->data2;
+				break;
+
+			case MITYPE_SCLADFLAGS:
+				info.flags = (info.ladflags & handler->data2) | handler->data1;
+				break;
+
+
 			case MITYPE_COMPATFLAG:
 			{
 				int set = 1;
@@ -1830,30 +1852,6 @@ void FMapInfoParser::ParseMapDefinition(level_info_t &info)
 				info.compatmask2 |= handler->data2;
 			}
 			break;
-
-			// [LAD]
-			case MITYPE_SETLADFLAG:
-				if (!CheckAssign())
-				{
-					info.ladflags |= handler->data1;
-				}
-				else
-				{
-					sc.MustGetNumber();
-					if (sc.Number) info.ladflags |= handler->data1;
-					else info.ladflags &= ~handler->data1;
-				}
-				info.ladflags |= handler->data2;
-				break;
-
-			case MITYPE_CLRLADFLAG:
-				info.ladflags &= ~handler->data1;
-				info.ladflags |= handler->data2;
-				break;
-
-			case MITYPE_SCLADFLAGS:
-				info.flags = (info.ladflags & handler->data2) | handler->data1;
-				break;
 
 			default:
 				// should never happen
