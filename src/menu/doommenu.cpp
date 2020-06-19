@@ -510,6 +510,11 @@ CCMD(reset2saved)
 	R_SetViewSize (screenblocks);
 }
 
+// [LAD]
+CCMD(resetbindings)
+{
+	C_SetDefaultBindings();
+}
 
 //=============================================================================
 //
