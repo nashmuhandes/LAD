@@ -80,17 +80,17 @@ vec3 ProcessMaterialLight(Material material, vec3 ambientLight)
 
 	vec3 Lo = uDynLightColor.rgb;
 
-	if (uDirectionalLight.w != 0.0 && N != vec3(0.0))
+	if (uDirectionalContrast.w != 0.0 && N != vec3(0.0))
 	{
-		float directionalLightStrength = uDirectionalLight.w;
+		float directionalContrastStrength = uDirectionalContrast.w;
 
-		vec3 L = uDirectionalLight.xyz;
+		vec3 L = uDirectionalContrast.xyz;
 		float attenuation = clamp(dot(N, L), 0.0, 1.0);
 		if (attenuation > 0.0)
 		{
 			vec3 H = normalize(V + L);
 
-			vec3 radiance = ambientLight.rgb * attenuation * directionalLightStrength;
+			vec3 radiance = ambientLight.rgb * attenuation * directionalContrastStrength;
 
 			// cook-torrance brdf
 			float NDF = DistributionGGX(N, H, roughness);
@@ -107,7 +107,7 @@ vec3 ProcessMaterialLight(Material material, vec3 ambientLight)
 			Lo += (kD * albedo / PI + specular) * radiance;
 		}
 
-		ambientLight *= 1.0 - directionalLightStrength;
+		ambientLight *= 1.0 - directionalContrastStrength;
 	}
 
 	if (uLightIndex >= 0)

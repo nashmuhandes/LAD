@@ -390,7 +390,7 @@ struct level_info_t
 	FString		acsName;
 	bool		fs_nocheckposition;
 
-	FVector4 directionalLight;
+	FVector4 directionalContrast;
 
 	level_info_t() 
 	{ 

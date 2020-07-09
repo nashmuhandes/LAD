@@ -280,7 +280,7 @@ bool HWDrawInfo::CheckFog(sector_t *frontsector, sector_t *backsector)
 			 backsector->GetTexture(sector_t::ceiling)!=skyflatnum));
 }
 
-FVector4 HWDrawInfo::GetDirectionalLight(void)
+FVector4 HWDrawInfo::GetDirectionalContrast(void)
 {
-	return Level->directionalLight;
+	return Level->directionalContrast;
 }
