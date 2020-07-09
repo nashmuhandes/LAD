@@ -730,6 +730,7 @@ struct LevelLocals native
 	native readonly int outsidefogdensity;
 	native readonly int skyfog;
 	native readonly float pixelstretch;
+	native readonly int8 directionalcontrastmode;
 	native readonly float MusicVolume;
 	native name deathsequence;
 	native readonly int compatflags;

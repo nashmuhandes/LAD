@@ -67,7 +67,8 @@ void FHWModelRenderer::BeginDrawModel(FRenderStyle style, FSpriteModelFrame *smf
 
 	state.mModelMatrix = objectToWorldMatrix;
 	state.EnableModelMatrix(true);
-	state.SetDirectionalContrast(di->GetDirectionalContrast());
+	bool directionalContrastEnabled = level.info->directionalcontrastmode >= 1;
+	if (directionalContrastEnabled) state.SetDirectionalContrast(di->GetDirectionalContrast());
 }
 
 void FHWModelRenderer::EndDrawModel(FRenderStyle style, FSpriteModelFrame *smf)
@@ -93,7 +94,8 @@ void FHWModelRenderer::BeginDrawHUDModel(FRenderStyle style, const VSMatrix &obj
 
 	state.mModelMatrix = objectToWorldMatrix;
 	state.EnableModelMatrix(true);
-	state.SetDirectionalContrast(di->GetDirectionalContrast());
+	bool directionalContrastEnabled = level.info->directionalcontrastmode >= 1;
+	if (directionalContrastEnabled) state.SetDirectionalContrast(di->GetDirectionalContrast());
 }
 
 void FHWModelRenderer::EndDrawHUDModel(FRenderStyle style)

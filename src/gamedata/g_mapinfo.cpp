@@ -282,6 +282,7 @@ void level_info_t::Reset()
 	outsidefogdensity = 0;
 	skyfog = 0;
 	pixelstretch = 1.2f;
+	directionalcontrastmode = 0;
 
 	specialactions.Clear();
 	DefaultEnvironment = 0;
@@ -1428,6 +1429,12 @@ DEFINE_MAP_OPTION(pixelratio, false)
 	info->pixelstretch = (float)parse.sc.Float;
 }
 
+DEFINE_MAP_OPTION(directionalcontrastmode, false)
+{
+	parse.ParseAssign();
+	parse.sc.MustGetNumber();
+	info->directionalcontrastmode = (int8_t)clamp(parse.sc.Number, 0, 2);
+}
 
 DEFINE_MAP_OPTION(brightfog, false)
 {

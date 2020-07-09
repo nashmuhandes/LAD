@@ -654,6 +654,7 @@ public:
 
 	FName		deathsequence;
 	float		pixelstretch;
+	int8_t		directionalcontrastmode;
 	float		MusicVolume;
 
 	// Hardware render stuff that can either be set via CVAR or MAPINFO

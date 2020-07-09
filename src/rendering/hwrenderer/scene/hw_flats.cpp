@@ -313,6 +313,8 @@ void HWFlat::DrawFlat(HWDrawInfo *di, FRenderState &state, bool translucent)
 
 	int rel = getExtraLight();
 
+	bool directionalContrastEnabled = level.info->directionalcontrastmode == 2;
+
 	state.SetNormal(plane.plane.Normal().X, plane.plane.Normal().Z, plane.plane.Normal().Y);
 
 	di->SetColor(state, lightlevel, rel, di->isFullbrightScene(), Colormap, alpha);
@@ -334,7 +336,7 @@ void HWFlat::DrawFlat(HWDrawInfo *di, FRenderState &state, bool translucent)
 	{
 		if (sector->special != GLSector_Skybox)
 		{
-			state.SetDirectionalContrast(di->GetDirectionalContrast());
+			if (directionalContrastEnabled) state.SetDirectionalContrast(di->GetDirectionalContrast());
 			state.SetMaterial(texture, UF_Texture, 0, CLAMP_NONE, 0, -1);
 			SetPlaneTextureRotation(state, &plane, texture);
 			DrawSubsectors(di, state);
@@ -363,7 +365,7 @@ void HWFlat::DrawFlat(HWDrawInfo *di, FRenderState &state, bool translucent)
 		{
 			if (!texture->GetTranslucency()) state.AlphaFunc(Alpha_GEqual, gl_mask_threshold);
 			else state.AlphaFunc(Alpha_GEqual, 0.f);
-			state.SetDirectionalContrast(di->GetDirectionalContrast());
+			if (directionalContrastEnabled) state.SetDirectionalContrast(di->GetDirectionalContrast());
 			state.SetMaterial(texture, UF_Texture, 0, CLAMP_NONE, 0, -1);
 			SetPlaneTextureRotation(state, &plane, texture);
 			DrawSubsectors(di, state);
