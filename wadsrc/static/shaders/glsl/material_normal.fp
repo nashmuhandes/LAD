@@ -48,9 +48,10 @@ vec3 ProcessMaterialLight(Material material, vec3 color)
 
 	if (uDirectionalLight.w != 0 && normal != vec3(0.0))
 	{
-		float directionalLightStrength = uDirectionalLight.w;
+		float directionalLightContrast = fract(uDirectionalLight.w);
+		float directionalLightStrength = floor(uDirectionalLight.w) / 255.0f;
 		dynlight.rgb += color * directionalLightAttenuation(normal) * directionalLightStrength;
-		color *= 1.0 - directionalLightStrength;
+		color *= 1.0 - directionalLightContrast;
 	}
 
 	if (uLightIndex >= 0)

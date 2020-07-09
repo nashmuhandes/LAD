@@ -82,7 +82,8 @@ vec3 ProcessMaterialLight(Material material, vec3 ambientLight)
 
 	if (uDirectionalLight.w != 0.0 && N != vec3(0.0))
 	{
-		float directionalLightStrength = uDirectionalLight.w;
+		float directionalLightContrast = fract(uDirectionalLight.w);
+		float directionalLightStrength = floor(uDirectionalLight.w) / 255.0f;
 
 		vec3 L = uDirectionalLight.xyz;
 		float attenuation = clamp(dot(N, L), 0.0, 1.0);
@@ -107,7 +108,7 @@ vec3 ProcessMaterialLight(Material material, vec3 ambientLight)
 			Lo += (kD * albedo / PI + specular) * radiance;
 		}
 
-		ambientLight *= 1.0 - directionalLightStrength;
+		ambientLight *= 1.0 - directionalLightContrast;
 	}
 
 	if (uLightIndex >= 0)
