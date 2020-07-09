@@ -736,6 +736,9 @@ struct LevelLocals native
 	native readonly int compatflags2;
 // level_info_t *info cannot be done yet.
 
+	native void SetDirectionalLight(double x, double y, double z, double w);
+	native Vector3 GetDirectionalLightVec(void);
+	native double GetDirectionalLightStr(void);
 	native String GetUDMFString(int type, int index, Name key);
 	native int GetUDMFInt(int type, int index, Name key);
 	native double GetUDMFFloat(int type, int index, Name key);

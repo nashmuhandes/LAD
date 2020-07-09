@@ -2663,6 +2663,49 @@ DEFINE_ACTION_FUNCTION_NATIVE(FLevelLocals, setFrozen, setFrozen)
 	return 0;
 }
 
+static void SetDirectionalLight(FLevelLocals* self, double x, double y, double z, double w)
+{
+	// normalize the vector
+	DVector3 dlv = DVector3(x, y, z);
+	dlv.MakeUnit();
+	self->directionalLight = FVector4(dlv.X, dlv.Y, dlv.Z, w);
+}
+
+DEFINE_ACTION_FUNCTION_NATIVE(FLevelLocals, SetDirectionalLight, SetDirectionalLight)
+{
+	PARAM_SELF_STRUCT_PROLOGUE(FLevelLocals);
+	PARAM_FLOAT(x);
+	PARAM_FLOAT(y);
+	PARAM_FLOAT(z);
+	PARAM_FLOAT(w);
+	SetDirectionalLight(self, x, y, z, w);
+	return 0;
+}
+
+static void GetDirectionalLightVec(FLevelLocals* self, DVector3* result)
+{
+	*result = DVector3(self->directionalLight.X, self->directionalLight.Y, self->directionalLight.Z);
+}
+
+DEFINE_ACTION_FUNCTION_NATIVE(FLevelLocals, GetDirectionalLightVec, GetDirectionalLightVec)
+{
+	PARAM_SELF_STRUCT_PROLOGUE(FLevelLocals);
+	DVector3 result;
+	GetDirectionalLightVec(self, &result);
+	ACTION_RETURN_VEC3(result);
+}
+
+static double GetDirectionalLightStr(FLevelLocals* self)
+{
+	return self->directionalLight.W;
+}
+
+DEFINE_ACTION_FUNCTION_NATIVE(FLevelLocals, GetDirectionalLightStr, GetDirectionalLightStr)
+{
+	PARAM_SELF_STRUCT_PROLOGUE(FLevelLocals);
+	ACTION_RETURN_FLOAT(GetDirectionalLightStr(self));
+}
+
 //=====================================================================================
 //
 //

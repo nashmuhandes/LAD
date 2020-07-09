@@ -662,6 +662,7 @@ public:
 	bool		lightadditivesurfaces;
 	bool		notexturefill;
 	int			ImpactDecalCount;
+	FVector4	directionalLight;
 
 	FDynamicLight *lights;
 
