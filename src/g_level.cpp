@@ -1665,7 +1665,8 @@ void FLevelLocals::Init()
 	deathsequence = info->deathsequence;
 
 	pixelstretch = info->pixelstretch;
-	directionalcontrastmode = info->directionalcontrastmode;
+	directionalContrastMode = info->directionalcontrastmode;
+	directionalContrast = info->directionalcontrast;
 
 	compatflags.Callback();
 	compatflags2.Callback();
