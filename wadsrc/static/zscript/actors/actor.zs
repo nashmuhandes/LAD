@@ -73,6 +73,7 @@ class Actor : Thinker native
 	const DEFAULT_HEALTH = 1000;
 	const ONFLOORZ = -2147483648.0;
 	const ONCEILINGZ = 2147483647.0;
+	const STEEPSLOPE = (46342./65536.);	// [RH] Minimum floorplane.c value for walking
 	const FLOATRANDZ = ONCEILINGZ-1;
 	const TELEFRAG_DAMAGE = 1000000;
 	const MinVel = 1./65536;
@@ -92,10 +93,10 @@ class Actor : Thinker native
 	native vector2 SpriteOffset;
 	native double spriteAngle;
 	native double spriteRotation;
-	native double VisibleStartAngle;
-	native double VisibleStartPitch;
-	native double VisibleEndAngle;
-	native double VisibleEndPitch;
+	native float VisibleStartAngle;
+	native float VisibleStartPitch;
+	native float VisibleEndAngle;
+	native float VisibleEndPitch;
 	native double Angle;
 	native double Pitch;
 	native double Roll;
@@ -149,7 +150,7 @@ class Actor : Thinker native
 	native int StartHealth;
 	native uint8 WeaveIndexXY;
 	native uint8 WeaveIndexZ;
-	native int skillrespawncount;
+	native uint16 skillrespawncount;
 	native int Args[5];
 	native int Mass;
 	native int Special;
@@ -217,6 +218,7 @@ class Actor : Thinker native
 	native sound CrushPainSound;
 	native double MaxDropoffHeight;
 	native double MaxStepHeight;
+	native double MaxSlopeSteepness;
 	native int16 PainChance;
 	native name PainType;
 	native name DeathType;
@@ -313,6 +315,7 @@ class Actor : Thinker native
 	property MinMissileChance: MinMissileChance;
 	property MaxStepHeight: MaxStepHeight;
 	property MaxDropoffHeight: MaxDropoffHeight;
+	property MaxSlopeSteepness: MaxSlopeSteepness;
 	property PoisonDamageType: PoisonDamageType;
 	property RadiusDamageFactor: RadiusDamageFactor;
 	property SelfDamageFactor: SelfDamageFactor;
@@ -371,6 +374,7 @@ class Actor : Thinker native
 		MeleeRange 64 - 20;
 		MaxDropoffHeight 24;
 		MaxStepHeight 24;
+		MaxSlopeSteepness STEEPSLOPE;
 		BounceFactor 0.7;
 		WallBounceFactor 0.75;
 		BounceCount -1;
