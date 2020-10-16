@@ -3025,6 +3025,9 @@ static void GC_MarkGameRoots()
 	// NextToThink must not be freed while thinkers are ticking.
 	GC::Mark(NextToThink);
 }
+
+bool  CheckSkipGameOptionBlock(const char* str);
+
 //==========================================================================
 //
 // D_DoomMain
@@ -3050,13 +3053,6 @@ static int D_DoomMain_Internal (void)
 	buttonMap.GetButton(Button_Mlook)->bReleaseLock = true;
 	buttonMap.GetButton(Button_Klook)->bReleaseLock = true;
 
-	static StringtableCallbacks stblcb =
-	{
-		StrTable_ValidFilter,
-		StrTable_GetGender
-	};
-	GStrings.SetCallbacks(&stblcb);
-
 	sysCallbacks = {
 		System_WantGuiCapture,
 		System_WantLeftButton,
@@ -3073,6 +3069,10 @@ static int D_DoomMain_Internal (void)
 		System_M_Dim,
 		System_GetPlayerName,
 		System_DispatchEvent,
+		StrTable_ValidFilter,
+		StrTable_GetGender,
+		nullptr,
+		CheckSkipGameOptionBlock,
 	};
 
 	
@@ -3441,6 +3441,7 @@ static int D_DoomMain_Internal (void)
 		FinishDehPatch();
 
 		if (!batchrun) Printf("M_Init: Init menus.\n");
+		SetDefaultMenuColors();
 		M_Init();
 		M_CreateGameMenus();
 

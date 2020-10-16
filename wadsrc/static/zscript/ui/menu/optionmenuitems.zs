@@ -122,7 +122,7 @@ class OptionMenuItemSubmenu : OptionMenuItem
 
 	override bool Activate()
 	{
-		Menu.MenuSound("menu/choose");
+		Menu.MenuSound("menu/advance");
 		Menu.SetMenu(mAction, mParam);
 		return true;
 	}
@@ -1234,42 +1234,3 @@ class OptionMenuItemScaleSlider : OptionMenuItemSlider
 	
 }
 
-//=============================================================================
-//
-// Placeholder classes for overhauled video mode menu. Do not use!
-// Their sole purpose is to support mods with full copy of embedded MENUDEF
-//
-//=============================================================================
-
-class OptionMenuItemScreenResolution : OptionMenuItem
-{
-	String mResTexts[3];
-	int mSelection;
-	int mHighlight;
-	int mMaxValid;
-
-	enum EValues
-	{
-		SRL_INDEX = 0x30000,
-		SRL_SELECTION = 0x30003,
-		SRL_HIGHLIGHT = 0x30004,
-	};
-
-	OptionMenuItemScreenResolution Init(String command)
-	{
-		return self;
-	}
-
-	override bool Selectable()
-	{
-		return false;
-	}
-}
-
-class VideoModeMenu : OptionMenu
-{
-	static bool SetSelectedSize()
-	{
-		return false;
-	}
-}
