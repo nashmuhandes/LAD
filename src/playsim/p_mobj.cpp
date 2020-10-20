@@ -1025,8 +1025,8 @@ bool AActor::IsInsideVisibleAngles() const
 
 	if (mo != nullptr)
 	{
-		
-		DVector3 diffang = r_viewpoint.Pos - Pos();
+		DVector2 offset = Level->Displacements.getOffset(r_viewpoint.sector->PortalGroup, Sector->PortalGroup);
+		DVector3 diffang = r_viewpoint.Pos + offset - Pos();
 		DAngle to = diffang.Angle();
 
 		if (!(renderflags & RF_ABSMASKANGLE)) 
@@ -4625,6 +4625,12 @@ AActor *AActor::StaticSpawn(FLevelLocals *Level, PClassActor *type, const DVecto
 	if (type == NULL)
 	{
 		I_Error("Tried to spawn a class-less actor\n");
+	}
+	else if (type->bAbstract)
+	{
+		// [Player701] Abstract actors cannot be spawned by any means
+		Printf("Attempt to spawn an instance of abstract actor class %s\n", type->TypeName.GetChars());
+		return nullptr;
 	}
 
 	if (allowreplacement)
