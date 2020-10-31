@@ -239,9 +239,8 @@ class OptionMenu : Menu
 
 					if (y <= 0)
 					{
-						y = DrawCaption(mDesc.mTitle, y, false);
+						y = DrawCaption(mDesc.mTitle, -y, false);
 					}
-					y *= CleanYfac_1;
 					int	rowheight = OptionMenuSettings.mLinespacing * CleanYfac_1;
 					int maxitems = (screen.GetHeight() - rowheight - y) / rowheight + 1;
 

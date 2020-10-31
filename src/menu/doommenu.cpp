@@ -71,13 +71,12 @@ EXTERN_CVAR(Bool, saveloadconfirmation) // [mxd]
 EXTERN_CVAR(Bool, quicksaverotation)
 EXTERN_CVAR(Bool, show_messages)
 
+CVAR(Bool, m_simpleoptions, true, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
+
 typedef void(*hfunc)();
 DMenu* CreateMessageBoxMenu(DMenu* parent, const char* message, int messagemode, bool playsound, FName action = NAME_None, hfunc handler = nullptr);
 bool OkForLocalization(FTextureID texnum, const char* substitute);
-void D_ToggleHud();
 void I_WaitVBL(int count);
-
-extern bool hud_toggled;
 
 
 FNewGameStartup NewGameStartupInfo;
@@ -192,6 +191,15 @@ bool M_SetSpecialMenu(FName& menu, int param)
 	case NAME_Playermenu:
 		menu = NAME_NewPlayerMenu;	// redirect the old player menu to the new one.
 		break;
+
+	case NAME_Optionsmenu:
+		if (m_simpleoptions) menu = NAME_OptionsmenuSimple;
+		break;
+
+	case NAME_OptionsmenuFull:
+		menu = NAME_Optionsmenu;
+		break;
+
 	}
 
 	DMenuDescriptor** desc = MenuDescriptors.CheckKey(menu);
@@ -471,12 +479,12 @@ CCMD (togglemessages)
 {
 	if (show_messages)
 	{
-		Printf (128, "%s\n", GStrings("MSGOFF"));
+		Printf("%s\n", GStrings("MSGOFF"));
 		show_messages = false;
 	}
 	else
 	{
-		Printf (128, "%s\n", GStrings("MSGON"));
+		Printf("%s\n", GStrings("MSGON"));
 		show_messages = true;
 	}
 }
@@ -1268,6 +1276,7 @@ void SetDefaultMenuColors()
 
 CCMD (menu_main)
 {
+	if (gamestate == GS_FULLCONSOLE) gamestate = GS_MENUSCREEN;
 	M_StartControlPanel(true);
 	M_SetMenu(NAME_Mainmenu, -1);
 }

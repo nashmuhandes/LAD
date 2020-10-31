@@ -1204,6 +1204,7 @@ bool AActor::Grind(bool items)
 				S_Sound (this, CHAN_BODY, 0, "misc/fallingsplat", 1, ATTN_IDLE);
 				Translation = BloodTranslation;
 			}
+			Level->localEventManager->WorldThingGround(this, state);
 			return false;
 		}
 		if (!(flags & MF_NOBLOOD))
@@ -1246,6 +1247,7 @@ bool AActor::Grind(bool items)
 				gib->Translation = BloodTranslation;
 			}
 			S_Sound (this, CHAN_BODY, 0, "misc/fallingsplat", 1, ATTN_IDLE);
+			Level->localEventManager->WorldThingGround(this, nullptr);
 		}
 		if (flags & MF_ICECORPSE)
 		{
@@ -5354,7 +5356,6 @@ AActor *FLevelLocals::SpawnPlayer (FPlayerStart *mthing, int playernum, int flag
 	return mobj;
 }
 
-
 //
 // P_SpawnMapThing
 // The fields of the mapthing should
@@ -5366,6 +5367,8 @@ AActor *FLevelLocals::SpawnMapThing (FMapThing *mthing, int position)
 	PClassActor *i;
 	int mask;
 	AActor *mobj;
+
+	bool spawnmulti = G_SkillProperty(SKILLP_SpawnMulti) || !!(dmflags2 & DF2_ALWAYS_SPAWN_MULTI);
 
 	if (mthing->EdNum == 0 || mthing->EdNum == -1)
 		return NULL;
@@ -5445,6 +5448,10 @@ AActor *FLevelLocals::SpawnMapThing (FMapThing *mthing, int position)
 		else if (multiplayer)
 		{
 			mask = MTF_COOPERATIVE;
+		}
+		else if (spawnmulti)
+		{
+			mask = MTF_COOPERATIVE|MTF_SINGLE;
 		}
 		else
 		{
