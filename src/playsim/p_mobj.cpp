@@ -3242,8 +3242,11 @@ bool AActor::AdjustReflectionAngle (AActor *thing, DAngle &angle)
 
 int AActor::AbsorbDamage(int damage, FName dmgtype, AActor *inflictor, AActor *source, int flags)
 {
-	for (AActor *item = Inventory; item != nullptr; item = item->Inventory)
+	AActor *next;
+	for (AActor *item = Inventory; item != nullptr; item = next)
 	{
+		// [Player701] Remember the next item now in case the current item is destroyed later
+		next = item->Inventory;
 		IFVIRTUALPTRNAME(item, NAME_Inventory, AbsorbDamage)
 		{
 			VMValue params[7] = { item, damage, dmgtype.GetIndex(), &damage, inflictor, source, flags };
@@ -6701,24 +6704,6 @@ DEFINE_ACTION_FUNCTION(AActor, OldSpawnMissile)
 // a mobj_t pointer to the missile.
 //
 //---------------------------------------------------------------------------
-
-AActor *P_SpawnMissileAngle (AActor *source, PClassActor *type, DAngle angle, double vz)
-{
-	if (source == nullptr || type == nullptr)
-	{
-		return NULL;
-	}
-	return P_SpawnMissileAngleZSpeed (source, source->Z() + 32 + source->GetBobOffset(), type, angle, vz, GetDefaultSpeed (type));
-}
-
-AActor *P_SpawnMissileAngleZ (AActor *source, double z, PClassActor *type, DAngle angle, double vz)
-{
-	if (type == nullptr)
-	{
-		return nullptr;
-	}
-	return P_SpawnMissileAngleZSpeed (source, z, type, angle, vz, GetDefaultSpeed (type));
-}
 
 AActor *P_SpawnMissileZAimed (AActor *source, double z, AActor *dest, PClassActor *type)
 {

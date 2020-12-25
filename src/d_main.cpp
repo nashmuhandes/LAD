@@ -1543,6 +1543,7 @@ void D_DoAdvanceDemo (void)
 			break;
 		}
 		// fall through to case 1 if no advisory notice
+		[[fallthrough]];
 
 	case 1:
 		Advisory = NULL;
@@ -1564,6 +1565,7 @@ void D_DoAdvanceDemo (void)
 				break;
 			}
 		}
+		[[fallthrough]];
 
 	default:
 	case 0:
@@ -2066,19 +2068,19 @@ static void AddAutoloadFiles(const char *autoname)
 	{
 		if (GameStartupInfo.LoadLights == 1 || (GameStartupInfo.LoadLights != 0 && autoloadlights))
 		{
-			const char *lightswad = BaseFileSearch ("lights.pk3", NULL, false, GameConfig);
+			const char *lightswad = BaseFileSearch ("lights.pk3", NULL, true, GameConfig);
 			if (lightswad)
 				D_AddFile (allwads, lightswad, true, -1, GameConfig);
 		}
 		if (GameStartupInfo.LoadBrightmaps == 1 || (GameStartupInfo.LoadBrightmaps != 0 && autoloadbrightmaps))
 		{
-			const char *bmwad = BaseFileSearch ("brightmaps.pk3", NULL, false, GameConfig);
+			const char *bmwad = BaseFileSearch ("brightmaps.pk3", NULL, true, GameConfig);
 			if (bmwad)
 				D_AddFile (allwads, bmwad, true, -1, GameConfig);
 		}
 		if (GameStartupInfo.LoadWidescreen == 1 || (GameStartupInfo.LoadWidescreen != 0 && autoloadwidescreen))
 		{
-			const char *wswad = BaseFileSearch ("game_widescreen_gfx.pk3", NULL, false, GameConfig);
+			const char *wswad = BaseFileSearch ("game_widescreen_gfx.pk3", NULL, true, GameConfig);
 			if (wswad)
 				D_AddFile (allwads, wswad, true, -1, GameConfig);
 		}
@@ -3740,12 +3742,10 @@ void D_Cleanup()
 	GC::FullGC();					// clean up before taking down the object list.
 	
 	// Delete the reference to the VM functions here which were deleted and will be recreated after the restart.
-	FAutoSegIterator probe(ARegHead, ARegTail);
-	while (*++probe != NULL)
+	AutoSegs::ActionFunctons.ForEach([](AFuncDesc *afunc)
 	{
-		AFuncDesc *afunc = (AFuncDesc *)*probe;
 		*(afunc->VMPointer) = NULL;
-	}
+	});
 	
 	GC::DelSoftRootHead();
 	
@@ -3822,6 +3822,7 @@ void I_UpdateWindowTitle()
 			titlestr.Format("%s - %s", level.LevelName.GetChars(), GameStartupInfo.Name.GetChars());
 			break;
 		}
+		[[fallthrough]];
 	case 2:
 		titlestr = GameStartupInfo.Name;
 		break;
