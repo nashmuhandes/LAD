@@ -319,7 +319,11 @@ if( ZD_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
 	set( CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused -Wno-unused-parameter -Wno-missing-field-initializers -ffp-contract=off ${CMAKE_CXX_FLAGS}" )
 
 	# ARM processors (Raspberry Pi, et al) - enable ARM NEON support.
-	if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+	if(${ZDOOM_TARGET_ARCH} MATCHES "arm" AND NOT APPLE)
+		set (USE_LINUX_ARM 1 CACHE BOOL "Compile for ARM - Linux")
+	endif ()
+
+	if (USE_LINUX_ARM)
 		set (USE_ARMV8 0 CACHE BOOL "Use ARMv8 instructions - Raspberry Pi 3")
 		if (USE_ARMV8)
 			set( CMAKE_CXX_FLAGS "-mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mtune=cortex-a53 -mhard-float -DNO_SSE ${CMAKE_CXX_FLAGS}" )
@@ -455,6 +459,7 @@ if (NOT ${ZDOOM_TARGET_ARCH} MATCHES "arm" )
 	set (PLAT_WIN32_SOURCES ${PLAT_WIN32_SOURCES} common/platform/win32/i_crash.cpp )
 endif()
 if (MSVC AND ${ZDOOM_TARGET_ARCH} MATCHES "arm")
+	set (PLAT_WIN32_SOURCES ${PLAT_WIN32_SOURCES} common/platform/win32/i_crash_arm.cpp )
 	add_definitions( -DNO_SSE -D__ARM__ -DRAPIDJSON_ENDIAN=RAPIDJSON_LITTLEENDIAN)
 endif()
 	
