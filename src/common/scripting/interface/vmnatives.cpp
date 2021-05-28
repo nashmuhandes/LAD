@@ -49,6 +49,7 @@
 #include "s_music.h"
 #include "i_interface.h"
 #include "base_sbar.h"
+#include "image.h"
 
 //==========================================================================
 //
@@ -80,10 +81,10 @@ DEFINE_ACTION_FUNCTION_NATIVE(DStatusBarCore, StatusbarToRealCoords, StatusbarTo
 	return MIN(4, numret);
 }
 
-void SBar_DrawTexture(DStatusBarCore* self, int texid, double x, double y, int flags, double alpha, double w, double h, double scaleX, double scaleY, int style)
+void SBar_DrawTexture(DStatusBarCore* self, int texid, double x, double y, int flags, double alpha, double w, double h, double scaleX, double scaleY, int style, int color, int translation, double clipwidth)
 {
 	if (!twod->HasBegun2D()) ThrowAbortException(X_OTHER, "Attempt to draw to screen outside a draw function");
-	self->DrawGraphic(FSetTextureID(texid), x, y, flags, alpha, w, h, scaleX, scaleY, ERenderStyle(style));
+	self->DrawGraphic(FSetTextureID(texid), x, y, flags, alpha, w, h, scaleX, scaleY, ERenderStyle(style), color, translation, clipwidth);
 }
 
 DEFINE_ACTION_FUNCTION_NATIVE(DStatusBarCore, DrawTexture, SBar_DrawTexture)
@@ -99,14 +100,17 @@ DEFINE_ACTION_FUNCTION_NATIVE(DStatusBarCore, DrawTexture, SBar_DrawTexture)
 	PARAM_FLOAT(scaleX);
 	PARAM_FLOAT(scaleY);
 	PARAM_INT(style);
-	SBar_DrawTexture(self, texid, x, y, flags, alpha, w, h, scaleX, scaleY, style);
+	PARAM_INT(col);
+	PARAM_INT(trans);
+	PARAM_FLOAT(clipwidth);
+	SBar_DrawTexture(self, texid, x, y, flags, alpha, w, h, scaleX, scaleY, style, col, trans, clipwidth);
 	return 0;
 }
 
-void SBar_DrawImage(DStatusBarCore* self, const FString& texid, double x, double y, int flags, double alpha, double w, double h, double scaleX, double scaleY, int style)
+void SBar_DrawImage(DStatusBarCore* self, const FString& texid, double x, double y, int flags, double alpha, double w, double h, double scaleX, double scaleY, int style, int color, int translation, double clipwidth)
 {
 	if (!twod->HasBegun2D()) ThrowAbortException(X_OTHER, "Attempt to draw to screen outside a draw function");
-	self->DrawGraphic(TexMan.CheckForTexture(texid, ETextureType::Any), x, y, flags, alpha, w, h, scaleX, scaleY, ERenderStyle(style));
+	self->DrawGraphic(TexMan.CheckForTexture(texid, ETextureType::Any), x, y, flags, alpha, w, h, scaleX, scaleY, ERenderStyle(style), color, translation, clipwidth);
 }
 
 DEFINE_ACTION_FUNCTION_NATIVE(DStatusBarCore, DrawImage, SBar_DrawImage)
@@ -122,9 +126,61 @@ DEFINE_ACTION_FUNCTION_NATIVE(DStatusBarCore, DrawImage, SBar_DrawImage)
 	PARAM_FLOAT(scaleX);
 	PARAM_FLOAT(scaleY);
 	PARAM_INT(style);
-	SBar_DrawImage(self, texid, x, y, flags, alpha, w, h, scaleX, scaleY, style);
+	PARAM_INT(col);
+	PARAM_INT(trans);
+	PARAM_FLOAT(clipwidth);
+	SBar_DrawImage(self, texid, x, y, flags, alpha, w, h, scaleX, scaleY, style, col, trans, clipwidth);
 	return 0;
 }
+
+void SBar_DrawImageRotated(DStatusBarCore* self, const FString& texid, double x, double y, int flags, double angle, double alpha, double scaleX, double scaleY, int style, int color, int translation)
+{
+	if (!twod->HasBegun2D()) ThrowAbortException(X_OTHER, "Attempt to draw to screen outside a draw function");
+	self->DrawRotated(TexMan.CheckForTexture(texid, ETextureType::Any), x, y, flags, angle, alpha, scaleX, scaleY, color, translation, (ERenderStyle)style);
+}
+
+DEFINE_ACTION_FUNCTION_NATIVE(DStatusBarCore, DrawImageRotated, SBar_DrawImageRotated)
+{
+	PARAM_SELF_PROLOGUE(DStatusBarCore);
+	PARAM_STRING(texid);
+	PARAM_FLOAT(x);
+	PARAM_FLOAT(y);
+	PARAM_INT(flags);
+	PARAM_FLOAT(angle);
+	PARAM_FLOAT(alpha);
+	PARAM_FLOAT(scaleX);
+	PARAM_FLOAT(scaleY);
+	PARAM_INT(style);
+	PARAM_INT(col);
+	PARAM_INT(trans);
+	SBar_DrawImageRotated(self, texid, x, y, flags, angle, alpha, scaleX, scaleY, style, col, trans);
+	return 0;
+}
+
+void SBar_DrawTextureRotated(DStatusBarCore* self, int texid, double x, double y, int flags, double angle, double alpha, double scaleX, double scaleY, int style, int color, int translation)
+{
+	if (!twod->HasBegun2D()) ThrowAbortException(X_OTHER, "Attempt to draw to screen outside a draw function");
+	self->DrawRotated(FSetTextureID(texid), x, y, flags, alpha, scaleX, scaleY, color, translation, style);
+}
+
+DEFINE_ACTION_FUNCTION_NATIVE(DStatusBarCore, DrawTextureRotated, SBar_DrawTextureRotated)
+{
+	PARAM_SELF_PROLOGUE(DStatusBarCore);
+	PARAM_INT(texid);
+	PARAM_FLOAT(x);
+	PARAM_FLOAT(y);
+	PARAM_INT(flags);
+	PARAM_FLOAT(angle);
+	PARAM_FLOAT(alpha);
+	PARAM_FLOAT(scaleX);
+	PARAM_FLOAT(scaleY);
+	PARAM_INT(style);
+	PARAM_INT(col);
+	PARAM_INT(trans);
+	SBar_DrawTextureRotated(self, texid, x, y, flags, angle, alpha, scaleX, scaleY, style, col, trans);
+	return 0;
+}
+
 
 void SBar_DrawString(DStatusBarCore* self, DHUDFont* font, const FString& string, double x, double y, int flags, int trans, double alpha, int wrapwidth, int linespacing, double scaleX, double scaleY, int translation, int style);
 
@@ -339,8 +395,7 @@ DEFINE_ACTION_FUNCTION(_TexMan, GetName)
 
 static int CheckForTexture(const FString& name, int type, int flags)
 {
-	// ForceLookup is intentionally blocked here, this flag is for internal use only.
-	return TexMan.CheckForTexture(name, static_cast<ETextureType>(type), (flags & ~FTextureManager::TEXMAN_ForceLookup)).GetIndex();
+	return TexMan.CheckForTexture(name, static_cast<ETextureType>(type), flags).GetIndex();
 }
 
 DEFINE_ACTION_FUNCTION_NATIVE(_TexMan, CheckForTexture, CheckForTexture)
@@ -480,6 +535,20 @@ DEFINE_ACTION_FUNCTION_NATIVE(_TexMan, OkForLocalization, OkForLocalization_)
 	ACTION_RETURN_INT(OkForLocalization_(name, subst));
 }
 
+static int UseGamePalette(int index)
+{
+	auto tex = TexMan.GameByIndex(index, false);
+	if (!tex) return false;
+	auto image = tex->GetTexture()->GetImage();
+	return image ? image->UseGamePalette() : false;
+}
+
+DEFINE_ACTION_FUNCTION_NATIVE(_TexMan, UseGamePalette, UseGamePalette)
+{
+	PARAM_PROLOGUE;
+	PARAM_INT(texid);
+	ACTION_RETURN_INT(UseGamePalette(texid));
+}
 
 //=====================================================================================
 //
@@ -870,6 +939,13 @@ DEFINE_ACTION_FUNCTION(FKeyBindings, GetAllKeysForCommand)
 	return 0;
 }
 
+DEFINE_ACTION_FUNCTION(FKeyBindings, GetBinding)
+{
+	PARAM_SELF_STRUCT_PROLOGUE(FKeyBindings);
+	PARAM_INT(key);
+	ACTION_RETURN_STRING(self->GetBinding(key));
+}
+
 DEFINE_ACTION_FUNCTION(FKeyBindings, UnbindACommand)
 {
 	PARAM_SELF_STRUCT_PROLOGUE(FKeyBindings);
@@ -917,6 +993,7 @@ DEFINE_GLOBAL_NAMED(mus_playing, musplaying);
 DEFINE_FIELD_X(MusPlayingInfo, MusPlayingInfo, name);
 DEFINE_FIELD_X(MusPlayingInfo, MusPlayingInfo, baseorder);
 DEFINE_FIELD_X(MusPlayingInfo, MusPlayingInfo, loop);
+DEFINE_FIELD_X(MusPlayingInfo, MusPlayingInfo, handle);
 
 DEFINE_GLOBAL_NAMED(PClass::AllClasses, AllClasses)
 DEFINE_GLOBAL(Bindings)

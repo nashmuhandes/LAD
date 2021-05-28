@@ -1107,6 +1107,8 @@ xy(menu_change, "menu/change")
 xy(menu_advance, "menu/advance")
 
 xx(zoomsize)
+xx(ScreenJobRunner)
+xx(RazeStatusBar)
 
 // [LAD]
 xx(LADBodyPart)
