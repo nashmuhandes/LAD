@@ -1157,6 +1157,29 @@ static bool CheckRipLevel(AActor *victim, AActor *projectile)
 //
 //==========================================================================
 
+static bool P_ProjectileImmune(AActor* target, AActor* source)
+{
+	// This one's directly taken from DSDA.
+	auto targetgroup = target->GetClass()->ActorInfo()->projectile_group;
+	auto sourcegroup = source->GetClass()->ActorInfo()->projectile_group;
+
+	return
+		( // PG_GROUPLESS means no immunity, even to own species
+			targetgroup != -1/*PG_GROUPLESS*/ ||
+			target == source
+			) &&
+		(
+			( // target type has default behaviour, and things are the same type
+				targetgroup == 0/*PG_DEFAULT*/ &&
+				(source->GetSpecies() == target->GetSpecies() && !(target->flags6 & MF6_DOHARMSPECIES))
+				) ||
+			( // target type has special behaviour, and things have the same group
+				targetgroup != 0/*PG_DEFAULT*/ &&
+				targetgroup == sourcegroup
+				)
+			);
+}
+
 static bool CanAttackHurt(AActor *victim, AActor *shooter)
 {
 	// players are never subject to infighting settings and are always allowed
@@ -1204,7 +1227,8 @@ static bool CanAttackHurt(AActor *victim, AActor *shooter)
 					// [RH] Don't hurt monsters that hate the same victim as you do
 					return false;
 				}
-				if (victim->GetSpecies() == shooter->GetSpecies() && !(victim->flags6 & MF6_DOHARMSPECIES))
+
+				if (P_ProjectileImmune(victim, shooter))
 				{
 					// Don't hurt same species or any relative -
 					// but only if the target isn't one's hostile.
@@ -1575,7 +1599,7 @@ bool PIT_CheckThing(FMultiBlockThingsIterator &it, FMultiBlockThingsIterator::Ch
 					{ // Ok to spawn blood
 						P_RipperBlood(tm.thing, thing);
 					}
-					S_Sound(tm.thing, CHAN_BODY, 0, "misc/ripslop", 1, ATTN_IDLE);
+					S_Sound(tm.thing, CHAN_BODY, 0, tm.thing->SoundVar(NAME_RipSound), 1, ATTN_IDLE);
 
 					// Do poisoning (if using new style poison)
 					if (tm.thing->PoisonDamage > 0 && tm.thing->PoisonDuration != INT_MIN)
@@ -5931,6 +5955,11 @@ int P_RadiusAttack(AActor *bombspot, AActor *bombsource, int bombdamage, int bom
 		{ // don't damage the source of the explosion
 			continue;
 		}
+
+		// MBF21
+		auto targetgroup = thing->GetClass()->ActorInfo()->splash_group;
+		auto sourcegroup = bombspot->GetClass()->ActorInfo()->splash_group;
+		if (targetgroup != 0 && targetgroup == sourcegroup) continue;
 
 		// a much needed option: monsters that fire explosive projectiles cannot 
 		// be hurt by projectiles fired by a monster of the same type.

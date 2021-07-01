@@ -1110,6 +1110,8 @@ xy(menu_advance, "menu/advance")
 xx(zoomsize)
 xx(ScreenJobRunner)
 xx(RazeStatusBar)
+xx(RipSound)
+xx(Archvile)
 
 // [LAD]
 xx(LADBodyPart)
