@@ -807,7 +807,7 @@ void HWSprite::Process(HWDrawInfo *di, AActor* thing, sector_t * sector, area_t 
 		z = thing->floorz;
 	}
 	// [RH] Make floatbobbing a renderer-only effect.
-	else if (thing->flags2 & MF2_FLOATBOB)
+	else
 	{
 		float fz = thing->GetBobOffset(vp.TicFrac);
 		z += fz;
@@ -1141,7 +1141,7 @@ void HWSprite::Process(HWDrawInfo *di, AActor* thing, sector_t * sector, area_t 
 	{
 		RenderStyle = STYLE_Stencil;
 		ThingColor = MAKEARGB(255, 0, 0, 0);
-		trans = 0.5f;
+		trans *= 0.5f;
 		hw_styleflags = STYLEHW_NoAlphaTest;
 	}
 
