@@ -35,7 +35,7 @@
 
 #include <assert.h>
 
-#include "templates.h"
+
 #include "base_sbar.h"
 #include "printf.h"
 #include "v_draw.h"
@@ -293,11 +293,11 @@ static void ST_CalcCleanFacs(int designwidth, int designheight, int realwidth, i
 	}
 	// Use whichever pair of cwidth/cheight or width/height that produces less difference
 	// between CleanXfac and CleanYfac.
-	cx1 = MAX(cwidth / designwidth, 1);
-	cy1 = MAX(cheight / designheight, 1);
-	cx2 = MAX(realwidth / designwidth, 1);
-	cy2 = MAX(realheight / designheight, 1);
-	if (abs(cx1 - cy1) <= abs(cx2 - cy2) || MAX(cx1, cx2) >= 4)
+	cx1 = max(cwidth / designwidth, 1);
+	cy1 = max(cheight / designheight, 1);
+	cx2 = max(realwidth / designwidth, 1);
+	cy2 = max(realheight / designheight, 1);
+	if (abs(cx1 - cy1) <= abs(cx2 - cy2) || max(cx1, cx2) >= 4)
 	{ // e.g. 640x360 looks better with this.
 		*cleanx = cx1;
 		*cleany = cy1;
@@ -489,7 +489,7 @@ void DStatusBarCore::DrawGraphic(FGameTexture* tex, double x, double y, int flag
 				if (boxwidth <= 0 || (boxheight > 0 && scale2 < scale1))
 					scale1 = scale2;
 			}
-			else scale1 = MIN(scale1, scale2);
+			else scale1 = min(scale1, scale2);
 
 			boxwidth = texwidth * scale1;
 			boxheight = texheight * scale1;
@@ -754,7 +754,7 @@ void DStatusBarCore::DrawString(FFont* font, const FString& cstring, double x, d
 	{
 		if (ch == ' ')
 		{
-			x += monospaced ? spacing : font->GetSpaceWidth() + spacing;
+			x += (monospaced ? spacing : font->GetSpaceWidth() + spacing) * scaleX;
 			continue;
 		}
 		else if (ch == TEXTCOLOR_ESCAPE)
@@ -774,7 +774,7 @@ void DStatusBarCore::DrawString(FFont* font, const FString& cstring, double x, d
 		width += font->GetDefaultKerning();
 
 		if (!monospaced) //If we are monospaced lets use the offset
-			x += (c->GetDisplayLeftOffset() + 1); //ignore x offsets since we adapt to character size
+			x += c->GetDisplayLeftOffset() * scaleX + 1; //ignore x offsets since we adapt to character size
 
 		double rx, ry, rw, rh;
 		rx = x + drawOffset.X;
@@ -825,12 +825,12 @@ void DStatusBarCore::DrawString(FFont* font, const FString& cstring, double x, d
 			DTA_LegacyRenderStyle, ERenderStyle(style),
 			TAG_DONE);
 
-		dx = monospaced
-			? spacing
-			: width + spacing - (c->GetDisplayLeftOffset() + 1);
-
 		// Take text scale into account
-		x += dx * scaleX;
+		dx = monospaced
+			? spacing * scaleX
+			: (double(width) + spacing - c->GetDisplayLeftOffset()) * scaleX - 1;
+
+		x += dx;
 	}
 }
 

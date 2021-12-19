@@ -50,7 +50,7 @@
 #include "texturemanager.h"
 #include "printf.h"
 #include "i_interface.h"
-#include "templates.h"
+
 
 
 bool CheckSkipGameOptionBlock(FScanner& sc);
@@ -343,6 +343,10 @@ static void DoParseListMenuBody(FScanner &sc, DListMenuDescriptor *desc, bool &s
 		else if (sc.Compare("animatedtransition"))
 		{
 			desc->mAnimatedTransition = true;
+		}
+		else if (sc.Compare("animated"))
+		{
+			desc->mAnimated = true;
 		}
 		else if (sc.Compare("MouseWindow"))
 		{
@@ -906,7 +910,7 @@ static void ParseOptionSettings(FScanner &sc)
 		else if (sc.Compare("Linespacing"))
 		{
 			sc.MustGetNumber();
-			OptionSettings.mLinespacing = sc.Number;
+			// ignored
 		}
 		else if (sc.Compare("LabelOffset"))
 		{
@@ -1212,6 +1216,10 @@ static void ParseImageScrollerBody(FScanner& sc, DImageScrollerDescriptor* desc)
 		{
 			desc->mAnimatedTransition = true;
 		}
+		else if (sc.Compare("animated"))
+		{
+			desc->mAnimated = true;
+		}
 		else if (sc.Compare("textBackground"))
 		{
 			sc.MustGetString();
@@ -1394,6 +1402,7 @@ void M_ParseMenuDefs()
 	DefaultOptionMenuSettings = Create<DOptionMenuDescriptor>();
 	DefaultListMenuSettings->Reset();
 	DefaultOptionMenuSettings->Reset();
+	OptionSettings.mLinespacing = 17;
 
 	int IWADMenu = fileSystem.CheckNumForName("MENUDEF", ns_global, fileSystem.GetIwadNum());
 

@@ -208,13 +208,13 @@ void HWWall::RenderTexturedWall(HWDrawInfo *di, FRenderState &state, int rflags)
 	}
 #endif
 
+	if (flags & HWWall::HWF_CLAMPY && (type == RENDERWALL_M2S || type == RENDERWALL_M2SNF))
+	{
+		state.SetTextureClamp(true);
+	}
 
 	if (type == RENDERWALL_M2SNF)
 	{
-		if (flags & HWWall::HWF_CLAMPY)
-		{
-			if (tmode == TM_NORMAL) state.SetTextureMode(TM_CLAMPY);
-		}
 		di->SetFog(state, 255, 0, di->isFullbrightScene(), nullptr, false);
 	}
 	if (type != RENDERWALL_COLOR && seg->sidedef != nullptr)
@@ -300,6 +300,7 @@ void HWWall::RenderTexturedWall(HWDrawInfo *di, FRenderState &state, int rflags)
 	state.SetObjectColor2(0);
 	state.SetAddColor(0);
 	state.SetTextureMode(tmode);
+	state.SetTextureClamp(false);
 	state.EnableGlow(false);
 	state.EnableGradient(false);
 	state.ApplyTextureManipulation(nullptr);
@@ -704,7 +705,7 @@ bool HWWall::SplitWallComplex(HWDrawInfo *di, sector_t * frontsector, bool trans
 	if ((maplightbottomleft<ztop[0] && maplightbottomright>ztop[1]) ||
 		(maplightbottomleft>ztop[0] && maplightbottomright<ztop[1]))
 	{
-		float clen = MAX<float>(fabsf(glseg.x2 - glseg.x1), fabsf(glseg.y2 - glseg.y1));
+		float clen = max<float>(fabsf(glseg.x2 - glseg.x1), fabsf(glseg.y2 - glseg.y1));
 
 		float dch = ztop[1] - ztop[0];
 		float dfh = maplightbottomright - maplightbottomleft;
@@ -744,7 +745,7 @@ bool HWWall::SplitWallComplex(HWDrawInfo *di, sector_t * frontsector, bool trans
 	if ((maplightbottomleft<zbottom[0] && maplightbottomright>zbottom[1]) ||
 		(maplightbottomleft>zbottom[0] && maplightbottomright<zbottom[1]))
 	{
-		float clen = MAX<float>(fabsf(glseg.x2 - glseg.x1), fabsf(glseg.y2 - glseg.y1));
+		float clen = max<float>(fabsf(glseg.x2 - glseg.x1), fabsf(glseg.y2 - glseg.y1));
 
 		float dch = zbottom[1] - zbottom[0];
 		float dfh = maplightbottomright - maplightbottomleft;
@@ -1282,12 +1283,12 @@ void HWWall::DoMidTexture(HWDrawInfo *di, seg_t * seg, bool drawfogboundary,
 		rowoffset = tci.RowOffset(seg->sidedef->GetTextureYOffset(side_t::mid));
 		if ((seg->linedef->flags & ML_DONTPEGBOTTOM) >0)
 		{
-			texturebottom = MAX(realfront->GetPlaneTexZ(sector_t::floor), realback->GetPlaneTexZ(sector_t::floor) + zalign) + rowoffset;
+			texturebottom = max(realfront->GetPlaneTexZ(sector_t::floor), realback->GetPlaneTexZ(sector_t::floor) + zalign) + rowoffset;
 			texturetop = texturebottom + tci.mRenderHeight;
 		}
 		else
 		{
-			texturetop = MIN(realfront->GetPlaneTexZ(sector_t::ceiling), realback->GetPlaneTexZ(sector_t::ceiling) + zalign) + rowoffset;
+			texturetop = min(realfront->GetPlaneTexZ(sector_t::ceiling), realback->GetPlaneTexZ(sector_t::ceiling) + zalign) + rowoffset;
 			texturebottom = texturetop - tci.mRenderHeight;
 		}
 	}
@@ -1318,8 +1319,8 @@ void HWWall::DoMidTexture(HWDrawInfo *di, seg_t * seg, bool drawfogboundary,
 			else
 			{
 				// texture is missing - use the higher plane
-				topleft = MAX(bch1,fch1);
-				topright = MAX(bch2,fch2);
+				topleft = max(bch1,fch1);
+				topright = max(bch2,fch2);
 			}
 		}
 		else if ((bch1>fch1 || bch2>fch2) && 
@@ -1333,8 +1334,8 @@ void HWWall::DoMidTexture(HWDrawInfo *di, seg_t * seg, bool drawfogboundary,
 		else
 		{
 			// But not if there can be visual artifacts.
-			topleft = MIN(bch1,fch1);
-			topright = MIN(bch2,fch2);
+			topleft = min(bch1,fch1);
+			topright = min(bch2,fch2);
 		}
 		
 		//
@@ -1346,8 +1347,8 @@ void HWWall::DoMidTexture(HWDrawInfo *di, seg_t * seg, bool drawfogboundary,
 		if (!tex || !tex->isValid())
 		{
 			// texture is missing - use the lower plane
-			bottomleft = MIN(bfh1,ffh1);
-			bottomright = MIN(bfh2,ffh2);
+			bottomleft = min(bfh1,ffh1);
+			bottomright = min(bfh2,ffh2);
 		}
 		else if (bfh1<ffh1 || bfh2<ffh2) // (!((bfh1<=ffh1 && bfh2<=ffh2) || (bfh1>=ffh1 && bfh2>=ffh2)))
 		{
@@ -1359,8 +1360,8 @@ void HWWall::DoMidTexture(HWDrawInfo *di, seg_t * seg, bool drawfogboundary,
 		else
 		{
 			// normal case - use the higher plane
-			bottomleft = MAX(bfh1,ffh1);
-			bottomright = MAX(bfh2,ffh2);
+			bottomleft = max(bfh1,ffh1);
+			bottomright = max(bfh2,ffh2);
 		}
 		
 		//
@@ -1513,8 +1514,8 @@ void HWWall::DoMidTexture(HWDrawInfo *di, seg_t * seg, bool drawfogboundary,
 			int i,t=0;
 			float v_factor=(zbottom[0]-ztop[0])/(tcs[LOLFT].v-tcs[UPLFT].v);
 			// only split the vertical area of the polygon that does not contain slopes.
-			float splittopv = MAX(tcs[UPLFT].v, tcs[UPRGT].v);
-			float splitbotv = MIN(tcs[LOLFT].v, tcs[LORGT].v);
+			float splittopv = max(tcs[UPLFT].v, tcs[UPRGT].v);
+			float splitbotv = min(tcs[LOLFT].v, tcs[LORGT].v);
 
 			// this is split vertically into sections.
 			for(i=0;i<v;i++)
@@ -1933,7 +1934,7 @@ void HWWall::Process(HWDrawInfo *di, seg_t *seg, sector_t * frontsector, sector_
 	sector_t * segback;
 
 #ifdef _DEBUG
-	if (seg->linedef->Index() == 14454)
+	if (seg->linedef->Index() == 759)
 	{
 		int a = 0;
 	}

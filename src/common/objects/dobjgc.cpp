@@ -57,7 +57,7 @@
 // HEADER FILES ------------------------------------------------------------
 
 #include "dobject.h"
-#include "templates.h"
+
 #include "c_dispatch.h"
 #include "menu.h"
 #include "stats.h"
@@ -108,6 +108,7 @@ namespace GC
 size_t AllocBytes;
 size_t Threshold;
 size_t Estimate;
+size_t AllocCount;
 DObject *Gray;
 DObject *Root;
 DObject *SoftRoots;
@@ -347,7 +348,7 @@ static size_t SingleStep()
 			State = GCS_Finalize;
 		}
 		//assert(old >= AllocBytes);
-		Estimate -= MAX<size_t>(0, old - AllocBytes);
+		Estimate -= max<size_t>(0, old - AllocBytes);
 		return (GCSWEEPMAX - finalize_count) * GCSWEEPCOST + finalize_count * GCFINALIZECOST;
 	  }
 
@@ -624,7 +625,7 @@ CCMD(gc)
 		}
 		else
 		{
-			GC::Pause = MAX(1,atoi(argv[2]));
+			GC::Pause = max(1,atoi(argv[2]));
 		}
 	}
 	else if (stricmp(argv[1], "stepmul") == 0)
@@ -635,7 +636,7 @@ CCMD(gc)
 		}
 		else
 		{
-			GC::StepMul = MAX(100, atoi(argv[2]));
+			GC::StepMul = max(100, atoi(argv[2]));
 		}
 	}
 }

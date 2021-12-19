@@ -198,7 +198,7 @@ extern bool insave;
 extern TDeletingArray<FLightDefaults *> LightDefaults;
 extern FName MessageBoxClass;
 
-const char* iwad_folders[13] = { "flats/", "textures/", "hires/", "sprites/", "voxels/", "colormaps/", "acs/", "maps/", "voices/", "patches/", "graphics/", "sounds/", "music/" };
+const char* iwad_folders[14] = { "flats/", "textures/", "hires/", "sprites/", "voxels/", "colormaps/", "acs/", "maps/", "voices/", "patches/", "graphics/", "sounds/", "music/", "materials/"};
 const char* iwad_reserved[12] = { "mapinfo", "zmapinfo", "gameinfo", "sndinfo", "sbarinfo", "menudef", "gldefs", "animdefs", "decorate", "zscript", "iwadinfo", "maps/" };
 
 
@@ -1026,18 +1026,31 @@ void D_Display ()
 		// draw pause pic
 		if ((paused || pauseext) && menuactive == MENU_Off)
 		{
-			auto tex = TexMan.GetGameTextureByName(gameinfo.PauseSign, true);
-			double x = (SCREENWIDTH - tex->GetDisplayWidth() * CleanXfac)/2 +
-				tex->GetDisplayLeftOffset() * CleanXfac;
-			DrawTexture(twod, tex, x, 4, DTA_CleanNoMove, true, TAG_DONE);
-			if (paused && multiplayer)
+			// [MK] optionally let the status bar handle this
+			bool skip = false;
+			IFVIRTUALPTR(StatusBar, DBaseStatusBar, DrawPaused)
 			{
-				FFont *font = generic_ui? NewSmallFont : SmallFont;
-				FString pstring = GStrings("TXT_BY");
-				pstring.Substitute("%s", players[paused - 1].userinfo.GetName());
-				DrawText(twod, font, CR_RED,
-					(twod->GetWidth() - font->StringWidth(pstring)*CleanXfac) / 2,
-					(tex->GetDisplayHeight() * CleanYfac) + 4, pstring, DTA_CleanNoMove, true, TAG_DONE);
+				VMValue params[] { (DObject*)StatusBar, paused-1 };
+				int rv;
+				VMReturn ret(&rv);
+				VMCall(func, params, countof(params), &ret, 1);
+				skip = !!rv;
+			}
+			if ( !skip )
+			{
+				auto tex = TexMan.GetGameTextureByName(gameinfo.PauseSign, true);
+				double x = (SCREENWIDTH - tex->GetDisplayWidth() * CleanXfac)/2 +
+					tex->GetDisplayLeftOffset() * CleanXfac;
+				DrawTexture(twod, tex, x, 4, DTA_CleanNoMove, true, TAG_DONE);
+				if (paused && multiplayer)
+				{
+					FFont *font = generic_ui? NewSmallFont : SmallFont;
+					FString pstring = GStrings("TXT_BY");
+					pstring.Substitute("%s", players[paused - 1].userinfo.GetName());
+					DrawText(twod, font, CR_RED,
+						(twod->GetWidth() - font->StringWidth(pstring)*CleanXfac) / 2,
+						(tex->GetDisplayHeight() * CleanYfac) + 4, pstring, DTA_CleanNoMove, true, TAG_DONE);
+				}
 			}
 		}
 

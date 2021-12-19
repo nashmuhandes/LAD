@@ -49,6 +49,8 @@
 #include <map>
 #include <memory>
 
+EXTERN_CVAR(Bool, r_skipmats)
+
 namespace OpenGLRenderer
 {
 
@@ -382,7 +384,7 @@ bool FShader::Load(const char * name, const char * vert_prog_lump, const char * 
 			vp_comb = "#version 430 core\n#define SHADER_STORAGE_LIGHTS\n";
 	}
 
-	if (gl.flags & RFL_SHADER_STORAGE_BUFFER)
+	if ((gl.flags & RFL_SHADER_STORAGE_BUFFER) && screen->allowSSBO())
 	{
 		vp_comb << "#define SUPPORTS_SHADOWMAPS\n";
 	}
@@ -729,6 +731,9 @@ FShader *FShaderManager::BindEffect(int effect, EPassType passType)
 
 FShader *FShaderManager::Get(unsigned int eff, bool alphateston, EPassType passType)
 {
+	if (r_skipmats && eff >= 3 && eff <= 4)
+		eff = 0;
+
 	if (passType < mPassShaders.Size())
 		return mPassShaders[passType]->Get(eff, alphateston);
 	else

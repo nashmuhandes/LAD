@@ -44,7 +44,7 @@
 #include <stddef.h>
 
 #include "doomtype.h"
-#include "templates.h"
+
 #include "doomstat.h"
 #include "info.h"
 #include "d_dehacked.h"
@@ -764,22 +764,6 @@ static void CreateLineEffectFunc(FunctionCallEmitter &emitters, int value1, int 
 	emitters.AddParameterIntConst(value2);		// tag
 }
 
-// No misc, but it's basically A_Explode with an added effect
-static void CreateNailBombFunc(FunctionCallEmitter &emitters, int value1, int value2, MBFParamState* state)
-{ // A_Explode
-	// This one does not actually have MBF-style parameters. But since
-	// we're aliasing it to an extension of A_Explode...
-	emitters.AddParameterIntConst(-1);		// damage
-	emitters.AddParameterIntConst(-1);		// distance
-	emitters.AddParameterIntConst(1);		// flags (1=XF_HURTSOURCE)
-	emitters.AddParameterIntConst(0);		// alert
-	emitters.AddParameterIntConst(0);		// fulldamagedistance
-	emitters.AddParameterIntConst(30);		// nails
-	emitters.AddParameterIntConst(10);		// naildamage
-	emitters.AddParameterPointerConst(PClass::FindClass(NAME_BulletPuff));	// itemtype
-	emitters.AddParameterIntConst(NAME_None);	// damage type
-}
-
 static void CreateSpawnObjectFunc(FunctionCallEmitter& emitters, int value1, int value2, MBFParamState* state)
 {
 	state->ValidateArgCount(8, "A_SpawnObject");
@@ -936,7 +920,6 @@ static void (*MBFCodePointerFactories[])(FunctionCallEmitter&, int, int, MBFPara
 {
 	// Die and Detonate are not in this list because these codepointers have
 	// no dehacked arguments and therefore do not need special handling.
-	// NailBomb has no argument but is implemented as new parameters for A_Explode.
 	CreateMushroomFunc,
 	CreateSpawnFunc,
 	CreateTurnFunc,
@@ -945,7 +928,6 @@ static void (*MBFCodePointerFactories[])(FunctionCallEmitter&, int, int, MBFPara
 	CreatePlaySoundFunc,
 	CreateRandomJumpFunc,
 	CreateLineEffectFunc,
-	CreateNailBombFunc,
 	CreateSpawnObjectFunc,
 	CreateMonsterProjectileFunc,
 	CreateMonsterBulletAttackFunc,
@@ -969,6 +951,7 @@ static void (*MBFCodePointerFactories[])(FunctionCallEmitter&, int, int, MBFPara
 	CreateWeaponJumpFunc,
 	CreateWeaponJumpFunc,
 	CreateJumpIfFlagSetFunc,
+	CreateFlagSetFunc,
 	CreateFlagSetFunc
 };
 
@@ -979,7 +962,6 @@ static void SetDehParams(FState *state, int codepointer, VMDisassemblyDumper &di
 	static const uint8_t regts[] = { REGT_POINTER, REGT_POINTER, REGT_POINTER };
 	int value1 = state->GetMisc1();
 	int value2 = state->GetMisc2();
-	if (!(value1|value2)) return;
 	
 	bool returnsState = codepointer == 6;
 	

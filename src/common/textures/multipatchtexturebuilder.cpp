@@ -144,6 +144,7 @@ void FMultipatchTextureBuilder::MakeTexture(BuildInfo &buildinfo, ETextureType u
 	buildinfo.texture->SetScale((float)buildinfo.Scale.X, (float)buildinfo.Scale.Y);
 	buildinfo.texture->SetWorldPanning(buildinfo.bWorldPanning);
 	buildinfo.texture->SetNoDecals(buildinfo.bNoDecals);
+	buildinfo.texture->SetNoTrimming(buildinfo.bNoTrim);
 	TexMan.AddGameTexture(buildinfo.texture);
 }
 
@@ -572,7 +573,7 @@ void FMultipatchTextureBuilder::ParsePatch(FScanner &sc, BuildInfo &info, TexPar
 			else if (sc.Compare("alpha"))
 			{
 				sc.MustGetFloat();
-				part.Alpha = clamp<blend_t>(int(sc.Float * BLENDUNIT), 0, BLENDUNIT);
+				part.Alpha = clamp<blend_t>(int(sc.Float * +BLENDUNIT), 0, BLENDUNIT);
 				// bComplex is not set because it is only needed when the style is not OP_COPY.
 			}
 			else if (sc.Compare("style"))
@@ -668,6 +669,10 @@ void FMultipatchTextureBuilder::ParseTexture(FScanner &sc, ETextureType UseType,
 			else if (sc.Compare("NoDecals"))
 			{
 				buildinfo.bNoDecals = true;
+			}
+			else if (sc.Compare("NoTrim"))
+			{
+				buildinfo.bNoTrim = true;
 			}
 			else if (sc.Compare("Patch"))
 			{
