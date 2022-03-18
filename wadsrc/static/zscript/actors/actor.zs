@@ -67,6 +67,12 @@ struct LinkContext
 	voidptr render_list;
 }
 
+class ViewPosition native
+{
+	native readonly Vector3 Offset;
+	native readonly int Flags;
+}
+
 
 class Actor : Thinker native
 {
@@ -89,6 +95,7 @@ class Actor : Thinker native
 	// for some comments on these fields, see their native representations in actor.h.
 	native readonly Actor snext;	// next in sector list.
 	native PlayerInfo Player;
+	native readonly ViewPosition ViewPos; // Will be null until A_SetViewPos() is called for the first time.
 	native readonly vector3 Pos;
 	native vector3 Prev;
 	native uint ThruBits;
@@ -1082,6 +1089,7 @@ class Actor : Thinker native
 	native void A_WolfAttack(int flags = 0, sound whattoplay = "weapons/pistol", double snipe = 1.0, int maxdamage = 64, int blocksize = 128, int pointblank = 2, int longrange = 4, double runspeed = 160.0, class<Actor> pufftype = "BulletPuff");
 	deprecated("4.3", "Use A_StartSound() instead") native clearscope void A_PlaySound(sound whattoplay = "weapons/pistol", int slot = CHAN_BODY, double volume = 1.0, bool looping = false, double attenuation = ATTN_NORM, bool local = false, double pitch = 0.0);
 	native clearscope void A_StartSound(sound whattoplay, int slot = CHAN_BODY, int flags = 0, double volume = 1.0, double attenuation = ATTN_NORM, double pitch = 0.0, double startTime = 0.0);
+	native clearscope void A_StartSoundIfNotSame(sound whattoplay, sound checkagainst, int slot = CHAN_BODY, int flags = 0, double volume = 1.0, double attenuation = ATTN_NORM, double pitch = 0.0, double startTime = 0.0);
 	native void A_SoundVolume(int slot, double volume);
 	native void A_SoundPitch(int slot, double pitch);
 	deprecated("2.3", "Use A_StartSound(<sound>, CHAN_WEAPON) instead") void A_PlayWeaponSound(sound whattoplay, bool fullvol = false) { A_StartSound(whattoplay, CHAN_WEAPON, 0, 1, fullvol? ATTN_NONE : ATTN_NORM); }
@@ -1157,6 +1165,7 @@ class Actor : Thinker native
 	native void A_SetViewAngle(double angle = 0, int flags = 0, int ptr = AAPTR_DEFAULT);
 	native void A_SetViewPitch(double pitch, int flags = 0, int ptr = AAPTR_DEFAULT);
 	native void A_SetViewRoll(double roll, int flags = 0, int ptr = AAPTR_DEFAULT);
+	native void SetViewPos(Vector3 offset, int flags = -1);
 	deprecated("2.3", "User variables are deprecated in ZScript. Actor variables are directly accessible") native void A_SetUserVar(name varname, int value);
 	deprecated("2.3", "User variables are deprecated in ZScript. Actor variables are directly accessible") native void A_SetUserArray(name varname, int index, int value);
 	deprecated("2.3", "User variables are deprecated in ZScript. Actor variables are directly accessible") native void A_SetUserVarFloat(name varname, double value);
@@ -1278,6 +1287,35 @@ class Actor : Thinker native
 		}
 	}
 	
+	virtual void PlayerLandedMakeGruntSound(actor onmobj)
+	{
+		bool grunted;
+
+		// [RH] only make noise if alive
+		if (self.health > 0 && self.player.morphTics == 0)
+		{
+			grunted = false;
+			// Why should this number vary by gravity?
+			if (self.Vel.Z < -self.player.mo.GruntSpeed)
+			{
+				A_StartSound("*grunt", CHAN_VOICE);
+				grunted = true;
+			}
+			bool isliquid = (pos.Z <= floorz) && HitFloor ();
+			if (onmobj != NULL || !isliquid)
+			{
+				if (!grunted)
+				{
+					A_StartSound("*land", CHAN_AUTO);
+				}
+				else
+				{
+					A_StartSoundIfNotSame("*land", "*grunt", CHAN_AUTO);
+				}
+			}
+		}
+	}
+
 	//----------------------------------------------------------------------------
 	//
 	// PROC A_CheckSkullDone

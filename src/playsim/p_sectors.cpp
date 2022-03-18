@@ -938,7 +938,12 @@ int GetTerrain(const sector_t *sector, int pos)
 	return sector->terrainnum[pos] >= 0 ? sector->terrainnum[pos] : TerrainTypes[sector->GetTexture(pos)];
 }
 
-	//=====================================================================================
+FTerrainDef *GetFloorTerrain_S(const sector_t* sec, int pos)
+{
+	return &Terrains[GetTerrain(sec, pos)];
+}
+
+//=====================================================================================
 //
 //
 //=====================================================================================
@@ -1533,11 +1538,18 @@ void line_t::AdjustLine()
 //
 //==========================================================================
 
-int side_t::GetLightLevel (bool foggy, int baselight, bool is3dlight, int *pfakecontrast) const
+int side_t::GetLightLevel (bool foggy, int baselight, int which, bool is3dlight, int *pfakecontrast) const
 {
-	if (!is3dlight && (Flags & WALLF_ABSLIGHTING))
+	if (!is3dlight)
 	{
-		baselight = Light;
+		if (Flags & (WALLF_ABSLIGHTING_TIER << which))
+		{
+			baselight = TierLights[which];
+		}
+		else if (Flags & WALLF_ABSLIGHTING)
+		{
+			baselight = Light + TierLights[which];
+		}
 	}
 
 	if (pfakecontrast != NULL)
@@ -1576,9 +1588,9 @@ int side_t::GetLightLevel (bool foggy, int baselight, bool is3dlight, int *pfake
 			}
 		}
 	}
-	if (!is3dlight && !(Flags & WALLF_ABSLIGHTING) && (!foggy || (Flags & WALLF_LIGHT_FOG)))
+	if (!is3dlight && !(Flags & WALLF_ABSLIGHTING) && !(Flags & (WALLF_ABSLIGHTING_TIER << which)) && (!foggy || (Flags & WALLF_LIGHT_FOG)))
 	{
-		baselight += this->Light;
+		baselight += this->Light + this->TierLights[which];
 	}
 	return baselight;
 }
@@ -1619,4 +1631,3 @@ void vertex_t::RecalcVertexHeights()
 	if (numheights <= 2) numheights = 0;	// is not in need of any special attention
 	dirty = false;
 }
-

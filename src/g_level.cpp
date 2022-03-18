@@ -2282,4 +2282,3 @@ void FLevelLocals::SetMusic()
 {
 	S_ChangeMusic(Music, musicorder);
 }
-

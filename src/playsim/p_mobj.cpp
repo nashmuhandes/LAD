@@ -369,6 +369,7 @@ void AActor::Serialize(FSerializer &arc)
 		A("spawnorder", SpawnOrder)
 		A("friction", Friction)
 		A("SpriteOffset", SpriteOffset)
+		("viewpos", ViewPos)
 		A("userlights", UserLights);
 
 		SerializeTerrain(arc, "floorterrain", floorterrain, &def->floorterrain);
@@ -2777,10 +2778,17 @@ DEFINE_ACTION_FUNCTION(AActor, CheckFakeFloorTriggers)
 //
 //===========================================================================
 
+void AActor::PlayerLandedMakeGruntSound(AActor *onmobj)
+{
+	IFVIRTUAL(AActor, PlayerLandedMakeGruntSound)
+	{
+		VMValue params[2] = { (AActor*)this, (AActor*)onmobj };
+		VMCall(func, params, 2, nullptr, 0);
+	}
+}
+
 static void PlayerLandedOnThing (AActor *mo, AActor *onmobj)
 {
-	bool grunted;
-
 	if (!mo->player)
 		return;
 
@@ -2794,24 +2802,8 @@ static void PlayerLandedOnThing (AActor *mo, AActor *onmobj)
 
 	P_FallingDamage (mo);
 
-	// [RH] only make noise if alive
-	if (mo->health > 0 && !mo->player->morphTics)
-	{
-		grunted = false;
-		// Why should this number vary by gravity?
-		if (mo->Vel.Z < -mo->player->mo->FloatVar(NAME_GruntSpeed))
-		{
-			S_Sound (mo, CHAN_VOICE, 0, "*grunt", 1, ATTN_NORM);
-			grunted = true;
-		}
-		if (onmobj != NULL || !Terrains[P_GetThingFloorType (mo)].IsLiquid)
-		{
-			if (!grunted || !S_AreSoundsEquivalent (mo, "*grunt", "*land"))
-			{
-				S_Sound (mo, CHAN_AUTO, 0, "*land", 1, ATTN_NORM);
-			}
-		}
-	}
+	mo->PlayerLandedMakeGruntSound(onmobj);
+
 //	mo->player->centering = true;
 }
 
@@ -4952,6 +4944,12 @@ void AActor::OnDestroy ()
 	UnlinkFromWorld (nullptr);
 	flags |= MF_NOSECTOR|MF_NOBLOCKMAP;
 
+	if (ViewPos != nullptr)
+	{
+		ViewPos->Destroy();
+		ViewPos = nullptr;
+	}
+
 	// Transform any playing sound into positioned, non-actor sounds.
 	S_RelinkSound (this, NULL);
 
@@ -6273,6 +6271,7 @@ foundone:
 		if (smallsplash && splash->SmallSplash)
 		{
 			mo = Spawn(sec->Level, splash->SmallSplash, pos, ALLOW_REPLACE);
+			mo->target = thing;
 			if (mo) mo->Floorclip += splash->SmallSplashClip;
 		}
 		else
@@ -6294,6 +6293,7 @@ foundone:
 			if (splash->SplashBase)
 			{
 				mo = Spawn(sec->Level, splash->SplashBase, pos, ALLOW_REPLACE);
+				mo->target = thing;
 			}
 			if (thing->player && !splash->NoAlert && alert)
 			{
