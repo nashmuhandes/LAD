@@ -54,7 +54,7 @@
 #include "s_sound.h"
 #include "v_video.h"
 #include "intermission/intermission.h"
-#include "f_wipe.h"
+#include "wipe.h"
 #include "m_argv.h"
 #include "m_misc.h"
 #include "menu.h"
@@ -118,6 +118,7 @@
 #include "hw_clock.h"
 #include "hwrenderer/scene/hw_drawinfo.h"
 #include "doomfont.h"
+#include "screenjob.h"
 
 #ifdef __unix__
 #include "i_system.h"  // for SHARE_DIR
@@ -166,7 +167,7 @@ void G_BuildTiccmd (ticcmd_t* cmd);
 void D_DoAdvanceDemo ();
 void D_LoadWadSettings ();
 void ParseGLDefs();
-void DrawFullscreenSubtitle(const char *text);
+void DrawFullscreenSubtitle(FFont* font, const char *text);
 void D_Cleanup();
 void FreeSBarInfoScript();
 void I_UpdateWindowTitle();
@@ -557,6 +558,7 @@ CVAR (Flag, sv_nocountendmonst,		dmflags2, DF2_NOCOUNTENDMONST);
 CVAR (Flag, sv_respawnsuper,		dmflags2, DF2_RESPAWN_SUPER);
 CVAR (Flag, sv_nothingspawn,		dmflags2, DF2_NO_COOP_THING_SPAWN);
 CVAR (Flag, sv_alwaysspawnmulti,	dmflags2, DF2_ALWAYS_SPAWN_MULTI);
+CVAR (Flag, sv_novertspread,		dmflags2, DF2_NOVERTSPREAD);
 
 //==========================================================================
 //
@@ -568,6 +570,7 @@ EXTERN_CVAR(Int, compatmode)
 
 CUSTOM_CVAR (Int, compatflags, 0, CVAR_ARCHIVE|CVAR_SERVERINFO | CVAR_NOINITCALL)
 {
+	if (FBaseCVar::m_inEnable) return;
 	for (auto Level : AllLevels())
 	{
 		Level->ApplyCompatibility();
@@ -576,6 +579,7 @@ CUSTOM_CVAR (Int, compatflags, 0, CVAR_ARCHIVE|CVAR_SERVERINFO | CVAR_NOINITCALL
 
 CUSTOM_CVAR (Int, compatflags2, 0, CVAR_ARCHIVE|CVAR_SERVERINFO | CVAR_NOINITCALL)
 {
+	if (FBaseCVar::m_inEnable) return;
 	for (auto Level : AllLevels())
 	{
 		Level->ApplyCompatibility2();
@@ -583,7 +587,7 @@ CUSTOM_CVAR (Int, compatflags2, 0, CVAR_ARCHIVE|CVAR_SERVERINFO | CVAR_NOINITCAL
 	}
 }
 
-CUSTOM_CVAR(Int, compatmode, 0, CVAR_ARCHIVE|CVAR_NOINITCALL)
+CUSTOM_CVAR(Int, compatmode, 0, CVAR_ARCHIVE)
 {
 	int v, w = 0;
 
@@ -819,9 +823,18 @@ static void DrawRateStuff()
 	}
 }
 
+static void DrawOverlays()
+{
+	NetUpdate ();
+	C_DrawConsole ();
+	M_Drawer ();
+	DrawRateStuff();
+	if (!hud_toggled)
+		FStat::PrintStat (twod);
+}
+
 static void End2DAndUpdate()
 {
-	DrawRateStuff();
 	twod->End();
 	CheckBench();
 	screen->Update();
@@ -838,7 +851,7 @@ static void End2DAndUpdate()
 
 void D_Display ()
 {
-	FGameTexture *wipe = nullptr;
+	FTexture *wipestart = nullptr;
 	int wipe_type;
 	sector_t *viewsec;
 
@@ -904,7 +917,7 @@ void D_Display ()
 	if (NoWipe)
 	{
 		NoWipe--;
-		wipe = nullptr;
+		wipestart = nullptr;
 		wipegamestate = gamestate;
 	}
 	// No wipes when in a stereo3D VR mode
@@ -913,7 +926,7 @@ void D_Display ()
 		if (vr_mode == 0 || vid_rendermode != 4)
 		{
 			// save the current screen if about to wipe
-			wipe = MakeGameTexture(screen->WipeStartScreen(), nullptr, ETextureType::SWCanvas);
+			wipestart = screen->WipeStartScreen();
 
 			switch (wipegamestate)
 			{
@@ -939,7 +952,7 @@ void D_Display ()
 	}
 	else
 	{
-		wipe = nullptr;
+		wipestart = nullptr;
 	}
 	
 	screen->FrameTime = I_msTimeFS();
@@ -1015,18 +1028,16 @@ void D_Display ()
 				End2DAndUpdate ();
 				return;
 				
-			case GS_INTERMISSION:
-				WI_Drawer ();
-				break;
-				
-			case GS_FINALE:
-				F_Drawer ();
-				break;
-				
 			case GS_DEMOSCREEN:
 				D_PageDrawer ();
 				break;
 				
+		case GS_CUTSCENE:
+		case GS_INTRO:
+			ScreenJobDraw();
+			break;
+
+
 			default:
 				break;
 		}
@@ -1036,7 +1047,7 @@ void D_Display ()
 		CT_Drawer ();
 
 		// draw pause pic
-		if ((paused || pauseext) && menuactive == MENU_Off)
+		if ((paused || pauseext) && menuactive == MENU_Off && StatusBar != nullptr)
 		{
 			// [MK] optionally let the status bar handle this
 			bool skip = false;
@@ -1087,54 +1098,17 @@ void D_Display ()
 		}
 	}
 
-	if (!wipe || NoWipe < 0 || wipe_type == wipe_None || hud_toggled)
+	if (!wipestart || NoWipe < 0 || wipe_type == wipe_None || hud_toggled)
 	{
-		if (wipe != nullptr) delete wipe;
-		wipe = nullptr;
-		NetUpdate ();			// send out any new accumulation
-		// normal update
-		// draw ZScript UI stuff
-		C_DrawConsole ();	// draw console
-		M_Drawer ();			// menu is drawn even on top of everything
-		if (!hud_toggled)
-			FStat::PrintStat (twod);
+		if (wipestart != nullptr) wipestart->DecRef();
+		wipestart = nullptr;
+		DrawOverlays();
 		End2DAndUpdate ();
 	}
 	else
 	{
-		// wipe update
-		uint64_t wipestart, nowtime, diff;
-		bool done;
-
-		GSnd->SetSfxPaused(true, 1);
-		I_FreezeTime(true);
-		twod->End();
-		auto wipend = MakeGameTexture(screen->WipeEndScreen(), nullptr, ETextureType::SWCanvas);
-		auto wiper = Wiper::Create(wipe_type);
-		wiper->SetTextures(wipe, wipend);
-
-		wipestart = I_msTime();
 		NetUpdate();		// send out any new accumulation
-
-		do
-		{
-			do
-			{
-				I_WaitVBL(2);
-				nowtime = I_msTime();
-				diff = (nowtime - wipestart) * 40 / 1000;	// Using 35 here feels too slow.
-			} while (diff < 1);
-			wipestart = nowtime;
-			twod->Begin(screen->GetWidth(), screen->GetHeight());
-			done = wiper->Run(1);
-			C_DrawConsole ();	// console and
-			M_Drawer ();			// menu are drawn even on top of wipes
-			End2DAndUpdate ();
-			NetUpdate ();			// [RH] not sure this is needed anymore
-		} while (!done);
-		delete wiper;
-		I_FreezeTime(false);
-		GSnd->SetSfxPaused(false, 1);
+		PerformWipe(wipestart, screen->WipeEndScreen(), wipe_type, false, DrawOverlays);
 	}
 	cycles.Unclock();
 	FrameCycles = cycles;
@@ -1165,7 +1139,6 @@ void D_ErrorCleanup ()
 	{
 		menuactive = MENU_Off;
 	}
-	if (gamestate == GS_INTERMISSION) gamestate = GS_DEMOSCREEN;
 	insave = false;
 	ClearGlobalVMStack();
 }
@@ -1283,7 +1256,8 @@ void D_PageDrawer (void)
 	}
 	if (Subtitle != nullptr)
 	{
-		DrawFullscreenSubtitle(GStrings[Subtitle]);
+		FFont* font = generic_ui ? NewSmallFont : SmallFont;
+		DrawFullscreenSubtitle(font, GStrings[Subtitle]);
 	}
 	if (Advisory != nullptr)
 	{
@@ -1361,7 +1335,7 @@ void D_DoStrifeAdvanceDemo ()
 	case 3:
 		pagetic = 7 * TICRATE;
 		pagename = "PANEL1";
-		subtitle = "TXT_SUB_INTRO1";
+		subtitle = "$TXT_SUB_INTRO1";
 		S_Sound (CHAN_VOICE, CHANF_UI, voices[0], 1, ATTN_NORM);
 		// The new Strife teaser has D_FMINTR.
 		// The full retail Strife has D_INTRO.
@@ -1372,35 +1346,35 @@ void D_DoStrifeAdvanceDemo ()
 	case 4:
 		pagetic = 9 * TICRATE;
 		pagename = "PANEL2";
-		subtitle = "TXT_SUB_INTRO2";
+		subtitle = "$TXT_SUB_INTRO2";
 		S_Sound (CHAN_VOICE, CHANF_UI, voices[1], 1, ATTN_NORM);
 		break;
 
 	case 5:
 		pagetic = 12 * TICRATE;
 		pagename = "PANEL3";
-		subtitle = "TXT_SUB_INTRO3";
+		subtitle = "$TXT_SUB_INTRO3";
 		S_Sound (CHAN_VOICE, CHANF_UI, voices[2], 1, ATTN_NORM);
 		break;
 
 	case 6:
 		pagetic = 11 * TICRATE;
 		pagename = "PANEL4";
-		subtitle = "TXT_SUB_INTRO4";
+		subtitle = "$TXT_SUB_INTRO4";
 		S_Sound (CHAN_VOICE, CHANF_UI, voices[3], 1, ATTN_NORM);
 		break;
 
 	case 7:
 		pagetic = 10 * TICRATE;
 		pagename = "PANEL5";
-		subtitle = "TXT_SUB_INTRO5";
+		subtitle = "$TXT_SUB_INTRO5";
 		S_Sound (CHAN_VOICE, CHANF_UI, voices[4], 1, ATTN_NORM);
 		break;
 
 	case 8:
 		pagetic = 16 * TICRATE;
 		pagename = "PANEL6";
-		subtitle = "TXT_SUB_INTRO6";
+		subtitle = "$TXT_SUB_INTRO6";
 		S_Sound (CHAN_VOICE, CHANF_UI, voices[5], 1, ATTN_NORM);
 		break;
 
@@ -2732,7 +2706,7 @@ static bool System_CaptureModeInGame()
 	case 0:
 		return gamestate == GS_LEVEL;
 	case 1:
-		return gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_FINALE;
+		return gamestate == GS_LEVEL || gamestate == GS_CUTSCENE;
 	case 2:
 		return true;
 	}
@@ -2972,7 +2946,6 @@ extern DThinker* NextToThink;
 
 static void GC_MarkGameRoots()
 {
-	GC::Mark(DIntermissionController::CurrentIntermission);
 	GC::Mark(staticEventManager.FirstEventHandler);
 	GC::Mark(staticEventManager.LastEventHandler);
 	for (auto Level : AllLevels())
@@ -2993,6 +2966,17 @@ static void System_ToggleFullConsole()
 {
 	gameaction = ga_fullconsole;
 }
+
+static void System_StartCutscene(bool blockui)
+{
+	gameaction = blockui ? ga_intro : ga_intermission;
+}
+
+static void System_SetTransition(int type)
+{
+	if (type != wipe_None) wipegamestate = type == wipe_Burn? GS_FORCEWIPEBURN : type == wipe_Fade? GS_FORCEWIPEFADE : GS_FORCEWIPEMELT;
+}
+
 
 bool  CheckSkipGameOptionBlock(const char* str);
 
@@ -3045,7 +3029,8 @@ static int D_DoomMain_Internal (void)
 		nullptr, 
 		nullptr,
 		System_ToggleFullConsole,
-		nullptr,
+		System_StartCutscene,
+		System_SetTransition,
 	};
 
 	
@@ -3375,6 +3360,7 @@ static int D_DoomMain_Internal (void)
 
 		R_ParseTrnslate();
 		PClassActor::StaticInit ();
+		Job_Init();
 
 		// [GRB] Initialize player class list
 		SetupPlayerClasses ();
@@ -3685,11 +3671,11 @@ void D_Cleanup()
 	G_ClearMapinfo();
 
 	M_ClearMenus();					// close menu if open
-	F_EndFinale();					// If an intermission is active, end it now
 	AM_ClearColorsets();
 	DeinitSWColorMaps();
 	FreeSBarInfoScript();
-	
+	DeleteScreenJob();
+
 	// clean up game state
 	D_ErrorCleanup ();
 	P_Shutdown();
@@ -3718,7 +3704,7 @@ void D_Cleanup()
 	GameStartupInfo.LoadWidescreen = GameStartupInfo.LoadLights = GameStartupInfo.LoadBrightmaps = -1;
 	GameStartupInfo.DiscordAppId = "";
 	GameStartupInfo.SteamAppId = "";
-	
+		
 	GC::FullGC();					// clean up before taking down the object list.
 	
 	// Delete the reference to the VM functions here which were deleted and will be recreated after the restart.
