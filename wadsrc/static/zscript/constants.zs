@@ -440,6 +440,9 @@ enum EBlockFlags
 	BLOCKF_EVERYTHING = 32,
 	BLOCKF_RAILING = 64,
 	BLOCKF_USE = 128,
+	BLOCKF_SIGHT = 256,
+	BLOCKF_HITSCAN = 512,
+	BLOCKF_SOUND = 1024,
 };
 
 // Pointer constants, bitfield-enabled
@@ -1380,7 +1383,8 @@ enum ECompatFlags
 	COMPATF_MINOTAUR		= 1 << 22,	// Minotaur's floor flame is exploded immediately when feet are clipped
 	COMPATF_MUSHROOM		= 1 << 23,	// Force original velocity calculations for A_Mushroom in Dehacked mods.
 	COMPATF_MBFMONSTERMOVE	= 1 << 24,	// Monsters are affected by friction and pushers/pullers.
-	COMPATF_CORPSEGIBS		= 1 << 25,	// Crushed monsters are turned into gibs, rather than replaced by gibs.
+	COMPATF_CORPSEGIBS		= 1 << 25,	// only needed for some hypothetical mod checking this flag.
+	COMPATF_VILEGHOSTS		= 1 << 25,	// Crushed monsters are resurrected as ghosts.
 	COMPATF_NOBLOCKFRIENDS	= 1 << 26,	// Friendly monsters aren't blocked by monster-blocking lines.
 	COMPATF_SPRITESORT		= 1 << 27,	// Invert sprite sorting order for sprites of equal distance
 	COMPATF_HITSCAN			= 1 << 28,	// Hitscans use original blockmap anf hit check code.
