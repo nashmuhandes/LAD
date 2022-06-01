@@ -59,10 +59,6 @@
 #include "swrenderer/things/r_playersprite.h"
 #include <chrono>
 
-#ifdef WIN32
-void PeekThreadedErrorPane();
-#endif
-
 EXTERN_CVAR(Int, r_clearbuffer)
 EXTERN_CVAR(Int, r_debug_draw)
 
@@ -171,7 +167,7 @@ namespace swrenderer
 		// Never draw the player unless in chasecam mode
 		if (!MainThread()->Viewport->viewpoint.showviewer)
 		{
-			MainThread()->Viewport->viewpoint.camera->renderflags |= RF_INVISIBLE;
+			MainThread()->Viewport->viewpoint.camera->renderflags |= RF_MAYBEINVISIBLE;
 		}
 
 		RenderThreadSlices();
@@ -239,12 +235,7 @@ namespace swrenderer
 			finished_threads++;
 			if (!end_condition.wait_for(end_lock, 5s, [&]() { return finished_threads == Threads.size(); }))
 			{
-#ifdef WIN32
-				PeekThreadedErrorPane();
-#endif
-				// Invoke the crash reporter so that we can capture the call stack of whatever the hung worker thread is doing
-				int *threadCrashed = nullptr;
-				*threadCrashed = 0xdeadbeef;
+				I_FatalError("Render threads did not finish within 5 seconds!");
 			}
 			finished_threads = 0;
 		}

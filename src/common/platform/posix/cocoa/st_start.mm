@@ -42,22 +42,6 @@
 #include "engineerrors.h"
 
 
-FStartupScreen *StartScreen;
-
-
-CUSTOM_CVAR(Int, showendoom, 0, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
-{
-	if (self < 0)
-	{
-		self = 0;
-	}
-	else if (self > 2)
-	{
-		self = 2;
-	}
-}
-
-
 // ---------------------------------------------------------------------------
 
 
@@ -121,18 +105,6 @@ void FBasicStartupScreen::NetProgress(const int count)
 	FConsoleWindow::GetInstance().NetProgress(count);
 }
 
-void FBasicStartupScreen::NetMessage(const char* const format, ...)
-{
-	va_list args;
-	va_start(args, format);
-
-	FString message;
-	message.VFormat(format, args);
-	va_end(args);
-
-	Printf("%s\n", message.GetChars());
-}
-
 void FBasicStartupScreen::NetDone()
 {
 	FConsoleWindow::GetInstance().NetDone();
@@ -163,13 +135,4 @@ bool FBasicStartupScreen::NetLoop(bool (*timerCallback)(void*), void* const user
 FStartupScreen *FStartupScreen::CreateInstance(const int maxProgress)
 {
 	return new FBasicStartupScreen(maxProgress, true);
-}
-
-
-// ---------------------------------------------------------------------------
-
-
-void ST_Endoom()
-{
-	throw CExitEvent(0);
 }
