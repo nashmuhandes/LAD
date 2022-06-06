@@ -120,6 +120,7 @@
 #include "doomfont.h"
 #include "screenjob.h"
 #include "startscreen.h"
+#include "shiftstate.h"
 
 #ifdef __unix__
 #include "i_system.h"  // for SHARE_DIR
@@ -136,7 +137,7 @@ void DrawHUD();
 void D_DoAnonStats();
 void I_DetectOS();
 void UpdateGenericUI(bool cvar);
-
+void Local_Job_Init();
 
 // MACROS ------------------------------------------------------------------
 
@@ -203,8 +204,9 @@ extern bool insave;
 extern TDeletingArray<FLightDefaults *> LightDefaults;
 extern FName MessageBoxClass;
 
-const char* iwad_folders[14] = { "flats/", "textures/", "hires/", "sprites/", "voxels/", "colormaps/", "acs/", "maps/", "voices/", "patches/", "graphics/", "sounds/", "music/", "materials/"};
-const char* iwad_reserved[12] = { "mapinfo", "zmapinfo", "gameinfo", "sndinfo", "sbarinfo", "menudef", "gldefs", "animdefs", "decorate", "zscript", "iwadinfo", "maps/" };
+static const char* iwad_folders[] = { "flats/", "textures/", "hires/", "sprites/", "voxels/", "colormaps/", "acs/", "maps/", "voices/", "patches/", "graphics/", "sounds/", "music/", 
+	"materials/", "models/", "fonts/", "brightmaps/"};
+static const char* iwad_reserved[] = { "mapinfo", "zmapinfo", "umapinfo", "gameinfo", "sndinfo", "sndseq", "sbarinfo", "menudef", "gldefs", "animdefs", "decorate", "zscript", "iwadinfo", "maps/" };
 
 
 CUSTOM_CVAR(Float, i_timescale, 1.0f, CVAR_NOINITCALL | CVAR_VIRTUAL)
@@ -291,13 +293,14 @@ CUSTOM_CVAR (String, vid_cursor, "None", CVAR_ARCHIVE | CVAR_NOINITCALL)
 }
 
 // Controlled by startup dialog
-CVAR (Bool, disableautoload, false, CVAR_ARCHIVE | CVAR_NOINITCALL | CVAR_GLOBALCONFIG)
-CVAR (Bool, autoloadbrightmaps, false, CVAR_ARCHIVE | CVAR_NOINITCALL | CVAR_GLOBALCONFIG)
-CVAR (Bool, autoloadlights, false, CVAR_ARCHIVE | CVAR_NOINITCALL | CVAR_GLOBALCONFIG)
-CVAR (Bool, autoloadwidescreen, true, CVAR_ARCHIVE | CVAR_NOINITCALL | CVAR_GLOBALCONFIG)
-CVAR (Bool, r_debug_disable_vis_filter, false, 0)
+CVAR(Bool, disableautoload, false, CVAR_ARCHIVE | CVAR_NOINITCALL | CVAR_GLOBALCONFIG)
+CVAR(Bool, autoloadbrightmaps, false, CVAR_ARCHIVE | CVAR_NOINITCALL | CVAR_GLOBALCONFIG)
+CVAR(Bool, autoloadlights, false, CVAR_ARCHIVE | CVAR_NOINITCALL | CVAR_GLOBALCONFIG)
+CVAR(Bool, autoloadwidescreen, true, CVAR_ARCHIVE | CVAR_NOINITCALL | CVAR_GLOBALCONFIG)
+CVAR(Bool, r_debug_disable_vis_filter, false, 0)
 CVAR(Bool, vid_fps, false, 0)
 CVAR(Int, vid_showpalette, 0, 0)
+
 CUSTOM_CVAR (Bool, i_discordrpc, false, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 {
 	I_UpdateWindowTitle();
@@ -306,6 +309,7 @@ CUSTOM_CVAR(Int, I_FriendlyWindowTitle, 1, CVAR_GLOBALCONFIG|CVAR_ARCHIVE|CVAR_N
 {
 	I_UpdateWindowTitle();
 }
+CVAR(Bool, cl_nointros, false, CVAR_ARCHIVE)
 
 
 bool hud_toggled = false;
@@ -331,7 +335,6 @@ int restart = 0;
 bool AppActive = true;
 bool playedtitlemusic;
 
-FStartupScreen* StartWindow;
 FStartScreen* StartScreen;
 
 cycle_t FrameCycles;
@@ -762,7 +765,34 @@ static void DrawPaletteTester(int paletteno)
 // Draws the fps counter, dot ticker, and palette debug.
 //
 //==========================================================================
-uint64_t LastCount;
+uint64_t LastFPS, LastMSCount;
+
+void CalcFps()
+{
+	static uint64_t LastMS = 0, LastSec = 0, FrameCount = 0, LastTic = 0;
+
+	uint64_t ms = screen->FrameTime;
+	uint64_t howlong = ms - LastMS;
+	if ((signed)howlong > 0) // do this only once per frame.
+	{
+		uint32_t thisSec = (uint32_t)(ms / 1000);
+		if (LastSec < thisSec)
+		{
+			LastFPS = FrameCount / (thisSec - LastSec);
+			LastSec = thisSec;
+			FrameCount = 0;
+		}
+		FrameCount++;
+		LastMS = ms;
+		LastMSCount = howlong;
+	}
+}
+
+ADD_STAT(fps)
+{
+	CalcFps();
+	return FStringf("%2llu ms (%3llu fps)", (unsigned long long)LastMSCount , (unsigned long long)LastFPS);
+}
 
 static void DrawRateStuff()
 {
@@ -771,34 +801,19 @@ static void DrawRateStuff()
 	// Draws frame time and cumulative fps
 	if (vid_fps)
 	{
-		uint64_t ms = screen->FrameTime;
-		uint64_t howlong = ms - LastMS;
-		if ((signed)howlong >= 0)
-		{
-			char fpsbuff[40];
-			int chars;
-			int rate_x;
+		CalcFps();
+		char fpsbuff[40];
+		int chars;
+		int rate_x;
+		int textScale = active_con_scale(twod);
 
-			int textScale = active_con_scale(twod);
-
-			chars = mysnprintf(fpsbuff, countof(fpsbuff), "%2llu ms (%3llu fps)", (unsigned long long)howlong, (unsigned long long)LastCount);
-			rate_x = screen->GetWidth() / textScale - NewConsoleFont->StringWidth(&fpsbuff[0]);
-			ClearRect(twod, rate_x * textScale, 0, screen->GetWidth(), NewConsoleFont->GetHeight() * textScale, GPalette.BlackIndex, 0);
-			DrawText(twod, NewConsoleFont, CR_WHITE, rate_x, 0, (char*)&fpsbuff[0],
-				DTA_VirtualWidth, screen->GetWidth() / textScale,
-				DTA_VirtualHeight, screen->GetHeight() / textScale,
-				DTA_KeepRatio, true, TAG_DONE);
-
-			uint32_t thisSec = (uint32_t)(ms / 1000);
-			if (LastSec < thisSec)
-			{
-				LastCount = FrameCount / (thisSec - LastSec);
-				LastSec = thisSec;
-				FrameCount = 0;
-			}
-			FrameCount++;
-		}
-		LastMS = ms;
+		chars = mysnprintf(fpsbuff, countof(fpsbuff), "%2llu ms (%3llu fps)", (unsigned long long)LastMSCount, (unsigned long long)LastFPS);
+		rate_x = screen->GetWidth() / textScale - NewConsoleFont->StringWidth(&fpsbuff[0]);
+		ClearRect(twod, rate_x * textScale, 0, screen->GetWidth(), NewConsoleFont->GetHeight() * textScale, GPalette.BlackIndex, 0);
+		DrawText(twod, NewConsoleFont, CR_WHITE, rate_x, 0, (char*)&fpsbuff[0],
+			DTA_VirtualWidth, screen->GetWidth() / textScale,
+			DTA_VirtualHeight, screen->GetHeight() / textScale,
+			DTA_KeepRatio, true, TAG_DONE);
 	}
 
 	int Height = screen->GetHeight();
@@ -1875,13 +1890,18 @@ static FString ParseGameInfo(TArray<FString> &pwads, const char *fn, const char 
 	return iwad;
 }
 
+void GetReserved(LumpFilterInfo& lfi)
+{
+	for (auto p : iwad_folders) lfi.reservedFolders.Push(p);
+	for (auto p : iwad_reserved) lfi.requiredPrefixes.Push(p);
+}
+
 static FString CheckGameInfo(TArray<FString> & pwads)
 {
 	FileSystem check;
 
 	LumpFilterInfo lfi;
-	for (auto p : iwad_folders) lfi.reservedFolders.Push(p);
-	for (auto p : iwad_reserved) lfi.requiredPrefixes.Push(p);
+	GetReserved(lfi);
 
 	// Open the entire list as a temporary file system and look for a GAMEINFO lump. The last one will automatically win.
 	check.InitMultipleFiles(pwads, true, &lfi);
@@ -2623,6 +2643,8 @@ bool System_WantLeftButton()
 
 static bool System_DispatchEvent(event_t* ev)
 {
+	shiftState.AddEvent(ev);
+
 	if (ev->type == EV_Mouse && menuactive == MENU_Off && ConsoleState != c_down && ConsoleState != c_falling && !primaryLevel->localEventManager->Responder(ev) && !paused)
 	{
 		if (buttonMap.ButtonDown(Button_Mlook) || freelook)
@@ -2730,7 +2752,7 @@ FString System_GetLocationDescription()
 	auto& vp = r_viewpoint;
 	auto Level = vp.ViewLevel;
 	return Level == nullptr ? FString() : FStringf("Map %s: \"%s\",\nx = %1.4f, y = %1.4f, z = %1.4f, angle = %1.4f, pitch = %1.4f\n%llu fps\n\n",
-		Level->MapName.GetChars(), Level->LevelName.GetChars(), vp.Pos.X, vp.Pos.Y, vp.Pos.Z, vp.Angles.Yaw.Degrees, vp.Angles.Pitch.Degrees, (unsigned long long)LastCount);
+		Level->MapName.GetChars(), Level->LevelName.GetChars(), vp.Pos.X, vp.Pos.Y, vp.Pos.Z, vp.Angles.Yaw.Degrees, vp.Angles.Pitch.Degrees, (unsigned long long)LastFPS);
 
 }
 
@@ -3048,8 +3070,7 @@ static int D_InitGame(const FIWADInfo* iwad_info, TArray<FString>& allwads, TArr
 	}
 	lfi.gameTypeFilter.Push(FStringf("game-%s", GameTypeName()));
 
-	for (auto p : iwad_folders) lfi.reservedFolders.Push(p);
-	for (auto p : iwad_reserved) lfi.requiredPrefixes.Push(p);
+	GetReserved(lfi);
 
 	lfi.postprocessFunc = [&]()
 	{
@@ -3068,10 +3089,25 @@ static int D_InitGame(const FIWADInfo* iwad_info, TArray<FString>& allwads, TArr
 	SetMapxxFlag();
 
 	D_GrabCVarDefaults(); //parse DEFCVARS
+	InitPalette();
+
+	if (!batchrun) Printf("S_Init: Setting up sound.\n");
+	S_Init();
 
 	int max_progress = TexMan.GuesstimateNumTextures();
 	int per_shader_progress = 0;//screen->GetShaderCount()? (max_progress / 10 / screen->GetShaderCount()) : 0;
 	bool nostartscreen = batchrun || restart || Args->CheckParm("-join") || Args->CheckParm("-host") || Args->CheckParm("-norun");
+
+	if (GameStartupInfo.Type == FStartupInfo::DefaultStartup)
+	{
+		if (gameinfo.gametype == GAME_Hexen)
+			GameStartupInfo.Type = FStartupInfo::HexenStartup;
+		else if (gameinfo.gametype == GAME_Heretic)
+			GameStartupInfo.Type = FStartupInfo::HereticStartup;
+		else if (gameinfo.gametype == GAME_Strife)
+			GameStartupInfo.Type = FStartupInfo::StrifeStartup;
+	}
+
 	StartScreen = nostartscreen? nullptr : GetGameStartScreen(per_shader_progress > 0 ? max_progress * 10 / 9 : max_progress + 3);
 	
 	GameConfig->DoKeySetup(gameinfo.ConfigName);
@@ -3106,7 +3142,6 @@ static int D_InitGame(const FIWADInfo* iwad_info, TArray<FString>& allwads, TArr
 		Printf("%s", ci.GetChars());
 	}
 
-	InitPalette();
 	TexMan.Init();
 	
 	if (!batchrun) Printf ("V_Init: allocate screen.\n");
@@ -3139,13 +3174,10 @@ static int D_InitGame(const FIWADInfo* iwad_info, TArray<FString>& allwads, TArr
 		compatmode = (int)strtoll(compatmodeval, nullptr, 10);
 	}
 
-	if (!batchrun) Printf ("S_Init: Setting up sound.\n");
-	S_Init ();
-
 	if (!batchrun) Printf ("ST_Init: Init startup screen.\n");
 	if (!restart)
 	{
-		StartWindow = FStartupScreen::CreateInstance (TexMan.GuesstimateNumTextures() + 5);
+		StartWindow = FStartupScreen::CreateInstance (TexMan.GuesstimateNumTextures() + 5, StartScreen == nullptr);
 	}
 	else
 	{
@@ -3371,6 +3403,7 @@ static int D_InitGame(const FIWADInfo* iwad_info, TArray<FString>& allwads, TArr
 		twod->End();
 		UpdateJoystickMenu(NULL);
 		UpdateVRModes();
+		Local_Job_Init();
 
 		v = Args->CheckValue ("-loadgame");
 		if (v)
@@ -3417,7 +3450,17 @@ static int D_InitGame(const FIWADInfo* iwad_info, TArray<FString>& allwads, TArr
 					}
 					else
 					{
-						D_StartTitle();				// start up intro loop
+						if (multiplayer || cl_nointros || Args->CheckParm("-nointro"))
+						{
+							D_StartTitle();
+						}
+						else
+						{
+							I_SetFrameTime();
+							if (!StartCutscene(gameinfo.IntroScene, SJ_BLOCKUI, [=](bool) {
+								gameaction = ga_titleloop;
+								})) D_StartTitle();
+						}
 					}
 				}
 				else if (demorecording)
