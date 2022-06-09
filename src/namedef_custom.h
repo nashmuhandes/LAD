@@ -860,6 +860,3 @@ xx(lightdistancefloor)
 xx(lightcolorceiling)
 xx(lightintensityceiling)
 xx(lightdistanceceiling)
-
-// [LAD]
-xx(LADBodyPart)

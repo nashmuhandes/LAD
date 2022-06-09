@@ -706,12 +706,6 @@ void HWSprite::Process(HWDrawInfo *di, AActor* thing, sector_t * sector, area_t 
 	const auto &vp = di->Viewpoint;
 	AActor *camera = vp.camera;
 
-	// [LAD] don't draw self modular character parts in first person view
-	if (thing && thing->IsKindOf(NAME_LADBodyPart) && thing->tracer == vp.ViewActor)
-	{
-		return;
-	}
-
 	if (thing->renderflags & RF_INVISIBLE || !thing->RenderStyle.IsVisible(thing->Alpha))
 	{
 		if (!(thing->flags & MF_STEALTH) || !di->isStealthVision() || thing == camera)

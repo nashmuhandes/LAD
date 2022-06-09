@@ -1032,14 +1032,6 @@ namespace swrenderer
 		if (distanceSquared > sprite_distance_cull)
 			return false;
 
-		// [LAD] don't draw self modular character parts in first person view
-		if (thing && thing->IsKindOf(NAME_LADBodyPart) && thing->tracer == Thread->Viewport->viewpoint.camera
-			&& !(!Thread->Viewport->viewpoint.showviewer && renderportal->CurrentPortal && !P_PointOnLineSidePrecise(thing->tracer->Pos(), renderportal->CurrentPortal->dst))
-			&& !Thread->Viewport->viewpoint.showviewer)
-		{
-			return false;
-		}
-
 		return true;
 	}
 
