@@ -73,6 +73,8 @@ EXTERN_CVAR(Float, m_sensitivity_y)
 EXTERN_CVAR(Int, adl_volume_model)
 EXTERN_CVAR (Int, gl_texture_hqresize_targets)
 EXTERN_CVAR(Int, wipetype)
+EXTERN_CVAR(Bool, i_pauseinbackground)
+EXTERN_CVAR(Bool, i_soundinbackground)
 
 #ifdef _WIN32
 EXTERN_CVAR(Int, in_mouse)
@@ -370,6 +372,8 @@ void FGameConfigFile::DoGlobalSetup ()
 				if (var != NULL) var->ResetToDefault();
 				var = FindCVar("hud_althudscale", NULL);
 				if (var != NULL) var->ResetToDefault();
+				var = FindCVar("con_scale", NULL);
+				if (var != NULL) var->ResetToDefault();
 				var = FindCVar("con_scaletext", NULL);
 				if (var != NULL) var->ResetToDefault();
 				var = FindCVar("uiscale", NULL);
@@ -584,6 +588,11 @@ void FGameConfigFile::DoGlobalSetup ()
 					v.Float /= 4.f;
 					if (v.Float < 1.f) v.Float = 1.f;
 				}
+			}
+			if (last < 223)
+			{
+				// ooooh boy did i open a can of worms with this one.
+				i_pauseinbackground = !(i_soundinbackground);
 			}
 		}
 	}
