@@ -9,7 +9,7 @@
 #include "hw_renderstate.h"
 #include <list>
 
-#define SHADER_MIN_REQUIRED_TEXTURE_LAYERS 8
+#define SHADER_MIN_REQUIRED_TEXTURE_LAYERS 11
 
 class VulkanFrameBuffer;
 class VulkanDevice;
@@ -49,6 +49,9 @@ struct PushConstants
 
 	// Blinn glossiness and specular level
 	FVector2 uSpecularMaterial;
+
+	// bone animation
+	int uBoneIndexBase;
 
 	int uDataIndex;
 	int padding1, padding2, padding3;

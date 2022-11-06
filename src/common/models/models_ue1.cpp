@@ -48,6 +48,7 @@ float unpackuvert( uint32_t n, int c )
 bool FUE1Model::Load( const char *filename, int lumpnum, const char *buffer, int length )
 {
 	int lumpnum2;
+	hasSurfaces = true;
 	FString realfilename = fileSystem.GetFileFullName(lumpnum);
 	if ( (size_t)realfilename.IndexOf("_d.3d") == realfilename.Len()-5 )
 	{
@@ -221,16 +222,18 @@ void FUE1Model::UnloadGeometry()
 	groups.Reset();
 }
 
-int FUE1Model::FindFrame( const char *name )
+int FUE1Model::FindFrame(const char* name, bool nodefault)
 {
-	// unsupported, there are no named frames
-	return -1;
+	// there are no named frames, but we need something here to properly interface with it. So just treat the string as an index number.
+	auto index = strtol(name, nullptr, 0);
+	if (index < 0 || index >= numFrames) return FErr_NotFound;
+	return index;
 }
 
-void FUE1Model::RenderFrame( FModelRenderer *renderer, FGameTexture *skin, int frame, int frame2, double inter, int translation )
+void FUE1Model::RenderFrame( FModelRenderer *renderer, FGameTexture *skin, int frame, int frame2, double inter, int translation, const FTextureID* surfaceskinids, const TArray<VSMatrix>& boneData, int boneStartPosition)
 {
 	// the moment of magic
-	if ( (frame >= numFrames) || (frame2 >= numFrames) ) return;
+	if ( (frame < 0) || (frame2 < 0) || (frame >= numFrames) || (frame2 >= numFrames) ) return;
 	renderer->SetInterpolation(inter);
 	int vsize, fsize = 0, vofs = 0;
 	for ( int i=0; i<numGroups; i++ ) fsize += groups[i].numPolys*3;
@@ -246,9 +249,9 @@ void FUE1Model::RenderFrame( FModelRenderer *renderer, FGameTexture *skin, int f
 		FGameTexture *sskin = skin;
 		if ( !sskin )
 		{
-			int ssIndex = groups[i].texNum + curMDLIndex * MD3_MAX_SURFACES;
-			if (curSpriteMDLFrame && curSpriteMDLFrame->surfaceskinIDs[ssIndex].isValid())
-				sskin = TexMan.GetGameTexture(curSpriteMDLFrame->surfaceskinIDs[ssIndex], true);
+			int ssIndex = groups[i].texNum;
+			if (surfaceskinids && surfaceskinids[ssIndex].isValid())
+				sskin = TexMan.GetGameTexture(surfaceskinids[ssIndex], true);
 			if ( !sskin )
 			{
 				vofs += vsize;
@@ -258,7 +261,7 @@ void FUE1Model::RenderFrame( FModelRenderer *renderer, FGameTexture *skin, int f
 		// TODO: Handle per-group render styles and other flags once functions for it are implemented
 		// Future note: poly renderstyles should always be enforced unless the actor itself has a style other than Normal
 		renderer->SetMaterial(sskin,false,translation);
-		renderer->SetupFrame(this, vofs+frame*fsize,vofs+frame2*fsize,vsize);
+		renderer->SetupFrame(this, vofs + frame * fsize, vofs + frame2 * fsize, vsize, {}, -1);
 		renderer->DrawArrays(0,vsize);
 		vofs += vsize;
 	}
@@ -305,13 +308,13 @@ void FUE1Model::BuildVertexBuffer( FModelRenderer *renderer )
 	vbuf->UnlockVertexBuffer();
 }
 
-void FUE1Model::AddSkins( uint8_t *hitlist )
+void FUE1Model::AddSkins( uint8_t *hitlist, const FTextureID* surfaceskinids)
 {
 	for (int i = 0; i < numGroups; i++)
 	{
-		int ssIndex = groups[i].texNum + curMDLIndex * MD3_MAX_SURFACES;
-		if (curSpriteMDLFrame && curSpriteMDLFrame->surfaceskinIDs[ssIndex].isValid())
-			hitlist[curSpriteMDLFrame->surfaceskinIDs[ssIndex].GetIndex()] |= FTextureManager::HIT_Flat;
+		int ssIndex = groups[i].texNum;
+		if (surfaceskinids && surfaceskinids[ssIndex].isValid())
+			hitlist[surfaceskinids[ssIndex].GetIndex()] |= FTextureManager::HIT_Flat;
 	}
 }
 

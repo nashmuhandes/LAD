@@ -152,14 +152,14 @@ std::unique_ptr<VulkanRenderPass> VkRenderPassSetup::CreateRenderPass(int clearT
 	for (int i = 1; i < PassKey.DrawBuffers; i++)
 	{
 		builder.AddAttachment(
-			drawBufferFormats[i], buffers->GetSceneSamples(),
+			drawBufferFormats[i], (VkSampleCountFlagBits)PassKey.Samples,
 			(clearTargets & CT_Color) ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	}
 	if (PassKey.DepthStencil)
 	{
 		builder.AddDepthStencilAttachment(
-			buffers->SceneDepthStencilFormat, PassKey.DrawBufferFormat == VK_FORMAT_R8G8B8A8_UNORM ? VK_SAMPLE_COUNT_1_BIT : buffers->GetSceneSamples(),
+			buffers->SceneDepthStencilFormat, (VkSampleCountFlagBits)PassKey.Samples,
 			(clearTargets & CT_Depth) ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
 			(clearTargets & CT_Stencil) ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
 			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
@@ -230,10 +230,11 @@ std::unique_ptr<VulkanPipeline> VkRenderPassSetup::CreatePipeline(const VkPipeli
 		VK_FORMAT_R32G32_SFLOAT,
 		VK_FORMAT_R32_SFLOAT,
 		VK_FORMAT_R8G8B8A8_UNORM,
-		VK_FORMAT_A2B10G10R10_SNORM_PACK32
+		VK_FORMAT_A2B10G10R10_SNORM_PACK32,
+		VK_FORMAT_R8G8B8A8_UINT
 	};
 
-	bool inputLocations[7] = { false, false, false, false, false, false, false };
+	bool inputLocations[VATTR_MAX] = {};
 
 	for (size_t i = 0; i < vfmt.Attrs.size(); i++)
 	{
@@ -243,10 +244,10 @@ std::unique_ptr<VulkanPipeline> VkRenderPassSetup::CreatePipeline(const VkPipeli
 	}
 
 	// Vulkan requires an attribute binding for each location specified in the shader
-	for (int i = 0; i < 7; i++)
+	for (int i = 0; i < VATTR_MAX; i++)
 	{
 		if (!inputLocations[i])
-			builder.AddVertexAttribute(i, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
+			builder.AddVertexAttribute(i, 0, i != 8 ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R8G8B8A8_UINT, 0);
 	}
 
 	builder.AddDynamicState(VK_DYNAMIC_STATE_VIEWPORT);
@@ -342,7 +343,7 @@ void VkPPRenderPassSetup::CreatePipeline(const VkPPRenderPassKey& key)
 	// Note: the actual values are ignored since we use dynamic viewport+scissor states
 	builder.Viewport(0.0f, 0.0f, 320.0f, 200.0f);
 	builder.Scissor(0, 0, 320, 200);
-	if (key.StencilTest)
+	if (key.StencilTest != WhichDepthStencil::None)
 	{
 		builder.AddDynamicState(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
 		builder.DepthStencilEnable(false, false, true);
@@ -364,7 +365,7 @@ void VkPPRenderPassSetup::CreateRenderPass(const VkPPRenderPassKey& key)
 		builder.AddAttachment(key.OutputFormat, key.Samples, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	else
 		builder.AddAttachment(key.OutputFormat, key.Samples, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	if (key.StencilTest)
+	if (key.StencilTest == WhichDepthStencil::Scene)
 	{
 		builder.AddDepthStencilAttachment(
 			fb->GetBuffers()->SceneDepthStencilFormat, key.Samples,
@@ -372,10 +373,18 @@ void VkPPRenderPassSetup::CreateRenderPass(const VkPPRenderPassKey& key)
 			VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
 			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 	}
+	if (key.StencilTest == WhichDepthStencil::Pipeline)
+	{
+		builder.AddDepthStencilAttachment(
+			fb->GetBuffers()->PipelineDepthStencilFormat, key.Samples,
+			VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	}
 
 	builder.AddSubpass();
 	builder.AddSubpassColorAttachmentRef(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	if (key.StencilTest)
+	if (key.StencilTest != WhichDepthStencil::None)
 	{
 		builder.AddSubpassDepthStencilAttachmentRef(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		builder.AddExternalSubpassDependency(

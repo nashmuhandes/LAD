@@ -115,7 +115,7 @@ class Actor : Thinker native
 	native double FloatSpeed;
 	native SpriteID sprite;
 	native uint8 frame;
-	native fvector2 Scale;
+	native vector2 Scale;
 	native TextureID picnum;
 	native double Alpha;
 	native readonly color fillcolor;	// must be set with SetShade to initialize correctly.
@@ -258,6 +258,7 @@ class Actor : Thinker native
 	native int16 lightlevel;
 	native readonly int SpawnTime;
 	private native int InventoryID;	// internal counter.
+	native uint freezetics;
 
 	meta String Obituary;		// Player was killed by this actor
 	meta String HitObituary;		// Player was killed by this actor in melee
@@ -374,8 +375,8 @@ class Actor : Thinker native
 	native readonly deprecated("2.3", "Use Vel.X instead") double MomX;
 	native readonly deprecated("2.3", "Use Vel.Y instead") double MomY;
 	native readonly deprecated("2.3", "Use Vel.Z instead") double MomZ;
-	native deprecated("2.3", "Use Scale.X instead") float ScaleX;
-	native deprecated("2.3", "Use Scale.Y instead") float ScaleY;
+	native deprecated("2.3", "Use Scale.X instead") double ScaleX;
+	native deprecated("2.3", "Use Scale.Y instead") double ScaleY;
 
 	//FStrifeDialogueNode *Conversation; // [RH] The dialogue to show when this actor is used.;
 	
@@ -487,7 +488,7 @@ class Actor : Thinker native
 	virtual native int TakeSpecialDamage (Actor inflictor, Actor source, int damage, Name damagetype);
 	virtual native void Die(Actor source, Actor inflictor, int dmgflags = 0, Name MeansOfDeath = 'none');
 	virtual native bool Slam(Actor victim);
-	virtual native void Touch(Actor toucher);
+	virtual void Touch(Actor toucher) {}
 	virtual native void FallAndSink(double grav, double oldfloorz);
 	private native void Substitute(Actor replacement);
 	native ui void DisplayNameTag();
@@ -1127,11 +1128,13 @@ class Actor : Thinker native
 	native void A_FadeTo(double target, double amount = 0.1, int flags = 0);
 	native void A_SpawnDebris(class<Actor> spawntype, bool transfer_translation = false, double mult_h = 1, double mult_v = 1);
 	native void A_SpawnParticle(color color1, int flags = 0, int lifetime = TICRATE, double size = 1, double angle = 0, double xoff = 0, double yoff = 0, double zoff = 0, double velx = 0, double vely = 0, double velz = 0, double accelx = 0, double accely = 0, double accelz = 0, double startalphaf = 1, double fadestepf = -1, double sizestep = 0);
+	native void A_SpawnParticleEx(color color1, TextureID texture, int style = STYLE_None, int flags = 0, int lifetime = TICRATE, double size = 1, double angle = 0, double xoff = 0, double yoff = 0, double zoff = 0, double velx = 0, double vely = 0, double velz = 0, double accelx = 0, double accely = 0, double accelz = 0, double startalphaf = 1, double fadestepf = -1, double sizestep = 0, double startroll = 0, double rollvel = 0, double rollacc = 0);
 	native void A_ExtChase(bool usemelee, bool usemissile, bool playactive = true, bool nightmarefast = false);
 	native void A_DropInventory(class<Inventory> itemtype, int amount = -1);
 	native void A_SetBlend(color color1, double alpha, int tics, color color2 = 0, double alpha2 = 0.);
 	deprecated("2.3", "Use 'b<FlagName> = [true/false]' instead") native void A_ChangeFlag(string flagname, bool value);
 	native void A_ChangeCountFlags(int kill = FLAG_NO_CHANGE, int item = FLAG_NO_CHANGE, int secret = FLAG_NO_CHANGE);
+	action native void A_ChangeModel(name modeldef, int modelindex = 0, string modelpath = "", name model = "", int skinindex = 0, string skinpath = "", name skin = "", int flags = 0, int generatorindex = -1, int animationindex = 0, string animationpath = "", name animation = "");
 
 	void A_SetFriendly (bool set)
 	{
@@ -1357,6 +1360,9 @@ class Actor : Thinker native
 	GenericCrush:
 		POL5 A -1;
 		Stop;
+	DieFromSpawn:
+		TNT1 A 1;
+		TNT1 A 1 { self.Die(null, null); }
 	}
 
 	// Internal functions

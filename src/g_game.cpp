@@ -78,6 +78,7 @@
 #include "s_music.h"
 #include "p_setup.h"
 #include "d_event.h"
+#include "model.h"
 
 #include "v_video.h"
 #include "g_hub.h"
@@ -88,6 +89,7 @@
 #include "hwrenderer/scene/hw_drawinfo.h"
 #include "doommenu.h"
 #include "screenjob.h"
+#include "i_interface.h"
 
 
 static FRandom pr_dmspawn ("DMSpawn");
@@ -111,13 +113,12 @@ void	G_DoQuickSave ();
 void STAT_Serialize(FSerializer &file);
 bool WriteZip(const char *filename, TArray<FString> &filenames, TArray<FCompressedBuffer> &content);
 
-FIntCVar gameskill ("skill", 2, CVAR_SERVERINFO|CVAR_LATCH);
+CVARD_NAMED(Int, gameskill, skill, 2, CVAR_SERVERINFO|CVAR_LATCH, "sets the skill for the next newly started game")
 CVAR(Bool, save_formatted, false, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)	// use formatted JSON for saves (more readable but a larger files and a bit slower.
 CVAR (Int, deathmatch, 0, CVAR_SERVERINFO|CVAR_LATCH);
 CVAR (Bool, chasedemo, false, 0);
 CVAR (Bool, storesavepic, true, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR (Bool, longsavemessages, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
-CVAR (String, save_dir, "", CVAR_ARCHIVE|CVAR_GLOBALCONFIG);
 CVAR (Bool, cl_waitforsave, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 CVAR (Bool, enablescriptscreenshot, false, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 EXTERN_CVAR (Float, con_midtime);
@@ -143,10 +144,7 @@ CVAR(Int, nametagcolor, CR_GOLD, CVAR_ARCHIVE)
 extern bool playedtitlemusic;
 
 gameaction_t	gameaction;
-gamestate_t 	gamestate = GS_STARTUP;
 
-int 			paused;
-bool			pauseext;
 bool 			sendpause;				// send a pause event next tic 
 bool			sendsave;				// send a save event next tic 
 bool			sendturn180;			// [RH] send a 180 degree turn next tic
@@ -197,7 +195,7 @@ EXTERN_CVAR (Int, turnspeedwalkslow)
 EXTERN_CVAR (Int, turnspeedsprintslow)
 
 int				forwardmove[2], sidemove[2];
-FIntCVar		*angleturn[4] = {&turnspeedwalkfast, &turnspeedsprintfast, &turnspeedwalkslow, &turnspeedsprintslow};
+FIntCVarRef		*angleturn[4] = {&turnspeedwalkfast, &turnspeedsprintfast, &turnspeedwalkslow, &turnspeedsprintslow};
 int				flyspeed[2] = {1*256, 3*256};
 int				lookspeed[2] = {450, 512};
 
@@ -1070,7 +1068,7 @@ static void G_FullConsole()
 		primaryLevel->Music = "";
 		S_Start();
 		S_StopMusic(true);
-		P_FreeLevelData();
+		P_FreeLevelData(false);
 	}
 
 }
@@ -1919,15 +1917,18 @@ static void LoadGameError(const char *label, const char *append = "")
 
 void C_SerializeCVars(FSerializer& arc, const char* label, uint32_t filter)
 {
-	FBaseCVar* cvar;
 	FString dump;
 
 	if (arc.BeginObject(label))
 	{
 		if (arc.isWriting())
 		{
-			for (cvar = CVars; cvar != NULL; cvar = cvar->m_Next)
+			decltype(cvarMap)::Iterator it(cvarMap);
+			decltype(cvarMap)::Pair *pair;
+			while (it.NextPair(pair))
 			{
+				auto cvar = pair->Value;
+				
 				if ((cvar->Flags & filter) && !(cvar->Flags & (CVAR_NOSAVE | CVAR_IGNORE | CVAR_CONFIG_ONLY)))
 				{
 					UCVarValue val = cvar->GetGenericRep(CVAR_String);
@@ -1938,8 +1939,11 @@ void C_SerializeCVars(FSerializer& arc, const char* label, uint32_t filter)
 		}
 		else
 		{
-			for (cvar = CVars; cvar != NULL; cvar = cvar->m_Next)
+			decltype(cvarMap)::Iterator it(cvarMap);
+			decltype(cvarMap)::Pair *pair;
+			while (it.NextPair(pair))
 			{
+				auto cvar = pair->Value;
 				if ((cvar->Flags & filter) && !(cvar->Flags & (CVAR_NOSAVE | CVAR_IGNORE | CVAR_CONFIG_ONLY)))
 				{
 					UCVarValue val;
@@ -2119,6 +2123,14 @@ void G_DoLoadGame ()
 
 	BackupSaveName = savename;
 
+	//Push any added models from A_ChangeModel
+	for (auto& smf : savedModelFiles)
+	{
+		FString modelFilePath = smf.Left(smf.LastIndexOf("/")+1);
+		FString modelFileName = smf.Right(smf.Len() - smf.Left(smf.LastIndexOf("/") + 1).Len());
+		FindModel(modelFilePath, modelFileName);
+	}
+
 	// At this point, the GC threshold is likely a lot higher than the
 	// amount of memory in use, so bring it down now by starting a
 	// collection.
@@ -2157,35 +2169,11 @@ void G_SaveGame (const char *filename, const char *description)
 	}
 }
 
-FString G_BuildSaveName (const char *prefix, int slot)
+CCMD(opensaves)
 {
-	FString name;
-	FString leader;
-	const char *slash = "";
-
-	leader = Args->CheckValue ("-savedir");
-	if (leader.IsEmpty())
-	{
-		leader = save_dir;
-		if (leader.IsEmpty())
-		{
-			leader = M_GetSavegamesPath();
-		}
-	}
-	size_t len = leader.Len();
-	if (leader[0] != '\0' && leader[len-1] != '\\' && leader[len-1] != '/')
-	{
-		slash = "/";
-	}
-	name << leader << slash;
-	name = NicePath(name);
+	FString name = G_GetSavegamesFolder();
 	CreatePath(name);
-	name << prefix;
-	if (slot >= 0)
-	{
-		name.AppendFormat("%d." SAVEGAME_EXT, slot);
-	}
-	return name;
+	I_OpenShellFolder(name);
 }
 
 CVAR (Int, autosavenum, 0, CVAR_NOSET|CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
@@ -2221,9 +2209,9 @@ void G_DoAutoSave ()
 	}
 
 	num.Int = nextautosave;
-	autosavenum.ForceSet (num, CVAR_Int);
+	autosavenum->ForceSet (num, CVAR_Int);
 
-	file = G_BuildSaveName ("auto", nextautosave);
+	file = G_BuildSaveName(FStringf("auto%02d", nextautosave));
 
 	// The hint flag is only relevant on the primary level.
 	if (!(primaryLevel->flags2 & LEVEL2_NOAUTOSAVEHINT))
@@ -2260,9 +2248,9 @@ void G_DoQuickSave ()
 	}
 
 	num.Int = lastquicksave;
-	quicksavenum.ForceSet (num, CVAR_Int);
+	quicksavenum->ForceSet (num, CVAR_Int);
 
-	file = G_BuildSaveName ("quick", lastquicksave);
+	file = G_BuildSaveName(FStringf("quick%02d", nextautosave));
 
 	readableTime = myasctime ();
 	description.Format("Quicksave %s", readableTime);
@@ -2337,7 +2325,7 @@ void G_DoSaveGame (bool okForQuicksave, bool forceQuicksave, FString filename, c
 
 	if (demoplayback)
 	{
-		filename = G_BuildSaveName ("demosave." SAVEGAME_EXT, -1);
+		filename = G_BuildSaveName ("demosave");
 	}
 
 	if (cl_waitforsave)
